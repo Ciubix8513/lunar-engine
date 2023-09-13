@@ -1,4 +1,4 @@
-use wgpu::{include_wgsl, util::DeviceExt, ColorWrites, VertexAttribute, VertexBufferLayout};
+#![allow(dead_code)]
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
@@ -33,15 +33,11 @@ impl State {
                 ..Default::default()
             },
         ))
-        .unwrap();
+        .expect("Failed to get an adapter");
 
-        let (device, queue): (wgpu::Device, wgpu::Queue) = futures::executor::block_on(req_device(
-            &adapter,
-            &wgpu::DeviceDescriptor {
-                ..Default::default()
-            },
-        ))
-        .expect("Failed to create a device and a queue");
+        let (device, queue): (wgpu::Device, wgpu::Queue) =
+            futures::executor::block_on(req_device(&adapter, &wgpu::DeviceDescriptor::default()))
+                .expect("Failed to create a device and a queue");
 
         let capabilities = surface.get_capabilities(&adapter);
         let format = capabilities
@@ -61,8 +57,8 @@ impl State {
         };
         surface.configure(&device, &surface_config);
 
-        let vert_shader = device.create_shader_module(include_wgsl!("./shaders/vertex.wgsl"));
-        let frag_shader = device.create_shader_module(include_wgsl!("./shaders/color.wgsl"));
+        let vert_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/vertex.wgsl"));
+        let frag_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/color.wgsl"));
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
@@ -76,10 +72,10 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &vert_shader,
                 entry_point: "main",
-                buffers: &[VertexBufferLayout {
+                buffers: &[wgpu::VertexBufferLayout {
                     array_stride: 12,
                     step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[VertexAttribute {
+                    attributes: &[wgpu::VertexAttribute {
                         format: wgpu::VertexFormat::Float32x3,
                         offset: 0,
                         shader_location: 0,
@@ -103,7 +99,7 @@ impl State {
                 targets: &[Some(wgpu::ColorTargetState {
                     format,
                     blend: None,
-                    write_mask: ColorWrites::ALL,
+                    write_mask: wgpu::ColorWrites::ALL,
                 })],
             }),
             multiview: None,
@@ -111,11 +107,14 @@ impl State {
 
         let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
 
-        let v_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: bytemuck::cast_slice(&data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+        let v_buffer = wgpu::util::DeviceExt::create_buffer_init(
+            &device,
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(&data),
+                usage: wgpu::BufferUsages::VERTEX,
+            },
+        );
 
         Self {
             window,
@@ -130,7 +129,10 @@ impl State {
 
     pub fn app_loop(&mut self, event: &Event<()>, control_flow: &mut ControlFlow) {
         match event {
-            Event::WindowEvent { window_id, event } => match event {
+            Event::WindowEvent {
+                window_id: _,
+                event,
+            } => match event {
                 winit::event::WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 winit::event::WindowEvent::Resized(size) => {
                     self.surface_config.width = size.width;
