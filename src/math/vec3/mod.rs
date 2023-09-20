@@ -1,3 +1,4 @@
+#![allow(clippy::suboptimal_flops)]
 use crate::traits::Vector;
 
 #[repr(C)]
@@ -10,7 +11,8 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    #[must_use]
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 }
@@ -29,23 +31,15 @@ impl Vector for Vec3 {
     }
 }
 
-impl Into<Vec3> for (f32, f32, f32) {
-    fn into(self) -> Vec3 {
-        Vec3 {
-            x: self.0,
-            y: self.1,
-            z: self.2,
+impl From<(f32, f32, f32)> for Vec3 {
+    fn from(a: (f32, f32, f32)) -> Self {
+        Self {
+            x: a.0,
+            y: a.1,
+            z: a.2,
         }
     }
 }
-// (x,0,0
-//  0,y,0,
-//  0,0,z)
-//  (1,0,0,x,
-//   0,1,0,y,
-//   0,0,1,z
-//   0,0,0,1)
-//
 
 #[test]
 fn test_vec3_dot_product() {

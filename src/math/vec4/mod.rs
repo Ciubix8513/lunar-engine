@@ -1,3 +1,5 @@
+#![allow(clippy::suboptimal_flops)]
+
 use crate::traits::Vector;
 
 #[repr(C)]
@@ -11,7 +13,8 @@ pub struct Vec4 {
 }
 
 impl Vec4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+    #[must_use]
+    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 }

@@ -1,3 +1,4 @@
+#![allow(clippy::suboptimal_flops)]
 use crate::traits::Vector;
 
 #[repr(C)]
@@ -9,7 +10,8 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
-    pub fn new(x: f32, y: f32) -> Self {
+    #[must_use]
+    pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 }
@@ -26,12 +28,9 @@ impl Vector for Vec2 {
     }
 }
 
-impl Into<Vec2> for (f32, f32) {
-    fn into(self) -> Vec2 {
-        Vec2 {
-            x: self.0,
-            y: self.1,
-        }
+impl From<(f32, f32)> for Vec2 {
+    fn from(a: (f32, f32)) -> Self {
+        Self { x: a.0, y: a.1 }
     }
 }
 

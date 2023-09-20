@@ -1,3 +1,8 @@
+#![allow(
+    clippy::suboptimal_flops,
+    clippy::suspicious_operation_groupings,
+    clippy::too_many_arguments
+)]
 use std::ops::Mul;
 
 use crate::vec4::Vec4;
@@ -44,7 +49,8 @@ pub static IDENTITY: Mat4x4 = Mat4x4 {
 };
 
 impl Mat4x4 {
-    pub fn new(
+    #[must_use]
+    pub const fn new(
         m00: f32,
         m01: f32,
         m02: f32,
@@ -85,6 +91,7 @@ impl Mat4x4 {
     // [3 , 4]   [2] - [3 * 1 + 4 * 2] - [11]
     ///Transforms `other` using `self` matrix
     //TODO: SIMD THE SHIT OUT THIS
+    #[must_use]
     pub fn transform(&self, other: Vec4) -> Vec4 {
         Vec4 {
             x: self.m00 * other.x + self.m01 * other.y + self.m02 * other.z + self.m03 * other.w,
@@ -97,8 +104,9 @@ impl Mat4x4 {
     //[1 , 2] . [1 , 2] _ [1 * 1 +  3 * 2,  1 * 2 + 4*2]
     //[3 , 4]   [3 , 4] -
     ///Performs matrix multiplication `self` * `other`
-    pub fn multiply(&self, other: Mat4x4) -> Mat4x4 {
-        Mat4x4 {
+    #[must_use]
+    pub fn multiply(&self, other: Self) -> Self {
+        Self {
             m00: self.m00 * other.m00
                 + self.m01 * other.m10
                 + self.m02 * other.m20
@@ -168,10 +176,10 @@ impl Mat4x4 {
 }
 
 impl Mul<f32> for Mat4x4 {
-    type Output = Mat4x4;
+    type Output = Self;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Mat4x4 {
+        Self {
             m00: self.m00 * rhs,
             m01: self.m01 * rhs,
             m02: self.m02 * rhs,
@@ -192,10 +200,10 @@ impl Mul<f32> for Mat4x4 {
     }
 }
 
-impl Mul<Mat4x4> for Mat4x4 {
-    type Output = Mat4x4;
+impl Mul<Self> for Mat4x4 {
+    type Output = Self;
 
-    fn mul(self, rhs: Mat4x4) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self::Output {
         self.multiply(rhs)
     }
 }
