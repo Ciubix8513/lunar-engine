@@ -2,6 +2,7 @@ use crate::traits::Vector;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd)]
+///A generic vector with 3 dimensions
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -10,7 +11,7 @@ pub struct Vec3 {
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Vec3 { x, y, z }
+        Self { x, y, z }
     }
 }
 
