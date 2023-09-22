@@ -5,4 +5,6 @@ pub trait Vector {
     fn square_length(&self) -> f32;
     ///Returns dot product between the `self` vector and the `other` vector
     fn dot_product(&self, other: &Self) -> f32;
+
+    fn normalized(&self) -> Self;
 }
