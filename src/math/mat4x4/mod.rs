@@ -3,7 +3,7 @@
     clippy::suspicious_operation_groupings,
     clippy::too_many_arguments
 )]
-use std::ops::Mul;
+use std::ops::{Add, Mul, Sub};
 
 use crate::vec4::Vec4;
 
@@ -173,6 +173,58 @@ impl Mat4x4 {
                 + self.m33 * other.m33,
         }
     }
+
+    #[must_use]
+    ///Returns the determinant of `self`
+    fn determinant(&self) -> f32 {
+        self.m03 * self.m12 * self.m21 * self.m30
+            - self.m02 * self.m13 * self.m21 * self.m30
+            - self.m03 * self.m11 * self.m22 * self.m30
+            + self.m01 * self.m13 * self.m22 * self.m30
+            + self.m02 * self.m11 * self.m23 * self.m30
+            - self.m01 * self.m12 * self.m23 * self.m30
+            - self.m03 * self.m12 * self.m20 * self.m31
+            + self.m02 * self.m13 * self.m20 * self.m31
+            + self.m03 * self.m10 * self.m22 * self.m31
+            - self.m00 * self.m13 * self.m22 * self.m31
+            - self.m02 * self.m10 * self.m23 * self.m31
+            + self.m00 * self.m12 * self.m23 * self.m31
+            + self.m03 * self.m11 * self.m20 * self.m32
+            - self.m01 * self.m13 * self.m20 * self.m32
+            - self.m03 * self.m10 * self.m21 * self.m32
+            + self.m00 * self.m13 * self.m21 * self.m32
+            + self.m01 * self.m10 * self.m23 * self.m32
+            - self.m00 * self.m11 * self.m23 * self.m32
+            - self.m02 * self.m11 * self.m20 * self.m33
+            + self.m01 * self.m12 * self.m20 * self.m33
+            + self.m02 * self.m10 * self.m21 * self.m33
+            - self.m00 * self.m12 * self.m21 * self.m33
+            - self.m01 * self.m10 * self.m22 * self.m33
+            + self.m00 * self.m11 * self.m22 * self.m33
+    }
+
+    fn trace(&self) -> f32 {
+        self.m00 + self.m11 + self.m22 + self.m33
+    }
+
+    #[must_use]
+    fn inverted(&self) -> Option<Self> {
+        let det = self.determinant();
+        if det == 0.0 {
+            return None;
+        }
+
+        let squared = *self * *self;
+        let cubed = squared * *self;
+        let trace = self.trace();
+
+        let a = IDENTITY
+            * (0.166667 * (trace.powi(3) - 3.0 * trace * squared.trace() + 2.0 * cubed.trace()));
+        let b = *self * (0.5 * (trace.powi(2) - squared.trace()));
+        let c = squared * trace;
+
+        Some((a - b + c - cubed) * (1.0 / det))
+    }
 }
 
 impl Mul<f32> for Mat4x4 {
@@ -197,6 +249,56 @@ impl Mul<f32> for Mat4x4 {
             m32: self.m32 * rhs,
             m33: self.m33 * rhs,
         }
+    }
+}
+
+impl Add<Mat4x4> for Mat4x4 {
+    type Output = Self;
+
+    fn add(self, rhs: Mat4x4) -> Self::Output {
+        Mat4x4::new(
+            self.m00 + rhs.m00,
+            self.m01 + rhs.m01,
+            self.m02 + rhs.m02,
+            self.m03 + rhs.m03,
+            self.m10 + rhs.m10,
+            self.m11 + rhs.m11,
+            self.m12 + rhs.m12,
+            self.m13 + rhs.m13,
+            self.m20 + rhs.m20,
+            self.m21 + rhs.m21,
+            self.m22 + rhs.m22,
+            self.m23 + rhs.m23,
+            self.m30 + rhs.m30,
+            self.m31 + rhs.m31,
+            self.m32 + rhs.m32,
+            self.m33 + rhs.m33,
+        )
+    }
+}
+
+impl Sub<Mat4x4> for Mat4x4 {
+    type Output = Self;
+
+    fn sub(self, rhs: Mat4x4) -> Self::Output {
+        Mat4x4::new(
+            self.m00 - rhs.m00,
+            self.m01 - rhs.m01,
+            self.m02 - rhs.m02,
+            self.m03 - rhs.m03,
+            self.m10 - rhs.m10,
+            self.m11 - rhs.m11,
+            self.m12 - rhs.m12,
+            self.m13 - rhs.m13,
+            self.m20 - rhs.m20,
+            self.m21 - rhs.m21,
+            self.m22 - rhs.m22,
+            self.m23 - rhs.m23,
+            self.m30 - rhs.m30,
+            self.m31 - rhs.m31,
+            self.m32 - rhs.m32,
+            self.m33 - rhs.m33,
+        )
     }
 }
 
@@ -263,3 +365,44 @@ fn test_mat_mat_mul() {
     );
     assert_eq!(o, expected);
 }
+
+#[test]
+fn test_determinant() {
+    let a = Mat4x4::new(
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+
+    let o = a.determinant();
+    let expected = 0.0;
+
+    assert_eq!(o, expected);
+
+    let a = Mat4x4::new(
+        1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+
+    let o = a.determinant();
+    let expected = -80.0;
+    assert_eq!(o, expected);
+}
+
+// #[test]
+// fn test_inversion() {
+//     let a = Mat4x4::new(
+//         1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+//     );
+
+//     let o = a.inverted();
+//     let expected = None;
+
+//     assert_eq!(o, expected);
+
+//     let a = Mat4x4::new(
+//         1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+//     );
+
+//     let o = a.inverted().unwrap() * a;
+//     let expected = IDENTITY;
+//     assert_eq!(o, expected);
+//     assert_
+// }
