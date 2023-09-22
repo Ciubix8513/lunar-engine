@@ -1,5 +1,7 @@
 #![allow(clippy::suboptimal_flops)]
 
+use std::ops::Div;
+
 use crate::traits::Vector;
 
 #[repr(C)]
@@ -30,6 +32,18 @@ impl Vector for Vec4 {
 
     fn dot_product(&self, other: &Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
+    }
+
+    fn normalized(&self) -> Self {
+        *self / self.length()
+    }
+}
+
+impl Div<f32> for Vec4 {
+    type Output = Self;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Vec4::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
     }
 }
 
