@@ -1,6 +1,6 @@
 #![allow(clippy::suboptimal_flops)]
 
-use std::ops::Div;
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::traits::Vector;
 
@@ -44,6 +44,37 @@ impl Div<f32> for Vec4 {
 
     fn div(self, rhs: f32) -> Self::Output {
         Vec4::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
+    }
+}
+impl Mul<f32> for Vec4 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(self.x * rhs, self.y * rhs, self.z * rhs, self.w * rhs)
+    }
+}
+impl Sub<Self> for Vec4 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x - rhs.x,
+            self.y - rhs.y,
+            self.z - rhs.z,
+            self.z - rhs.z,
+        )
+    }
+}
+impl Add<Self> for Vec4 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.x + rhs.x,
+            self.y + rhs.y,
+            self.z + rhs.z,
+            self.w + rhs.w,
+        )
     }
 }
 

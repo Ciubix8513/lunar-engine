@@ -1,5 +1,5 @@
-#![allow(clippy::suboptimal_flops)]
-use std::ops::Div;
+// #![allow(clippy::suboptimal_flops)]
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::traits::Vector;
 
@@ -13,9 +13,15 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    #[must_use]
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
+    }
+    pub fn cross(&self, other: &Self) -> Self {
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
     }
 }
 
@@ -41,7 +47,28 @@ impl Div<f32> for Vec3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        Vec3::new(self.x / rhs, self.y / rhs, self.z / rhs)
+        Self::new(self.x / rhs, self.y / rhs, self.z / rhs)
+    }
+}
+impl Mul<f32> for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+impl Sub<Self> for Vec3 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+impl Add<Self> for Vec3 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 
