@@ -1,4 +1,4 @@
-use crate::{mat4x4::Mat4x4, vec3::Vec3};
+use crate::{mat4x4::Mat4x4, traits::Vector, vec3::Vec3};
 
 pub fn perspercive_projection(
     fov: f32,
@@ -66,4 +66,28 @@ pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
 
 pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
     scale_matrix(scale) * rotation_matrix_euler(rotation) * translation_matrix(translation)
+}
+
+pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
+    let zaxis = (camera_forward - camera_position).normalized();
+    let xaxis = (zaxis.cross(&camera_up)).normalized();
+    let yaxis = zaxis.cross(&xaxis);
+    Mat4x4::new(
+        xaxis.x,
+        yaxis.x,
+        zaxis.x,
+        0.0,
+        xaxis.y,
+        yaxis.y,
+        zaxis.y,
+        0.0,
+        xaxis.z,
+        yaxis.z,
+        zaxis.z,
+        0.0,
+        -(xaxis.dot_product(&camera_position)),
+        -(yaxis.dot_product(&camera_position)),
+        -(zaxis.dot_product(&camera_position)),
+        1.0,
+    )
 }
