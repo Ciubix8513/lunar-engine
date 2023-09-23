@@ -66,7 +66,7 @@ impl State {
             format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: vec![],
         };
@@ -135,7 +135,7 @@ impl State {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Cw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None, //Some(wgpu::Face::Back),
                 unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
@@ -204,7 +204,7 @@ impl State {
                 ) * look_at_matrix(
                     Vec3::default(),
                     Vec3::new(0.0, 1.0, 0.0),
-                    Vec3::new(0.0, 0.0, 1.0),
+                    Vec3::new(0.0, 0.0, -1.0),
                 ) * perspercive_projection(
                     60.0,
                     self.surface_config.width as f32 / self.surface_config.height as f32,
@@ -212,10 +212,13 @@ impl State {
                     100.0,
                 );
 
-                let frame = self
-                    .surface
-                    .get_current_texture()
-                    .expect("Failed to get surface texture");
+                let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
+                    self.surface.configure(&self.device, &self.surface_config);
+                    self.surface
+                        .get_current_texture()
+                        .expect("Failed to get the next surface")
+                });
+                // .expect("Failed to get surface texture");
                 let frame_view = frame
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
@@ -263,9 +266,10 @@ impl State {
                 let buffer = encoder.finish();
 
                 self.queue.submit(Some(buffer));
-                self.staging_belt.recall();
                 frame.present();
+                self.staging_belt.recall();
             }
+            Event::RedrawEventsCleared => self.window.request_redraw(),
             _ => {}
         }
     }
