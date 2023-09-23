@@ -1,9 +1,23 @@
 #![allow(dead_code)]
+use std::{mem::size_of, num::NonZeroU64};
+
+use bytemuck::bytes_of;
+use math::{
+    complex_shit::{look_at_matrix, perspercive_projection, scale_matrix, transform_matrix_euler},
+    mat4x4::Mat4x4,
+    vec3::Vec3,
+};
+use wgpu::{util::StagingBelt, BufferAddress, BufferSize};
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+pub struct Pipeline {
+    pipeline: wgpu::RenderPipeline,
+    bind_group: wgpu::BindGroup,
+    buffers: Box<[wgpu::Buffer]>,
+}
 
 pub struct State {
     window: Window,
@@ -11,8 +25,9 @@ pub struct State {
     queue: wgpu::Queue,
     surface: wgpu::Surface,
     surface_config: wgpu::SurfaceConfiguration,
-    pipeline: wgpu::RenderPipeline,
+    pipeline: Pipeline,
     v_buffer: wgpu::Buffer,
+    staging_belt: wgpu::util::StagingBelt,
 }
 
 impl State {
@@ -60,9 +75,43 @@ impl State {
         let vert_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/vertex.wgsl"));
         let frag_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/color.wgsl"));
 
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+
+        let uniform = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: size_of::<Mat4x4>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform,
+                    offset: 0,
+                    size: None,
+                }),
+            }],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -122,8 +171,13 @@ impl State {
             queue,
             surface,
             surface_config,
-            pipeline,
+            pipeline: Pipeline {
+                pipeline,
+                bind_group,
+                buffers: Box::new([uniform]),
+            },
             v_buffer,
+            staging_belt: StagingBelt::new(1024),
         }
     }
 
@@ -143,6 +197,21 @@ impl State {
                 _ => {}
             },
             Event::RedrawRequested(_) => {
+                let transform_matrix = transform_matrix_euler(
+                    &Vec3::new(0.0, 0.0, 3.0),
+                    &Vec3::new(1.0, 1.0, 1.0),
+                    &Vec3::default(),
+                ) * look_at_matrix(
+                    Vec3::default(),
+                    Vec3::new(0.0, 1.0, 0.0),
+                    Vec3::new(0.0, 0.0, 1.0),
+                ) * perspercive_projection(
+                    60.0,
+                    self.surface_config.width as f32 / self.surface_config.height as f32,
+                    0.1,
+                    100.0,
+                );
+
                 let frame = self
                     .surface
                     .get_current_texture()
@@ -155,6 +224,17 @@ impl State {
                     .device
                     .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
                 {
+                    self.staging_belt
+                        .write_buffer(
+                            &mut encoder,
+                            &self.pipeline.buffers[0],
+                            0,
+                            BufferSize::new(size_of::<Mat4x4>() as u64).unwrap(),
+                            &self.device,
+                        )
+                        .copy_from_slice(bytes_of(&transform_matrix));
+                    self.staging_belt.finish();
+
                     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: None,
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -173,7 +253,8 @@ impl State {
                         depth_stencil_attachment: None,
                     });
 
-                    render_pass.set_pipeline(&self.pipeline);
+                    render_pass.set_pipeline(&self.pipeline.pipeline);
+                    render_pass.set_bind_group(0, &self.pipeline.bind_group, &[]);
 
                     render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
                     render_pass.draw(0..3, 0..1);
@@ -182,6 +263,7 @@ impl State {
                 let buffer = encoder.finish();
 
                 self.queue.submit(Some(buffer));
+                self.staging_belt.recall();
                 frame.present();
             }
             _ => {}

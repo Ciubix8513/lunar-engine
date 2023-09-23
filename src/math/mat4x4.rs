@@ -8,7 +8,7 @@ use std::ops::{Add, Mul, Sub};
 use crate::vec4::Vec4;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
 ///A 4 by 4 matrix of `f32`
 pub struct Mat4x4 {
     pub m00: f32,
