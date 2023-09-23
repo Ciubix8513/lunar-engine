@@ -8,7 +8,7 @@ use std::ops::{Add, Mul, Sub};
 use crate::vec4::Vec4;
 
 #[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 ///A 4 by 4 matrix of `f32`
 pub struct Mat4x4 {
     pub m00: f32,
@@ -27,6 +27,29 @@ pub struct Mat4x4 {
     pub m31: f32,
     pub m32: f32,
     pub m33: f32,
+}
+
+impl Default for Mat4x4 {
+    fn default() -> Self {
+        Self {
+            m00: 1.0,
+            m01: Default::default(),
+            m02: Default::default(),
+            m03: Default::default(),
+            m10: Default::default(),
+            m11: 1.0,
+            m12: Default::default(),
+            m13: Default::default(),
+            m20: Default::default(),
+            m21: Default::default(),
+            m22: 1.0,
+            m23: Default::default(),
+            m30: Default::default(),
+            m31: Default::default(),
+            m32: Default::default(),
+            m33: 1.0,
+        }
+    }
 }
 
 pub static IDENTITY: Mat4x4 = Mat4x4 {
