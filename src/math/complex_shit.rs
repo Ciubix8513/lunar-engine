@@ -44,24 +44,18 @@ pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
     let sin_z = rotation.z.sin();
     let cos_z = rotation.z.cos();
 
-    Mat4x4::new(
-        cos_y * cos_z,
-        sin_x * sin_y * cos_z - cos_x * cos_z,
-        cos_x * sin_y * cos_z + sin_x * sin_z,
-        0.0,
-        cos_y * sin_z,
-        sin_x * sin_y * sin_z + cos_x * cos_z,
-        cos_x * sin_y * sin_z - sin_x * cos_z,
-        0.0,
-        -sin_y,
-        sin_x * cos_y,
-        cos_x * cos_y,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-    )
+    Mat4x4 {
+        m00: cos_x * cos_z,
+        m01: sin_x * sin_y * cos_z - cos_x * sin_z,
+        m02: cos_x * sin_y * cos_z + sin_x * sin_z,
+        m10: cos_y * sin_z,
+        m11: sin_x * sin_y * sin_z + cos_x * cos_z,
+        m12: cos_x * sin_y * sin_z - sin_x * cos_z,
+        m20: -sin_y,
+        m21: sin_x * cos_y,
+        m22: cos_x * cos_y,
+        ..Default::default()
+    }
 }
 
 pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
