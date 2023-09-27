@@ -59,7 +59,7 @@ pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
 }
 
 pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
-    scale_matrix(scale) * rotation_matrix_euler(rotation) * translation_matrix(translation)
+    scale_matrix(scale) * translation_matrix(translation) * rotation_matrix_euler(rotation)
 }
 
 pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
