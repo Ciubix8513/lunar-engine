@@ -110,6 +110,26 @@ impl Mat4x4 {
             m33,
         }
     }
+    pub fn transpose(self) -> Self {
+        Mat4x4 {
+            m00: self.m00,
+            m01: self.m10,
+            m02: self.m20,
+            m03: self.m30,
+            m10: self.m01,
+            m11: self.m11,
+            m12: self.m21,
+            m13: self.m31,
+            m20: self.m02,
+            m21: self.m12,
+            m22: self.m22,
+            m23: self.m32,
+            m30: self.m03,
+            m31: self.m13,
+            m32: self.m23,
+            m33: self.m33,
+        }
+    }
     // [1 , 2] . [1] _ [1 * 1 + 2 * 2] _ [ 5]
     // [3 , 4]   [2] - [3 * 1 + 4 * 2] - [11]
     ///Transforms `other` using `self` matrix
@@ -374,6 +394,35 @@ fn test_transformation() {
     let c = a.transform(b);
 
     assert_eq!(c, Vec4::new(30.0, 70.0, 110.0, 150.0));
+}
+
+#[test]
+fn test_mat_mul_1() {
+    let a = Mat4x4::new(
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+    let b = Mat4x4::new(
+        2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+    );
+
+    let o = a.multiply(b);
+    let expected = Mat4x4::new(
+        100.0, 110.0, 120.0, 130.0, 228.0, 254.0, 280.0, 306.0, 356.0, 398.0, 440.0, 482.0, 484.0,
+        542.0, 600.0, 658.0,
+    );
+    assert_eq!(o, expected);
+}
+
+#[test]
+fn test_mat_identity_mul() {
+    let a = Mat4x4::new(
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+    let o = a.multiply(Mat4x4::default());
+    let expected = Mat4x4::new(
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+    assert_eq!(o, expected);
 }
 
 #[test]
