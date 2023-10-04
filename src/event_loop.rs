@@ -2,13 +2,12 @@
 use std::mem::size_of;
 
 use bytemuck::{bytes_of, Pod, Zeroable};
-use log::{error, log};
 use math::{
     complex_shit::{look_at_matrix, perspercive_projection, transform_matrix_euler},
     mat4x4::Mat4x4,
     vec3::Vec3,
 };
-use wgpu::{util::StagingBelt, BufferSize};
+use wgpu::{util::StagingBelt, BufferSize, Features};
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
@@ -59,9 +58,14 @@ impl State {
         ))
         .expect("Failed to get an adapter");
 
-        let (device, queue): (wgpu::Device, wgpu::Queue) =
-            futures::executor::block_on(req_device(&adapter, &wgpu::DeviceDescriptor::default()))
-                .expect("Failed to create a device and a queue");
+        let (device, queue): (wgpu::Device, wgpu::Queue) = futures::executor::block_on(req_device(
+            &adapter,
+            &wgpu::DeviceDescriptor {
+                features: Features::DEPTH_CLIP_CONTROL,
+                ..Default::default()
+            },
+        ))
+        .expect("Failed to create a device and a queue");
 
         let capabilities = surface.get_capabilities(&adapter);
         let format = capabilities
@@ -143,9 +147,9 @@ impl State {
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
-                front_face: wgpu::FrontFace::Cw,
+                front_face: wgpu::FrontFace::Ccw,
                 cull_mode: None, //Some(wgpu::Face::Back),
-                unclipped_depth: false,
+                unclipped_depth: true,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -221,14 +225,14 @@ impl State {
 
     fn render(&mut self) {
         let object_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 0.0, 3.0),
+            &Vec3::new(0.0, 1.0, 3.0),
             &Vec3::new(1.0, 1.0, 1.0),
             &Vec3::default(),
         );
         let camera_matrix = look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(0.0, -1.0, 0.0),
-            Vec3::new(0.0, 0.0, 1.0),
+            Vec3::new(0.0, 0.0, -1.0),
         );
         let screen_matrix = perspercive_projection(
             std::f32::consts::FRAC_PI_3,
@@ -261,9 +265,9 @@ impl State {
                     &self.device,
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
-                    // object: (object_matrix * camera_matrix * screen_matrix).transpose(),
-                    object: object_matrix.transpose(),
-                    camera: camera_matrix.transpose(),
+                    object: (object_matrix * camera_matrix * screen_matrix).transpose(),
+                    // object: object_matrix.transpose(),
+                    camera: object_matrix.transpose(),
                     screen: screen_matrix.transpose(),
                 }));
             self.staging_belt.finish();

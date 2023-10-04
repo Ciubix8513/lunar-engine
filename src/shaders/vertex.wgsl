@@ -10,6 +10,8 @@ struct transformations {
 @vertex
 fn main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
     var o = transformation_matrices.object * position;
-    o.w = 0.0;
+    // o = transformation_matrices.camera * o;
+    // o = transformation_matrices.screen * o;
+    o.w = 1.0;
     return o;
 }
