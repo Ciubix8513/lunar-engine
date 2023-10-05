@@ -28,6 +28,8 @@ pub struct State {
     surface_config: wgpu::SurfaceConfiguration,
     pipeline: Pipeline,
     v_buffer: wgpu::Buffer,
+    i_buffer: wgpu::Buffer,
+    ind_len: u32,
     staging_belt: wgpu::util::StagingBelt,
 }
 
@@ -135,13 +137,25 @@ impl State {
                 module: &vert_shader,
                 entry_point: "main",
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: 12,
+                    array_stride: 32,
                     step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[wgpu::VertexAttribute {
-                        format: wgpu::VertexFormat::Float32x3,
-                        offset: 0,
-                        shader_location: 0,
-                    }],
+                    attributes: &[
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x3,
+                            offset: 0,
+                            shader_location: 0,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 12,
+                            shader_location: 1,
+                        },
+                        wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x3,
+                            offset: 20,
+                            shader_location: 2,
+                        },
+                    ],
                 }],
             },
             primitive: wgpu::PrimitiveState {
@@ -167,14 +181,27 @@ impl State {
             multiview: None,
         });
 
-        let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
+        // l
+        // let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
+        let binding =
+            renderer_lib::import::obj::parse_obj(include_str!("../assets/cube_triangulated.obj"))
+                .unwrap();
+        let data = binding.first().unwrap();
 
         let v_buffer = wgpu::util::DeviceExt::create_buffer_init(
             &device,
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&data),
+                contents: bytemuck::cast_slice(data.vertices.as_slice().clone()),
                 usage: wgpu::BufferUsages::VERTEX,
+            },
+        );
+        let i_buffer = wgpu::util::DeviceExt::create_buffer_init(
+            &device,
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(data.indecies.as_slice().clone()),
+                usage: wgpu::BufferUsages::INDEX,
             },
         );
 
@@ -191,7 +218,9 @@ impl State {
                 buffers: Box::new([uniform]),
             },
             v_buffer,
+            i_buffer,
             staging_belt: StagingBelt::new(1024),
+            ind_len: data.indecies.len() as u32,
         }
     }
 
@@ -294,7 +323,10 @@ impl State {
             render_pass.set_bind_group(0, &self.pipeline.bind_group, &[]);
 
             render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_index_buffer(self.i_buffer.slice(..), wgpu::IndexFormat::Uint32);
+
+            render_pass.draw_indexed(0..self.ind_len, 0, 0..1)
+            // render_pass.draw(0..3, 0..1);
         }
 
         let buffer = encoder.finish();

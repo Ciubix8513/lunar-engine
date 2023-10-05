@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name="math"
-path="./src/math/lib.rs"
+name="renderer_lib"
+path="./src/renderer_lib/lib.rs"
 
 [[bin]]
 name="renderer"

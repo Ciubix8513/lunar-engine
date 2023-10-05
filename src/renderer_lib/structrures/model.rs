@@ -7,6 +7,7 @@ use crate::math::{vec2::Vec2, vec3::Vec3};
 pub struct Vertex {
     pub coords: Vec3,
     pub texture: Vec2,
+    pub normal: Vec3,
 }
 
 #[repr(C)]
