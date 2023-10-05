@@ -1,4 +1,4 @@
-use crate::{mat4x4::Mat4x4, traits::Vector, vec3::Vec3};
+use crate::math::{mat4x4::Mat4x4, traits::Vector, vec3::Vec3};
 
 pub fn perspercive_projection(
     fov: f32,

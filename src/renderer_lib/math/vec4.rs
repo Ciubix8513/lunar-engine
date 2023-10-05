@@ -2,7 +2,7 @@
 
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::traits::Vector;
+use crate::math::traits::Vector;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd)]

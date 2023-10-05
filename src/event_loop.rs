@@ -2,7 +2,7 @@
 use std::mem::size_of;
 
 use bytemuck::{bytes_of, Pod, Zeroable};
-use math::{
+use renderer_lib::math::{
     complex_shit::{look_at_matrix, perspercive_projection, transform_matrix_euler},
     mat4x4::Mat4x4,
     vec3::Vec3,

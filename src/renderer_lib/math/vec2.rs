@@ -1,10 +1,12 @@
 #![allow(clippy::suboptimal_flops)]
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::traits::Vector;
+use bytemuck::{Pod, Zeroable};
+
+use crate::math::traits::Vector;
 
 #[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 2 dimensions
 pub struct Vec2 {
     pub x: f32,

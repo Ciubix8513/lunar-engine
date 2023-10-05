@@ -5,7 +5,7 @@
 )]
 use std::ops::{Add, Mul, Sub};
 
-use crate::vec4::Vec4;
+use crate::math::vec4::Vec4;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
