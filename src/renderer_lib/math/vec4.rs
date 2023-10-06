@@ -1,5 +1,3 @@
-#![allow(clippy::suboptimal_flops)]
-
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::math::traits::Vector;
@@ -27,11 +25,19 @@ impl Vector for Vec4 {
     }
 
     fn square_length(&self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
+        self.w.mul_add(
+            self.w,
+            self.z
+                .mul_add(self.z, self.x.mul_add(self.x, self.y * self.y)),
+        )
     }
 
     fn dot_product(&self, other: &Self) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
+        self.w.mul_add(
+            other.w,
+            self.z
+                .mul_add(other.z, self.x.mul_add(other.x, self.y * other.y)),
+        )
     }
 
     fn normalized(&self) -> Self {
@@ -43,7 +49,7 @@ impl Div<f32> for Vec4 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        Vec4::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
+        Self::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
     }
 }
 impl Mul<f32> for Vec4 {

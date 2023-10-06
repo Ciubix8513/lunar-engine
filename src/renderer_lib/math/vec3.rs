@@ -1,4 +1,3 @@
-// #![allow(clippy::suboptimal_flops)]
 use std::ops::{Add, Div, Mul, Sub};
 
 use bytemuck::{Pod, Zeroable};
@@ -15,14 +14,16 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    #[must_use]
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
+    #[must_use]
     pub fn cross(&self, other: &Self) -> Self {
-        Vec3::new(
-            self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x,
+        Self::new(
+            self.y.mul_add(other.z, -self.z * other.y),
+            self.z.mul_add(other.x, -self.x * other.z),
+            self.x.mul_add(other.y, -self.y * other.x),
         )
     }
 }
@@ -33,11 +34,13 @@ impl Vector for Vec3 {
     }
 
     fn square_length(&self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z
+        self.z
+            .mul_add(self.z, self.x.mul_add(self.x, self.y * self.y))
     }
 
     fn dot_product(&self, other: &Self) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z
+        self.z
+            .mul_add(other.z, self.x.mul_add(other.x, self.y * other.y))
     }
 
     fn normalized(&self) -> Self {

@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation)]
 use crate::{
     math::{vec2::Vec2, vec3::Vec3},
     structrures::model::{Mesh, Vertex},
@@ -57,11 +58,11 @@ fn test_get_indecies() {
 }
 #[test]
 fn test_loading_single() {
-    parse_obj(include_str!("../../../assets/cube.obj")).unwrap();
+    parse(include_str!("../../../assets/cube_triangulated.obj")).unwrap();
 }
 
 ///Parses the given string as a wavefront obj file
-pub fn parse_obj(file: &str) -> Option<Vec<Mesh>> {
+pub fn parse(file: &str) -> Option<Vec<Mesh>> {
     let mut meshes = Vec::new();
     let mut positions = Vec::new();
     let mut normals = Vec::new();
@@ -90,28 +91,28 @@ pub fn parse_obj(file: &str) -> Option<Vec<Mesh>> {
             normals = Vec::new();
             uvs = Vec::new();
         }
-        if l.starts_with("v ") {
+        if let Some(stripped) = l.strip_prefix("v ") {
             //read the position
-            positions.push(read_vec3(&l[2..])?);
+            positions.push(read_vec3(stripped)?);
         }
-        if l.starts_with("vt ") {
+        if let Some(stripped) = l.strip_prefix("vt ") {
             //read the position
-            uvs.push(read_vec2(&l[3..])?);
+            uvs.push(read_vec2(stripped)?);
         }
-        if l.starts_with("vn ") {
+        if let Some(stripped) = l.strip_prefix("vn ") {
             //read the position
-            normals.push(read_vec3(&l[3..])?);
+            normals.push(read_vec3(stripped)?);
         }
-        if l.starts_with("f ") {
+        if let Some(stripped) = l.strip_prefix("f ") {
             let component_indecies: Vec<Option<(u32, u32, u32)>> =
-                l[2..].split(' ').map(get_indecies).collect();
+                stripped.split(' ').map(get_indecies).collect();
             for i in &component_indecies {
                 let i = (*i)?;
 
                 let mut found = false;
 
-                for j in 0..vertices_indecies.len() {
-                    if vertices_indecies[j] == i {
+                for (j, item) in vertices_indecies.iter().enumerate() {
+                    if item == &i {
                         //If found an existing vertex, push it's index
                         indecies.push(j as u32);
                         found = true;
@@ -146,5 +147,5 @@ pub fn parse_obj(file: &str) -> Option<Vec<Mesh>> {
         );
     }
 
-    return Some(meshes);
+    Some(meshes)
 }

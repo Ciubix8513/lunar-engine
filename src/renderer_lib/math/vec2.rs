@@ -1,4 +1,3 @@
-#![allow(clippy::suboptimal_flops)]
 use std::ops::{Add, Div, Mul, Sub};
 
 use bytemuck::{Pod, Zeroable};
@@ -25,10 +24,10 @@ impl Vector for Vec2 {
         self.square_length().sqrt()
     }
     fn square_length(&self) -> f32 {
-        self.x * self.x + self.y * self.y
+        self.x.mul_add(self.x, self.y * self.y)
     }
     fn dot_product(&self, other: &Self) -> f32 {
-        self.x * other.x + self.y * other.y
+        self.x.mul_add(other.x, self.y * other.y)
     }
     fn normalized(&self) -> Self {
         *self / self.length()
@@ -56,7 +55,7 @@ impl Mul<f32> for Vec2 {
     }
 }
 impl Sub<Self> for Vec2 {
-    type Output = Vec2;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self::new(self.x - rhs.x, self.y - rhs.y)

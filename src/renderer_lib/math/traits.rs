@@ -6,5 +6,6 @@ pub trait Vector {
     ///Returns dot product between the `self` vector and the `other` vector
     fn dot_product(&self, other: &Self) -> f32;
 
+    #[must_use]
     fn normalized(&self) -> Self;
 }

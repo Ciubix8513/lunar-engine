@@ -1,8 +1,4 @@
-#![allow(
-    clippy::suboptimal_flops,
-    clippy::suspicious_operation_groupings,
-    clippy::too_many_arguments
-)]
+#![allow(clippy::too_many_arguments, dead_code)]
 use std::ops::{Add, Mul, Sub};
 
 use crate::math::vec4::Vec4;
@@ -110,8 +106,9 @@ impl Mat4x4 {
             m33,
         }
     }
-    pub fn transpose(self) -> Self {
-        Mat4x4 {
+    #[must_use]
+    pub const fn transpose(self) -> Self {
+        Self {
             m00: self.m00,
             m01: self.m10,
             m02: self.m20,
@@ -137,10 +134,26 @@ impl Mat4x4 {
     #[must_use]
     pub fn transform(&self, other: Vec4) -> Vec4 {
         Vec4 {
-            x: self.m00 * other.x + self.m01 * other.y + self.m02 * other.z + self.m03 * other.w,
-            y: self.m10 * other.x + self.m11 * other.y + self.m12 * other.z + self.m13 * other.w,
-            z: self.m20 * other.x + self.m21 * other.y + self.m22 * other.z + self.m23 * other.w,
-            w: self.m30 * other.x + self.m31 * other.y + self.m32 * other.z + self.m33 * other.w,
+            x: self.m03.mul_add(
+                other.w,
+                self.m02
+                    .mul_add(other.z, self.m00.mul_add(other.x, self.m01 * other.y)),
+            ),
+            y: self.m13.mul_add(
+                other.w,
+                self.m12
+                    .mul_add(other.z, self.m10.mul_add(other.x, self.m11 * other.y)),
+            ),
+            z: self.m23.mul_add(
+                other.w,
+                self.m22
+                    .mul_add(other.z, self.m20.mul_add(other.x, self.m21 * other.y)),
+            ),
+            w: self.m33.mul_add(
+                other.w,
+                self.m32
+                    .mul_add(other.z, self.m30.mul_add(other.x, self.m31 * other.y)),
+            ),
         }
     }
 
@@ -150,100 +163,129 @@ impl Mat4x4 {
     #[must_use]
     pub fn multiply(&self, other: Self) -> Self {
         Self {
-            m00: self.m00 * other.m00
-                + self.m01 * other.m10
-                + self.m02 * other.m20
-                + self.m03 * other.m30,
-            m01: self.m00 * other.m01
-                + self.m01 * other.m11
-                + self.m02 * other.m21
-                + self.m03 * other.m31,
-            m02: self.m00 * other.m02
-                + self.m01 * other.m12
-                + self.m02 * other.m22
-                + self.m03 * other.m32,
-            m03: self.m00 * other.m03
-                + self.m01 * other.m13
-                + self.m02 * other.m23
-                + self.m03 * other.m33,
-            m10: self.m10 * other.m00
-                + self.m11 * other.m10
-                + self.m12 * other.m20
-                + self.m13 * other.m30,
-            m11: self.m10 * other.m01
-                + self.m11 * other.m11
-                + self.m12 * other.m21
-                + self.m13 * other.m31,
-            m12: self.m10 * other.m02
-                + self.m11 * other.m12
-                + self.m12 * other.m22
-                + self.m13 * other.m32,
-            m13: self.m10 * other.m03
-                + self.m11 * other.m13
-                + self.m12 * other.m23
-                + self.m13 * other.m33,
-            m20: self.m20 * other.m00
-                + self.m21 * other.m10
-                + self.m22 * other.m20
-                + self.m23 * other.m30,
-            m21: self.m20 * other.m01
-                + self.m21 * other.m11
-                + self.m22 * other.m21
-                + self.m23 * other.m31,
-            m22: self.m20 * other.m02
-                + self.m21 * other.m12
-                + self.m22 * other.m22
-                + self.m23 * other.m32,
-            m23: self.m20 * other.m03
-                + self.m21 * other.m13
-                + self.m22 * other.m23
-                + self.m23 * other.m33,
-            m30: self.m30 * other.m00
-                + self.m31 * other.m10
-                + self.m32 * other.m20
-                + self.m33 * other.m30,
-            m31: self.m30 * other.m01
-                + self.m31 * other.m11
-                + self.m32 * other.m21
-                + self.m33 * other.m31,
-            m32: self.m30 * other.m02
-                + self.m31 * other.m12
-                + self.m32 * other.m22
-                + self.m33 * other.m32,
-            m33: self.m30 * other.m03
-                + self.m31 * other.m13
-                + self.m32 * other.m23
-                + self.m33 * other.m33,
+            m00: self.m03.mul_add(
+                other.m30,
+                self.m02
+                    .mul_add(other.m20, self.m00.mul_add(other.m00, self.m01 * other.m10)),
+            ),
+            m01: self.m03.mul_add(
+                other.m31,
+                self.m02
+                    .mul_add(other.m21, self.m00.mul_add(other.m01, self.m01 * other.m11)),
+            ),
+            m02: self.m03.mul_add(
+                other.m32,
+                self.m02
+                    .mul_add(other.m22, self.m00.mul_add(other.m02, self.m01 * other.m12)),
+            ),
+            m03: self.m03.mul_add(
+                other.m33,
+                self.m02
+                    .mul_add(other.m23, self.m00.mul_add(other.m03, self.m01 * other.m13)),
+            ),
+            m10: self.m13.mul_add(
+                other.m30,
+                self.m12
+                    .mul_add(other.m20, self.m10.mul_add(other.m00, self.m11 * other.m10)),
+            ),
+            m11: self.m13.mul_add(
+                other.m31,
+                self.m12
+                    .mul_add(other.m21, self.m10.mul_add(other.m01, self.m11 * other.m11)),
+            ),
+            m12: self.m13.mul_add(
+                other.m32,
+                self.m12
+                    .mul_add(other.m22, self.m10.mul_add(other.m02, self.m11 * other.m12)),
+            ),
+            m13: self.m13.mul_add(
+                other.m33,
+                self.m12
+                    .mul_add(other.m23, self.m10.mul_add(other.m03, self.m11 * other.m13)),
+            ),
+            m20: self.m23.mul_add(
+                other.m30,
+                self.m22
+                    .mul_add(other.m20, self.m20.mul_add(other.m00, self.m21 * other.m10)),
+            ),
+            m21: self.m23.mul_add(
+                other.m31,
+                self.m22
+                    .mul_add(other.m21, self.m20.mul_add(other.m01, self.m21 * other.m11)),
+            ),
+            m22: self.m23.mul_add(
+                other.m32,
+                self.m22
+                    .mul_add(other.m22, self.m20.mul_add(other.m02, self.m21 * other.m12)),
+            ),
+            m23: self.m23.mul_add(
+                other.m33,
+                self.m22
+                    .mul_add(other.m23, self.m20.mul_add(other.m03, self.m21 * other.m13)),
+            ),
+            m30: self.m33.mul_add(
+                other.m30,
+                self.m32
+                    .mul_add(other.m20, self.m30.mul_add(other.m00, self.m31 * other.m10)),
+            ),
+            m31: self.m33.mul_add(
+                other.m31,
+                self.m32
+                    .mul_add(other.m21, self.m30.mul_add(other.m01, self.m31 * other.m11)),
+            ),
+            m32: self.m33.mul_add(
+                other.m32,
+                self.m32
+                    .mul_add(other.m22, self.m30.mul_add(other.m02, self.m31 * other.m12)),
+            ),
+            m33: self.m33.mul_add(
+                other.m33,
+                self.m32
+                    .mul_add(other.m23, self.m30.mul_add(other.m03, self.m31 * other.m13)),
+            ),
         }
     }
 
     #[must_use]
     ///Returns the determinant of `self`
     fn determinant(&self) -> f32 {
-        self.m03 * self.m12 * self.m21 * self.m30
-            - self.m02 * self.m13 * self.m21 * self.m30
-            - self.m03 * self.m11 * self.m22 * self.m30
-            + self.m01 * self.m13 * self.m22 * self.m30
-            + self.m02 * self.m11 * self.m23 * self.m30
-            - self.m01 * self.m12 * self.m23 * self.m30
-            - self.m03 * self.m12 * self.m20 * self.m31
-            + self.m02 * self.m13 * self.m20 * self.m31
-            + self.m03 * self.m10 * self.m22 * self.m31
-            - self.m00 * self.m13 * self.m22 * self.m31
-            - self.m02 * self.m10 * self.m23 * self.m31
-            + self.m00 * self.m12 * self.m23 * self.m31
-            + self.m03 * self.m11 * self.m20 * self.m32
-            - self.m01 * self.m13 * self.m20 * self.m32
-            - self.m03 * self.m10 * self.m21 * self.m32
-            + self.m00 * self.m13 * self.m21 * self.m32
-            + self.m01 * self.m10 * self.m23 * self.m32
-            - self.m00 * self.m11 * self.m23 * self.m32
-            - self.m02 * self.m11 * self.m20 * self.m33
-            + self.m01 * self.m12 * self.m20 * self.m33
-            + self.m02 * self.m10 * self.m21 * self.m33
-            - self.m00 * self.m12 * self.m21 * self.m33
-            - self.m01 * self.m10 * self.m22 * self.m33
-            + self.m00 * self.m11 * self.m22 * self.m33
+        (self.m00 * self.m11 * self.m22).mul_add(self.m33, (self.m01 * self.m10 * self.m22).mul_add(-self.m33, (self.m00 * self.m12 * self.m21).mul_add(-self.m33, (self.m02 * self.m10 * self.m21).mul_add(self.m33, (self.m01 * self.m12 * self.m20).mul_add(self.m33, (self.m02 * self.m11 * self.m20).mul_add(-self.m33, (self.m00 * self.m11 * self.m23).mul_add(-self.m32, (self.m01 * self.m10 * self.m23).mul_add(self.m32, (self.m00 * self.m13 * self.m21).mul_add(self.m32, (self.m03 * self.m10 * self.m21).mul_add(-self.m32, (self.m01 * self.m13 * self.m20).mul_add(-self.m32, (self.m03 * self.m11 * self.m20).mul_add(
+            self.m32,
+            (self.m00 * self.m12 * self.m23).mul_add(
+                self.m31,
+                (self.m02 * self.m10 * self.m23).mul_add(
+                    -self.m31,
+                    (self.m00 * self.m13 * self.m22).mul_add(
+                        -self.m31,
+                        (self.m03 * self.m10 * self.m22).mul_add(
+                            self.m31,
+                            (self.m02 * self.m13 * self.m20).mul_add(
+                                self.m31,
+                                (self.m03 * self.m12 * self.m20).mul_add(
+                                    -self.m31,
+                                    (self.m01 * self.m12 * self.m23).mul_add(
+                                        -self.m30,
+                                        (self.m02 * self.m11 * self.m23).mul_add(
+                                            self.m30,
+                                            (self.m01 * self.m13 * self.m22).mul_add(
+                                                self.m30,
+                                                (self.m03 * self.m11 * self.m22).mul_add(
+                                                    -self.m30,
+                                                    (self.m03 * self.m12 * self.m21).mul_add(
+                                                        self.m30,
+                                                        -self.m02 * self.m13 * self.m21 * self.m30,
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ))))))))))))
     }
 
     fn trace(&self) -> f32 {
@@ -262,8 +304,12 @@ impl Mat4x4 {
         let trace = self.trace();
 
         let a = IDENTITY
-            * (0.166667 * (trace.powi(3) - 3.0 * trace * squared.trace() + 2.0 * cubed.trace()));
-        let b = *self * (0.5 * (trace.powi(2) - squared.trace()));
+            * (0.166_667
+                * 2.0f32.mul_add(
+                    cubed.trace(),
+                    (3.0 * trace).mul_add(-squared.trace(), trace.powi(3)),
+                ));
+        let b = *self * (0.5 * trace.mul_add(trace, -squared.trace()));
         let c = squared * trace;
 
         Some((a - b + c - cubed) * (1.0 / det))
@@ -295,11 +341,11 @@ impl Mul<f32> for Mat4x4 {
     }
 }
 
-impl Add<Mat4x4> for Mat4x4 {
+impl Add<Self> for Mat4x4 {
     type Output = Self;
 
-    fn add(self, rhs: Mat4x4) -> Self::Output {
-        Mat4x4::new(
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
             self.m00 + rhs.m00,
             self.m01 + rhs.m01,
             self.m02 + rhs.m02,
@@ -320,11 +366,11 @@ impl Add<Mat4x4> for Mat4x4 {
     }
 }
 
-impl Sub<Mat4x4> for Mat4x4 {
+impl Sub<Self> for Mat4x4 {
     type Output = Self;
 
-    fn sub(self, rhs: Mat4x4) -> Self::Output {
-        Mat4x4::new(
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
             self.m00 - rhs.m00,
             self.m01 - rhs.m01,
             self.m02 - rhs.m02,

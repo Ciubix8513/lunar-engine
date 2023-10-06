@@ -1,4 +1,9 @@
-#![allow(dead_code)]
+#![allow(
+    dead_code,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::too_many_lines
+)]
 use std::mem::size_of;
 
 use bytemuck::{bytes_of, Pod, Zeroable};
@@ -184,7 +189,7 @@ impl State {
         // l
         // let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
         let binding =
-            renderer_lib::import::obj::parse_obj(include_str!("../assets/cube_triangulated.obj"))
+            renderer_lib::import::obj::parse(include_str!("../assets/cube_triangulated.obj"))
                 .unwrap();
         let data = binding.first().unwrap();
 
@@ -229,7 +234,7 @@ impl State {
             Event::RedrawEventsCleared => self.window.request_redraw(),
             Event::RedrawRequested(_) => {
                 if !self.closed {
-                    self.render()
+                    self.render();
                 }
             }
             Event::WindowEvent {
@@ -325,8 +330,7 @@ impl State {
             render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
             render_pass.set_index_buffer(self.i_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
-            render_pass.draw_indexed(0..self.ind_len, 0, 0..1)
-            // render_pass.draw(0..3, 0..1);
+            render_pass.draw_indexed(0..self.ind_len, 0, 0..1);
         }
 
         let buffer = encoder.finish();
