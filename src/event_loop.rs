@@ -4,15 +4,14 @@
     clippy::cast_possible_truncation,
     clippy::too_many_lines
 )]
-use std::mem::size_of;
-
 use bytemuck::{bytes_of, Pod, Zeroable};
 use renderer_lib::math::{
     complex_shit::{look_at_matrix, perspercive_projection, transform_matrix_euler},
     mat4x4::Mat4x4,
     vec3::Vec3,
 };
-use wgpu::{util::StagingBelt, BufferSize, Features};
+use std::mem::size_of;
+use wgpu::{util::StagingBelt, BufferSize, Extent3d, Features};
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
@@ -20,7 +19,7 @@ use winit::{
 };
 pub struct Pipeline {
     pipeline: wgpu::RenderPipeline,
-    bind_group: wgpu::BindGroup,
+    bind_groups: Vec<wgpu::BindGroup>,
     buffers: Box<[wgpu::Buffer]>,
 }
 
@@ -95,19 +94,46 @@ impl State {
         let vert_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/vertex.wgsl"));
         let frag_shader = device.create_shader_module(wgpu::include_wgsl!("./shaders/color.wgsl"));
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: None,
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
+        log::info!("Loaded shaders");
+
+        let bind_group_layout_v =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Vertex binding"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let bind_group_layout_f =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fragment binding"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+        log::info!("Created bind group layouts");
 
         let uniform = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
@@ -116,9 +142,57 @@ impl State {
             mapped_at_creation: false,
         });
 
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let texture_data =
+            renderer_lib::import::bmp::parse(include_bytes!("../assets/blahaj1.bmp")).unwrap();
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
-            layout: &bind_group_layout,
+            size: Extent3d {
+                width: texture_data.width,
+                height: texture_data.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
+        });
+        queue.write_texture(
+            texture.as_image_copy(),
+            bytemuck::cast_slice(&texture_data.data[..]),
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(texture_data.width * 4),
+                rows_per_image: None,
+            },
+            Extent3d {
+                width: texture_data.width,
+                height: texture_data.height,
+                depth_or_array_layers: 1,
+            },
+        );
+        log::info!("Wrote to texture");
+
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: None,
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::Repeat,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            lod_min_clamp: 0.0,
+            lod_max_clamp: 1.0,
+            compare: None,
+            anisotropy_clamp: 1,
+            border_color: None,
+        });
+
+        let bind_group_v = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Vertex bind group"),
+            layout: &bind_group_layout_v,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
@@ -128,10 +202,37 @@ impl State {
                 }),
             }],
         });
+        let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Fragment bind group"),
+            layout: &bind_group_layout_f,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture.create_view(
+                        &wgpu::TextureViewDescriptor {
+                            label: None,
+                            format: Some(wgpu::TextureFormat::Rgba8Unorm),
+                            dimension: None,
+                            aspect: wgpu::TextureAspect::All,
+                            base_mip_level: 0,
+                            mip_level_count: Some(1),
+                            base_array_layer: 0,
+                            array_layer_count: None,
+                        },
+                    )),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
+        log::info!("created bind group");
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[&bind_group_layout],
+            bind_group_layouts: &[&bind_group_layout_v, &bind_group_layout_f],
             push_constant_ranges: &[],
         });
 
@@ -219,7 +320,7 @@ impl State {
             surface_config,
             pipeline: Pipeline {
                 pipeline,
-                bind_group,
+                bind_groups: vec![bind_group_v, bind_group_f],
                 buffers: Box::new([uniform]),
             },
             v_buffer,
@@ -259,13 +360,13 @@ impl State {
 
     fn render(&mut self) {
         let object_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 1.0, 3.0),
-            &Vec3::new(1.0, 1.0, 1.0),
+            &Vec3::new(0.0, 0.0, -3.0),
+            &Vec3::new(0.5, 0.5, 0.5),
             &Vec3::default(),
         );
         let camera_matrix = look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
-            Vec3::new(0.0, -1.0, 0.0),
+            Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
         let screen_matrix = perspercive_projection(
@@ -325,8 +426,9 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.pipeline.pipeline);
-            render_pass.set_bind_group(0, &self.pipeline.bind_group, &[]);
-
+            for (index, g) in self.pipeline.bind_groups.iter().enumerate() {
+                render_pass.set_bind_group(index as u32, g, &[]);
+            }
             render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
             render_pass.set_index_buffer(self.i_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
