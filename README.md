@@ -8,8 +8,9 @@ My current streaming project, all code is writen live on my [twitch streams](htt
 - [x] Basic colored rendering
 - [x] Wavefront obj loading
 - [x] .bmp loading
-- [ ] textured rendering
+- [x] textured rendering
 #### Stage 2: Vtube overlay preparations   
+- [ ] Rendering abstraction
 - [ ] Complex scenes
 - [ ] Lit rendering 
 - [ ] gltf loading
