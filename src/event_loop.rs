@@ -23,7 +23,12 @@ pub struct Pipeline {
     buffers: Box<[wgpu::Buffer]>,
 }
 
-pub struct State {
+struct DepthStencil<'a> {
+    texture: wgpu::Texture,
+    descriptor: wgpu::TextureDescriptor<'a>,
+}
+
+pub struct State<'a> {
     closed: bool,
     window: Window,
     device: wgpu::Device,
@@ -35,8 +40,8 @@ pub struct State {
     i_buffer: wgpu::Buffer,
     ind_len: u32,
     staging_belt: wgpu::util::StagingBelt,
+    depth_stencil: DepthStencil<'a>,
 }
-
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy)]
 pub struct TransformationMatrices {
@@ -45,7 +50,7 @@ pub struct TransformationMatrices {
     screen: Mat4x4,
 }
 
-impl State {
+impl<'a> State<'a> {
     pub fn new(event_loop: &EventLoop<()>) -> Self {
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
@@ -273,7 +278,13 @@ impl State {
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module: &frag_shader,
@@ -290,15 +301,14 @@ impl State {
         // l
         // let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
         let binding =
-            renderer_lib::import::obj::parse(include_str!("../assets/cube_triangulated.obj"))
-                .unwrap();
+            renderer_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
         let data = binding.first().unwrap();
 
         let v_buffer = wgpu::util::DeviceExt::create_buffer_init(
             &device,
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(data.vertices.as_slice().clone()),
+                contents: bytemuck::cast_slice(data.vertices.as_slice()),
                 usage: wgpu::BufferUsages::VERTEX,
             },
         );
@@ -306,10 +316,28 @@ impl State {
             &device,
             &wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(data.indecies.as_slice().clone()),
+                contents: bytemuck::cast_slice(data.indecies.as_slice()),
                 usage: wgpu::BufferUsages::INDEX,
             },
         );
+
+        let descriptor = wgpu::TextureDescriptor {
+            label: Some("Depth stencil"),
+            size: Extent3d {
+                width: size.width as u32,
+                height: size.height as u32,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[wgpu::TextureFormat::Depth32Float],
+        };
+        let depth_stencil = device.create_texture(&descriptor);
 
         Self {
             closed: false,
@@ -327,6 +355,10 @@ impl State {
             i_buffer,
             staging_belt: StagingBelt::new(1024),
             ind_len: data.indecies.len() as u32,
+            depth_stencil: DepthStencil {
+                texture: depth_stencil,
+                descriptor,
+            },
         }
     }
 
@@ -349,7 +381,12 @@ impl State {
                 winit::event::WindowEvent::Resized(size) => {
                     self.surface_config.width = size.width;
                     self.surface_config.height = size.height;
+                    self.depth_stencil.descriptor.size.width = size.width;
+                    self.depth_stencil.descriptor.size.height = size.height;
+
                     self.surface.configure(&self.device, &self.surface_config);
+                    self.depth_stencil.texture =
+                        self.device.create_texture(&self.depth_stencil.descriptor);
                 }
                 _ => {}
             },
@@ -366,7 +403,7 @@ impl State {
         );
         let camera_matrix = look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
-            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, -1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
         let screen_matrix = perspercive_projection(
@@ -384,6 +421,11 @@ impl State {
         });
         // .expect("Failed to get surface texture");
         let frame_view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let depth_view = self
+            .depth_stencil
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -422,7 +464,14 @@ impl State {
                         store: true,
                     },
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: true,
+                    }),
+                    stencil_ops: None,
+                }),
             });
 
             render_pass.set_pipeline(&self.pipeline.pipeline);
