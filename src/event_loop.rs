@@ -324,8 +324,8 @@ impl<'a> State<'a> {
         let descriptor = wgpu::TextureDescriptor {
             label: Some("Depth stencil"),
             size: Extent3d {
-                width: size.width as u32,
-                height: size.height as u32,
+                width: size.width,
+                height: size.height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,

@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation)]
 use crate::structrures::image::{Image, Pixel};
 
 //Packed may cause issues with incorrect signature
@@ -29,6 +30,9 @@ struct InfoHeader {
 
 const HEADER_SIZE: usize = 54;
 
+///Parses a byte array as a bmp image
+///# Errors
+///fails if the file isn't 32 bit or has multiple color planes
 pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
     if data.len() <= HEADER_SIZE {
         return Err("Invalid data, header too small".into());
@@ -64,10 +68,10 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
     let mut out = Vec::new();
 
     for i in data[header.data_offset as usize..].chunks(4) {
-        out.push(*bytemuck::from_bytes::<Pixel>(i))
+        out.push(*bytemuck::from_bytes::<Pixel>(i));
     }
 
-    for i in out.iter_mut() {
+    for i in &mut out {
         *i = Pixel {
             r: i.b,
             g: i.g,
@@ -85,5 +89,5 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
 
 #[test]
 fn test_image_loading() {
-    parse(include_bytes!("../../../assets/test.bmp")).unwrap();
+    parse(include_bytes!("../../../assets/blahaj1.bmp")).unwrap();
 }
