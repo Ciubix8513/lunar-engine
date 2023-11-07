@@ -1,9 +1,13 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+use bytemuck::{Pod, Zeroable};
+
 use crate::math::traits::Vector;
 
+use super::vec3::Vec3;
+
 #[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 4 dimensions
 pub struct Vec4 {
     pub x: f32,
@@ -81,6 +85,30 @@ impl Add<Self> for Vec4 {
             self.z + rhs.z,
             self.w + rhs.w,
         )
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Vec4 {
+    #[inline(always)]
+    fn from(value: (f32, f32, f32, f32)) -> Self {
+        Self {
+            x: value.0,
+            y: value.1,
+            z: value.2,
+            w: value.3,
+        }
+    }
+}
+
+impl From<(Vec3, f32)> for Vec4 {
+    #[inline(always)]
+    fn from(value: (Vec3, f32)) -> Self {
+        Self {
+            x: value.0.x,
+            y: value.0.y,
+            z: value.0.z,
+            w: value.1,
+        }
     }
 }
 

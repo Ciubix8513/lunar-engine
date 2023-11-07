@@ -126,7 +126,7 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
                 //Create the new vertex
                 vertices_indecies.push(i);
                 vertices.push(Vertex {
-                    coords: positions[(i.0 - 1) as usize],
+                    coords: (positions[(i.0 - 1) as usize], 1.0).into(),
                     texture: uvs[(i.1 - 1) as usize],
                     normal: normals[(i.2 - 1) as usize],
                 });

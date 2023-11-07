@@ -8,9 +8,11 @@ pub fn perspercive_projection(
     screen_far: f32,
 ) -> Mat4x4 {
     let (sin_fov, cos_fov) = f32::sin_cos(0.5 * fov);
+    // 1/ tan(FOV / 2 ) = cot(FOV / 2)
     let h = cos_fov / sin_fov;
     let w = h / screen_aspect;
     let r = screen_far / (screen_near - screen_far);
+
     Mat4x4::new(
         w,
         0.0,
@@ -93,7 +95,7 @@ pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
 
 #[must_use]
 pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
-    translation_matrix(translation) * scale_matrix(scale) * rotation_matrix_euler(rotation)
+    translation_matrix(translation) * rotation_matrix_euler(rotation) * scale_matrix(scale)
 }
 
 #[must_use]

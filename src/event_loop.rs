@@ -249,22 +249,22 @@ impl<'a> State<'a> {
                 module: &vert_shader,
                 entry_point: "main",
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: 32,
+                    array_stride: 36,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
                         wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x3,
+                            format: wgpu::VertexFormat::Float32x4,
                             offset: 0,
                             shader_location: 0,
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x2,
-                            offset: 12,
+                            offset: 16,
                             shader_location: 1,
                         },
                         wgpu::VertexAttribute {
                             format: wgpu::VertexFormat::Float32x3,
-                            offset: 20,
+                            offset: 24,
                             shader_location: 2,
                         },
                     ],
@@ -275,7 +275,7 @@ impl<'a> State<'a> {
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: Some(wgpu::Face::Back),
-                unclipped_depth: true,
+                unclipped_depth: false,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
@@ -308,7 +308,7 @@ impl<'a> State<'a> {
         let v_buffer = wgpu::util::DeviceExt::create_buffer_init(
             &device,
             &wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("Vertex buffer"),
                 contents: bytemuck::cast_slice(data.vertices.as_slice()),
                 usage: wgpu::BufferUsages::VERTEX,
             },
@@ -316,7 +316,7 @@ impl<'a> State<'a> {
         let i_buffer = wgpu::util::DeviceExt::create_buffer_init(
             &device,
             &wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("Index buffer"),
                 contents: bytemuck::cast_slice(data.indecies.as_slice()),
                 usage: wgpu::BufferUsages::INDEX,
             },
@@ -398,10 +398,11 @@ impl<'a> State<'a> {
     }
 
     fn render(&mut self) {
-        let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
+        // let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
+        let rotation = &Vec3::default();
         let object_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 0.0, -5.0),
-            &Vec3::new(0.5, 0.5, 0.5),
+            &Vec3::new(0.0, 0.0, 5.0),
+            &Vec3::new(0.1, 0.1, 0.1),
             rotation,
         );
         log::info!("Rotation = {rotation:?}");
@@ -413,7 +414,7 @@ impl<'a> State<'a> {
         let screen_matrix = perspercive_projection(
             std::f32::consts::FRAC_PI_3,
             self.surface_config.width as f32 / self.surface_config.height as f32,
-            0.001,
+            0.1,
             10000.0,
         );
 
@@ -446,9 +447,9 @@ impl<'a> State<'a> {
                     &self.device,
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
-                    object: object_matrix.transpose(),
-                    camera: camera_matrix.transpose(),
-                    screen: screen_matrix.transpose(),
+                    object: object_matrix,
+                    camera: camera_matrix,
+                    screen: screen_matrix,
                 }));
             self.staging_belt.finish();
 

@@ -1,11 +1,11 @@
 use bytemuck::{Pod, Zeroable};
 
-use crate::math::{vec2::Vec2, vec3::Vec3};
+use crate::math::{vec2::Vec2, vec3::Vec3, vec4::Vec4};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Pod, Zeroable)]
 pub struct Vertex {
-    pub coords: Vec3,
+    pub coords: Vec4,
     pub texture: Vec2,
     pub normal: Vec3,
 }

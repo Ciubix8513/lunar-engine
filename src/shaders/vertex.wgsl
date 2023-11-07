@@ -1,7 +1,7 @@
 struct transformations {
-  object: mat4x4<f32>,
-  camera: mat4x4<f32>,
-  screen: mat4x4<f32>
+  world: mat4x4<f32>,
+  view: mat4x4<f32>,
+  projection: mat4x4<f32>
 }
 
 struct ColorOutput {
@@ -12,11 +12,14 @@ struct ColorOutput {
 @group(0) @binding(0) var<uniform> transformation_matrices : transformations;
 
 @vertex
-fn main(@location(0) position: vec3<f32>, @location(1) uvs: vec2<f32>, @location(2) normal: vec3<f32>) -> ColorOutput {
-    var o = transformation_matrices.object * vec4<f32>(position, 1.0);
-    o = transformation_matrices.camera * o;
-    o = transformation_matrices.screen * o;
-    o.w = 1.0;
+fn main(@location(0) position: vec4<f32>, @location(1) uvs: vec2<f32>, @location(2) normal: vec3<f32>) -> ColorOutput {
+    var o = transformation_matrices.world * position;
+    o = transformation_matrices.view * o;
+    o = transformation_matrices.projection * o;
+    // o.w = 1.0;
+
+    // var o = (transformation_matrices.world * transformation_matrices.projection) * position;
+
     var res: ColorOutput;
     res.position = o;
     res.tex_coord = uvs;
