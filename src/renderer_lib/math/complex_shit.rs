@@ -70,13 +70,15 @@ pub fn translation_matrix(translation: &Vec3) -> Mat4x4 {
 pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
     let sin_x = rotation.x.sin();
     let cos_x = rotation.x.cos();
+
     let sin_y = rotation.y.sin();
     let cos_y = rotation.y.cos();
+
     let sin_z = rotation.z.sin();
     let cos_z = rotation.z.cos();
 
     Mat4x4 {
-        m00: cos_x * cos_z,
+        m00: cos_y * cos_z,
         m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z),
         m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z),
         m10: cos_y * sin_z,
@@ -91,30 +93,46 @@ pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
 
 #[must_use]
 pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
-    scale_matrix(scale) * translation_matrix(translation) * rotation_matrix_euler(rotation)
+    translation_matrix(translation) * scale_matrix(scale) * rotation_matrix_euler(rotation)
 }
 
 #[must_use]
 pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
     let z_axis = (camera_forward - camera_position).normalized();
-    let x_axis = (z_axis.cross(&camera_up)).normalized();
-    let y_axis = z_axis.cross(&x_axis);
-    Mat4x4::new(
-        x_axis.x,
-        y_axis.x,
-        z_axis.x,
-        0.0,
-        x_axis.y,
-        y_axis.y,
-        z_axis.y,
-        0.0,
-        x_axis.z,
-        y_axis.z,
-        z_axis.z,
-        0.0,
-        -(x_axis.dot_product(&camera_position)),
-        -(y_axis.dot_product(&camera_position)),
-        -(z_axis.dot_product(&camera_position)),
-        1.0,
-    )
+    let x_axis = (&camera_up).normalized();
+    let y_axis = z_axis.cross(&x_axis).normalized();
+    Mat4x4 {
+        m00: y_axis.x,
+        m10: y_axis.y,
+        m20: y_axis.z,
+        m01: x_axis.x,
+        m11: x_axis.y,
+        m21: x_axis.z,
+        m12: -z_axis.y,
+        m02: -z_axis.x,
+        m22: -z_axis.z,
+        m30: -(y_axis.dot_product(&camera_position)),
+        m31: -(x_axis.dot_product(&camera_position)),
+        m32: (z_axis.dot_product(&camera_position)),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn test_rotation_matrix() {
+    let input = Vec3::new(0.0, 0.0, 0.0);
+    let mat = rotation_matrix_euler(&input);
+    let expected = Mat4x4::default();
+
+    assert_eq!(mat, expected);
+
+    let input = Vec3::new(0.0, 0.0, std::f32::consts::PI);
+    let mat = rotation_matrix_euler(&input);
+    let expected = Mat4x4 {
+        m00: -1.0,
+        m22: -1.0,
+        ..Default::default()
+    };
+
+    assert_eq!(mat, expected);
 }

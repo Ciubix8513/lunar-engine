@@ -14,8 +14,8 @@ struct ColorOutput {
 @vertex
 fn main(@location(0) position: vec3<f32>, @location(1) uvs: vec2<f32>, @location(2) normal: vec3<f32>) -> ColorOutput {
     var o = transformation_matrices.object * vec4<f32>(position, 1.0);
-    // o = transformation_matrices.camera * o;
-    // o = transformation_matrices.screen * o;
+    o = transformation_matrices.camera * o;
+    o = transformation_matrices.screen * o;
     o.w = 1.0;
     var res: ColorOutput;
     res.position = o;

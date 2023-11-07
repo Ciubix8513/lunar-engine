@@ -41,6 +41,7 @@ pub struct State<'a> {
     ind_len: u32,
     staging_belt: wgpu::util::StagingBelt,
     depth_stencil: DepthStencil<'a>,
+    frame: u64,
 }
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy)]
@@ -273,7 +274,7 @@ impl<'a> State<'a> {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None, //Some(wgpu::Face::Back),
+                cull_mode: Some(wgpu::Face::Back),
                 unclipped_depth: true,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
@@ -359,6 +360,7 @@ impl<'a> State<'a> {
                 texture: depth_stencil,
                 descriptor,
             },
+            frame: 0,
         }
     }
 
@@ -396,21 +398,23 @@ impl<'a> State<'a> {
     }
 
     fn render(&mut self) {
+        let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
         let object_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 0.0, -3.0),
+            &Vec3::new(0.0, 0.0, -5.0),
             &Vec3::new(0.5, 0.5, 0.5),
-            &Vec3::default(),
+            rotation,
         );
+        log::info!("Rotation = {rotation:?}");
         let camera_matrix = look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
-            Vec3::new(0.0, -1.0, 0.0),
+            Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
         let screen_matrix = perspercive_projection(
             std::f32::consts::FRAC_PI_3,
             self.surface_config.width as f32 / self.surface_config.height as f32,
-            0.1,
-            100.0,
+            0.001,
+            10000.0,
         );
 
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
@@ -442,9 +446,8 @@ impl<'a> State<'a> {
                     &self.device,
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
-                    object: (object_matrix * camera_matrix * screen_matrix).transpose(),
-                    // object: object_matrix.transpose(),
-                    camera: object_matrix.transpose(),
+                    object: object_matrix.transpose(),
+                    camera: camera_matrix.transpose(),
                     screen: screen_matrix.transpose(),
                 }));
             self.staging_belt.finish();
@@ -489,6 +492,8 @@ impl<'a> State<'a> {
         self.queue.submit(Some(buffer));
         frame.present();
         self.staging_belt.recall();
+
+        self.frame += 1;
     }
 }
 
