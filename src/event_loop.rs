@@ -399,7 +399,6 @@ impl<'a> State<'a> {
 
     fn render(&mut self) {
         let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
-        // let rotation = &Vec3::default();
         let world_matrix = transform_matrix_euler(
             &Vec3::new(0.0, 0.0, -5.0),
             &Vec3::new(0.5, 0.5, 0.5),
@@ -417,26 +416,6 @@ impl<'a> State<'a> {
             0.1,
             10000.0,
         );
-        log::info!("Projection =  {:?}", projection_matrix);
-        log::info!("world =  {:?}", world_matrix);
-        log::info!(
-            "world * projection = {:?}",
-            world_matrix * projection_matrix
-        );
-        log::info!(
-            "projection * world = {:?}",
-            projection_matrix * world_matrix.transpose()
-        );
-
-        log::info!(
-            "world.transpose * projection = {:?}",
-            world_matrix * projection_matrix
-        );
-        log::info!(
-            "projection * world.transpose = {:?}",
-            projection_matrix * world_matrix.transpose()
-        );
-        // assert!(false);
 
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
             self.surface.configure(&self.device, &self.surface_config);
@@ -468,8 +447,8 @@ impl<'a> State<'a> {
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
                     world: world_matrix.transpose(),
-                    view: camera_matrix.transpose(),
-                    projection: projection_matrix.transpose(),
+                    view: camera_matrix,
+                    projection: projection_matrix,
                 }));
             self.staging_belt.finish();
 

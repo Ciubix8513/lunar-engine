@@ -9,19 +9,14 @@ struct ColorOutput {
   @builtin(position) position: vec4<f32>
 }
 
-@group(0) @binding(0) var<uniform> transformation_matrices : transformations;
+@group(0) @binding(0) var<uniform> trans_mat: transformations;
 
 @vertex
 fn main(@location(0) position: vec4<f32>, @location(1) uvs: vec2<f32>, @location(2) normal: vec3<f32>) -> ColorOutput {
-    let mat = transpose(transpose(transformation_matrices.world) * transformation_matrices.view * transformation_matrices.projection);
-    let o = mat * position;
-
-    // var o = transpose(transformation_matrices.world) * position;
-    // o = transformation_matrices.view * o;
-    // o = transformation_matrices.projection * o;
-    // o.w = 1.0;
-
-    // var o = (transformation_matrices.world * transformation_matrices.projection) * position;
+    // let mat = trans_mat.projection * trans_mat.view * trans_mat.world ;
+    var o = trans_mat.world * position;
+    o = trans_mat.view * o;
+    o = trans_mat.projection * o;
 
     var res: ColorOutput;
     res.position = o;
