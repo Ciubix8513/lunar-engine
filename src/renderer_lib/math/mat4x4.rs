@@ -113,14 +113,17 @@ impl Mat4x4 {
             m01: self.m10,
             m02: self.m20,
             m03: self.m30,
-            m10: self.m01,
+
+            m10: self.m01, 
             m11: self.m11,
             m12: self.m21,
-            m13: self.m31,
+            m13: self.m31, 
+
             m20: self.m02,
             m21: self.m12,
             m22: self.m22,
             m23: self.m32,
+
             m30: self.m03,
             m31: self.m13,
             m32: self.m23,
@@ -238,11 +241,12 @@ impl Mat4x4 {
                 self.m32
                     .mul_add(other.m22, self.m30.mul_add(other.m02, self.m31 * other.m12)),
             ),
-            m33: self.m33.mul_add(
-                other.m33,
-                self.m32
-                    .mul_add(other.m23, self.m30.mul_add(other.m03, self.m31 * other.m13)),
-            ),
+            // m33: self.m33.mul_add(
+            //     other.m33,
+            //     self.m32
+            //         .mul_add(other.m23, self.m30.mul_add(other.m03, self.m31 * other.m13)),
+            // ),
+            m33: self.m30 * other.m03 + self.m31 * other.m13 + self.m32 *other.m23 + self.m33 * other.m33,
         }
     }
 
@@ -503,6 +507,32 @@ fn test_determinant() {
     assert_eq!(o, expected);
 }
 
+#[test]
+fn test_transpose() {
+    let a = Mat4x4::new(
+        1.0,  2.0,  3.0,  4.0,
+        5.0,  6.0,  7.0,  8.0,
+        9.0,  10.0, 11.0, 12.0, 
+        13.0, 14.0, 15.0, 16.0,
+    );
+
+    let o = a.transpose();
+    let expected = Mat4x4{
+        m00: 1.0, m01: 5.0, m02: 9.0,  m03: 13.0,
+        m10: 2.0, m11: 6.0, m12: 10.0, m13: 14.0,
+        m20: 3.0, m21: 7.0, m22: 11.0, m23: 15.0,
+        m30: 4.0, m31: 8.0, m32: 12.0, m33: 16.0,
+    };
+    assert_eq!(o, expected);
+
+    let a = Mat4x4::new(
+        1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+    );
+
+    let o = a.determinant();
+    let expected = -80.0;
+    assert_eq!(o, expected);
+}
 // #[test]
 // fn test_inversion() {
 //     let a = Mat4x4::new(

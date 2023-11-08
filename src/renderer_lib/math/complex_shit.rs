@@ -13,39 +13,15 @@ pub fn perspercive_projection(
     let w = h / screen_aspect;
     let r = screen_far / (screen_near - screen_far);
 
-    Mat4x4::new(
-        w,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        h,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        r,
-        -1.0,
-        0.0,
-        0.0,
-        r * screen_near,
-        0.0,
-    )
-    // let y_scale = (fov / 2.0).cos() / (fov / 2.0).sin();
-    // let x_scale = y_scale / screen_aspect;
-
-    // let c = screen_far / (screen_near - screen_far);
-    // let d = screen_near * c;
-
-    // Mat4x4 {
-    //     m00: x_scale,
-    //     m11: y_scale,
-    //     m22: c,
-    //     m23: -1.0,
-    //     m32: d,
-    //     m33: 0.0,
-    //     ..Default::default()
-    // }
+    Mat4x4 {
+        m00: w,
+        m11: h,
+        m22: r,
+        m23: -1.0,
+        m32: r * screen_near,
+        m33: 0.0,
+        ..Default::default()
+    }
 }
 
 #[must_use]

@@ -46,9 +46,9 @@ pub struct State<'a> {
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy)]
 pub struct TransformationMatrices {
-    object: Mat4x4,
-    camera: Mat4x4,
-    screen: Mat4x4,
+    world: Mat4x4,
+    view: Mat4x4,
+    projection: Mat4x4,
 }
 
 impl<'a> State<'a> {
@@ -398,11 +398,11 @@ impl<'a> State<'a> {
     }
 
     fn render(&mut self) {
-        // let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
-        let rotation = &Vec3::default();
-        let object_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 0.0, 5.0),
-            &Vec3::new(0.1, 0.1, 0.1),
+        let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
+        // let rotation = &Vec3::default();
+        let world_matrix = transform_matrix_euler(
+            &Vec3::new(0.0, 0.0, -5.0),
+            &Vec3::new(0.5, 0.5, 0.5),
             rotation,
         );
         log::info!("Rotation = {rotation:?}");
@@ -411,12 +411,32 @@ impl<'a> State<'a> {
             Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
-        let screen_matrix = perspercive_projection(
+        let projection_matrix = perspercive_projection(
             std::f32::consts::FRAC_PI_3,
             self.surface_config.width as f32 / self.surface_config.height as f32,
             0.1,
             10000.0,
         );
+        log::info!("Projection =  {:?}", projection_matrix);
+        log::info!("world =  {:?}", world_matrix);
+        log::info!(
+            "world * projection = {:?}",
+            world_matrix * projection_matrix
+        );
+        log::info!(
+            "projection * world = {:?}",
+            projection_matrix * world_matrix.transpose()
+        );
+
+        log::info!(
+            "world.transpose * projection = {:?}",
+            world_matrix * projection_matrix
+        );
+        log::info!(
+            "projection * world.transpose = {:?}",
+            projection_matrix * world_matrix.transpose()
+        );
+        // assert!(false);
 
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
             self.surface.configure(&self.device, &self.surface_config);
@@ -447,9 +467,9 @@ impl<'a> State<'a> {
                     &self.device,
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
-                    object: object_matrix,
-                    camera: camera_matrix,
-                    screen: screen_matrix,
+                    world: world_matrix.transpose(),
+                    view: camera_matrix.transpose(),
+                    projection: projection_matrix.transpose(),
                 }));
             self.staging_belt.finish();
 
