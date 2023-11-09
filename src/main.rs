@@ -5,7 +5,7 @@ mod event_loop;
 
 fn main() {
     env_logger::Builder::new()
-        .filter_module("wgpu", log::LevelFilter::Info)
+        .filter_module("wgpu", log::LevelFilter::Debug)
         .filter_module("renderer", log::LevelFilter::Info)
         .init();
     let event_loop = EventLoop::new();

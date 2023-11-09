@@ -56,7 +56,10 @@ impl<'a> State<'a> {
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
         let size = window.inner_size();
-        let instance = wgpu::Instance::default();
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::PRIMARY,
+            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
+        });
 
         let surface =
             unsafe { instance.create_surface(&window) }.expect("Failed to create a surface");
@@ -85,6 +88,7 @@ impl<'a> State<'a> {
             .last()
             .copied()
             .expect("Did not have last format");
+        let size = window.inner_size();
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -92,8 +96,8 @@ impl<'a> State<'a> {
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: wgpu::CompositeAlphaMode::Opaque,
-            view_formats: vec![],
+            view_formats: vec![format],
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
         surface.configure(&device, &surface_config);
 
@@ -369,7 +373,9 @@ impl<'a> State<'a> {
             Event::RedrawEventsCleared => self.window.request_redraw(),
             Event::RedrawRequested(_) => {
                 if !self.closed {
+                    log::warn!("Frame start");
                     self.render();
+                    log::warn!("Frame end");
                 }
             }
             Event::WindowEvent {
@@ -386,6 +392,7 @@ impl<'a> State<'a> {
                     self.depth_stencil.descriptor.size.width = size.width;
                     self.depth_stencil.descriptor.size.height = size.height;
 
+                    log::error!("resized");
                     self.surface.configure(&self.device, &self.surface_config);
                     self.depth_stencil.texture =
                         self.device.create_texture(&self.depth_stencil.descriptor);
@@ -404,7 +411,6 @@ impl<'a> State<'a> {
             &Vec3::new(0.5, 0.5, 0.5),
             rotation,
         );
-        log::info!("Rotation = {rotation:?}");
         let camera_matrix = look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(0.0, 1.0, 0.0),
@@ -418,15 +424,17 @@ impl<'a> State<'a> {
         );
 
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
+            log::error!("Reconfiguring on frame {}", self.frame);
             self.surface.configure(&self.device, &self.surface_config);
             self.surface
                 .get_current_texture()
                 .expect("Failed to get the next surface")
         });
         // .expect("Failed to get surface texture");
-        let frame_view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let frame_view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(self.surface_config.format),
+            ..Default::default()
+        });
 
         let depth_view = self
             .depth_stencil
@@ -488,12 +496,12 @@ impl<'a> State<'a> {
         }
 
         let buffer = encoder.finish();
-
         self.queue.submit(Some(buffer));
-        frame.present();
-        self.staging_belt.recall();
 
+        self.staging_belt.recall();
         self.frame += 1;
+
+        frame.present();
     }
 }
 
