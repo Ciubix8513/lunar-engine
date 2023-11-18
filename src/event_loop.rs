@@ -10,13 +10,15 @@ use renderer_lib::math::{
     mat4x4::Mat4x4,
     vec3::Vec3,
 };
-use std::mem::size_of;
+use std::{mem::size_of, path::Path};
 use wgpu::{util::StagingBelt, BufferSize, Extent3d, Features};
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+
+use crate::grimoire;
 pub struct Pipeline {
     pipeline: wgpu::RenderPipeline,
     bind_groups: Vec<wgpu::BindGroup>,
@@ -41,8 +43,11 @@ pub struct State<'a> {
     ind_len: u32,
     staging_belt: wgpu::util::StagingBelt,
     depth_stencil: DepthStencil<'a>,
+    recording_buffer: wgpu::Buffer,
     frame: u64,
+    recording: bool,
 }
+
 #[repr(C)]
 #[derive(Pod, Zeroable, Clone, Copy)]
 pub struct TransformationMatrices {
@@ -55,7 +60,7 @@ impl<'a> State<'a> {
     pub fn new(event_loop: &EventLoop<()>) -> Self {
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
-        let size = window.inner_size();
+        let _size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
@@ -91,11 +96,11 @@ impl<'a> State<'a> {
         let size = window.inner_size();
 
         let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
             format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: wgpu::PresentMode::AutoNoVsync,
             view_formats: vec![format],
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
@@ -344,6 +349,17 @@ impl<'a> State<'a> {
         };
         let depth_stencil = device.create_texture(&descriptor);
 
+        let mut bpr = u64::from(size.width * format.block_size(None).unwrap());
+        if bpr % 256 != 0 {
+            bpr = bpr + (256 - (bpr % 256));
+        }
+        let recording_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Recording buff"),
+            size: bpr * u64::from(size.height),
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
         Self {
             closed: false,
             window,
@@ -365,6 +381,8 @@ impl<'a> State<'a> {
                 descriptor,
             },
             frame: 0,
+            recording_buffer,
+            recording: true,
         }
     }
 
@@ -373,9 +391,9 @@ impl<'a> State<'a> {
             Event::RedrawEventsCleared => self.window.request_redraw(),
             Event::RedrawRequested(_) => {
                 if !self.closed {
-                    log::warn!("Frame start");
+                    log::debug!("Frame start");
                     self.render();
-                    log::warn!("Frame end");
+                    log::debug!("Frame end");
                 }
             }
             Event::WindowEvent {
@@ -391,8 +409,6 @@ impl<'a> State<'a> {
                     self.surface_config.height = size.height;
                     self.depth_stencil.descriptor.size.width = size.width;
                     self.depth_stencil.descriptor.size.height = size.height;
-
-                    log::error!("resized");
                     self.surface.configure(&self.device, &self.surface_config);
                     self.depth_stencil.texture =
                         self.device.create_texture(&self.depth_stencil.descriptor);
@@ -424,7 +440,6 @@ impl<'a> State<'a> {
         );
 
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
-            log::error!("Reconfiguring on frame {}", self.frame);
             self.surface.configure(&self.device, &self.surface_config);
             self.surface
                 .get_current_texture()
@@ -468,7 +483,7 @@ impl<'a> State<'a> {
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: 0.0,
-                            g: 1.0,
+                            g: 0.0,
                             b: 0.0,
                             a: 1.0,
                         }),
@@ -492,15 +507,80 @@ impl<'a> State<'a> {
             render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
             render_pass.set_index_buffer(self.i_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
+            //Draw the mesh
             render_pass.draw_indexed(0..self.ind_len, 0, 0..1);
         }
 
-        let buffer = encoder.finish();
-        self.queue.submit(Some(buffer));
+        if self.recording {
+            let image_size = frame.texture.size();
+            log::info!("Image size = {image_size:?}");
 
-        self.staging_belt.recall();
+            let mut bpr = image_size.width * frame.texture.format().block_size(None).unwrap();
+            if bpr % 256 != 0 {
+                bpr = bpr + (256 - (bpr % 256));
+            }
+            encoder.copy_texture_to_buffer(
+                frame.texture.as_image_copy(),
+                wgpu::ImageCopyBufferBase {
+                    buffer: &self.recording_buffer,
+                    layout: wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: Some(bpr), //(image_size.width * 4 * 4),
+                        rows_per_image: Some(image_size.height), //(image_size.height),
+                    },
+                },
+                frame.texture.size(),
+            );
+
+            self.queue.submit(Some(encoder.finish()));
+            self.staging_belt.recall();
+
+            let slice = self.recording_buffer.slice(..);
+            slice.map_async(wgpu::MapMode::Read, |_| {});
+            self.device.poll(wgpu::Maintain::Wait);
+            let buffer = slice
+                .get_mapped_range()
+                .iter()
+                .copied()
+                .collect::<Vec<u8>>();
+            let p = Path::new(grimoire::RECORDING_DIRECTORY);
+            if !p.exists() {
+                match std::fs::create_dir(p) {
+                    Err(e) => {
+                        log::error!("Failed to create recording directory {e}");
+                    }
+                    Ok(()) => {
+                        let filename = format!(
+                            "{}/recording_frame_{}.png",
+                            grimoire::RECORDING_DIRECTORY,
+                            self.frame
+                        );
+
+                        let image = renderer_lib::helpers::arr_to_image(
+                            &buffer,
+                            bpr / 4,
+                            image_size.width,
+                            image_size.height,
+                            image::ImageOutputFormat::Png,
+                        )
+                        .unwrap();
+
+                        if let Err(e) = std::fs::write(filename, image) {
+                            log::error!("Failed to write image {e}");
+                        }
+                    }
+                }
+            }
+        } else {
+            self.queue.submit(Some(encoder.finish()));
+            self.staging_belt.recall();
+        }
+
+        
+
+        self.recording = false;
+
         self.frame += 1;
-
         frame.present();
     }
 }

@@ -89,7 +89,6 @@ impl Add<Self> for Vec4 {
 }
 
 impl From<(f32, f32, f32, f32)> for Vec4 {
-    #[inline(always)]
     fn from(value: (f32, f32, f32, f32)) -> Self {
         Self {
             x: value.0,
@@ -101,7 +100,6 @@ impl From<(f32, f32, f32, f32)> for Vec4 {
 }
 
 impl From<(Vec3, f32)> for Vec4 {
-    #[inline(always)]
     fn from(value: (Vec3, f32)) -> Self {
         Self {
             x: value.0.x,

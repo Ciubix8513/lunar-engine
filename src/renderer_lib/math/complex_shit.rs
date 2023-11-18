@@ -77,7 +77,7 @@ pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3)
 #[must_use]
 pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
     let z_axis = (camera_forward - camera_position).normalized();
-    let x_axis = (&camera_up).normalized();
+    let x_axis = camera_up.normalized();
     let y_axis = z_axis.cross(&x_axis).normalized();
     Mat4x4 {
         m00: y_axis.x,

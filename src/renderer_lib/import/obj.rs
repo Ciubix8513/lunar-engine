@@ -138,9 +138,9 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
 
     meshes.push(Mesh { vertices, indecies });
 
-    log::error!("Read {} meshes", meshes.len());
+    log::info!("Read {} meshes", meshes.len());
     for i in &meshes {
-        log::error!(
+        log::info!(
             "verex len = {}, ind len = {}",
             i.vertices.len(),
             i.indecies.len()

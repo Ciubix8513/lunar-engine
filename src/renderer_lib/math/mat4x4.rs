@@ -241,12 +241,11 @@ impl Mat4x4 {
                 self.m32
                     .mul_add(other.m22, self.m30.mul_add(other.m02, self.m31 * other.m12)),
             ),
-            // m33: self.m33.mul_add(
-            //     other.m33,
-            //     self.m32
-            //         .mul_add(other.m23, self.m30.mul_add(other.m03, self.m31 * other.m13)),
-            // ),
-            m33: self.m30 * other.m03 + self.m31 * other.m13 + self.m32 *other.m23 + self.m33 * other.m33,
+            m33: self.m33.mul_add(
+                other.m33,
+                self.m32
+                    .mul_add(other.m23, self.m30.mul_add(other.m03, self.m31 * other.m13)),
+            ),
         }
     }
 
@@ -425,7 +424,7 @@ fn test_matrix_float_mul() {
             2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0,
             32.0
         )
-    )
+    );
 }
 
 #[test]

@@ -2,10 +2,11 @@ use event_loop::State;
 use winit::event_loop::EventLoop;
 
 mod event_loop;
+mod grimoire;
 
 fn main() {
     env_logger::Builder::new()
-        .filter_module("wgpu", log::LevelFilter::Debug)
+        .filter_module("wgpu", log::LevelFilter::Info)
         .filter_module("renderer", log::LevelFilter::Info)
         .init();
     let event_loop = EventLoop::new();
