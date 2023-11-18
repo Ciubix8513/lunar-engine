@@ -421,10 +421,10 @@ impl<'a> State<'a> {
     }
 
     fn render(&mut self) {
-        let rotation = &Vec3::new(0.0, self.frame as f32 / 100.0, 0.0);
+        let rotation = &Vec3::new(0.0, self.frame as f32 / 5.0, 0.0);
         let world_matrix = transform_matrix_euler(
-            &Vec3::new(0.0, 0.0, -5.0),
-            &Vec3::new(0.5, 0.5, 0.5),
+            &Vec3::new(0.0, 0.0, -3.5),
+            &Vec3::new(1.0, 1.0, 1.0),
             rotation,
         );
         let camera_matrix = look_at_matrix(
@@ -485,7 +485,7 @@ impl<'a> State<'a> {
                             r: 0.0,
                             g: 0.0,
                             b: 0.0,
-                            a: 1.0,
+                            a: 0.0,
                         }),
                         store: true,
                     },
@@ -543,44 +543,44 @@ impl<'a> State<'a> {
                 .iter()
                 .copied()
                 .collect::<Vec<u8>>();
+            self.recording_buffer.unmap();
+
             let p = Path::new(grimoire::RECORDING_DIRECTORY);
             if !p.exists() {
-                match std::fs::create_dir(p) {
-                    Err(e) => {
-                        log::error!("Failed to create recording directory {e}");
-                    }
-                    Ok(()) => {
-                        let filename = format!(
-                            "{}/recording_frame_{}.png",
-                            grimoire::RECORDING_DIRECTORY,
-                            self.frame
-                        );
-
-                        let image = renderer_lib::helpers::arr_to_image(
-                            &buffer,
-                            bpr / 4,
-                            image_size.width,
-                            image_size.height,
-                            image::ImageOutputFormat::Png,
-                        )
-                        .unwrap();
-
-                        if let Err(e) = std::fs::write(filename, image) {
-                            log::error!("Failed to write image {e}");
-                        }
-                    }
+                if let Err(e) = std::fs::create_dir(p) {
+                    log::error!("Failed to create recording directory {e}");
                 }
+            }
+            let filename = format!(
+                "{}/recording_frame_{}.png",
+                grimoire::RECORDING_DIRECTORY,
+                self.frame
+            );
+            log::info!("Filename = {filename}");
+
+            let image = renderer_lib::helpers::arr_to_image(
+                &buffer,
+                bpr / 4,
+                image_size.width,
+                image_size.height,
+                image::ImageOutputFormat::Png,
+            )
+            .unwrap();
+
+            if let Err(e) = std::fs::write(filename, image) {
+                log::error!("Failed to write image {e}");
             }
         } else {
             self.queue.submit(Some(encoder.finish()));
             self.staging_belt.recall();
         }
 
-        
-
-        self.recording = false;
+        if self.frame > 31 {
+            self.recording = false;
+        }
 
         self.frame += 1;
+
         frame.present();
     }
 }
