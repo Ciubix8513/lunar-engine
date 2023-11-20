@@ -11,8 +11,10 @@ fn main() {
         .init();
     let event_loop = EventLoop::new().expect("Failed to create event loop");
     let mut state = State::new(&event_loop);
-    event_loop.run(move |event, _, control_flow| {
-        control_flow.set_poll();
-        state.app_loop(&event, control_flow);
-    });
+    event_loop
+        .run(move |event, target| {
+            target.set_control_flow(winit::event_loop::ControlFlow::Poll);
+            state.app_loop(&event, target);
+        })
+        .expect("Failed to run event loop");
 }

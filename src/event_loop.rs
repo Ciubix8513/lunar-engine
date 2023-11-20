@@ -13,10 +13,10 @@ use renderer_lib::math::{
 use std::{mem::size_of, path::Path};
 use wgpu::{util::StagingBelt, BufferSize, Extent3d, Features};
 use winit::{
-    event::Event,
-    event_loop::{ControlFlow, EventLoop},
-    raw_window_handle::HasRawWindowHandle,
-    window::Window,
+    event::{ElementState, Event},
+    event_loop::{EventLoop, EventLoopWindowTarget},
+    keyboard::PhysicalKey,
+    // window::Window,
 };
 
 use crate::grimoire;
@@ -33,7 +33,7 @@ struct DepthStencil<'a> {
 
 pub struct State<'a> {
     closed: bool,
-    window: Window,
+    window: winit::window::Window,
     device: wgpu::Device,
     queue: wgpu::Queue,
     surface: wgpu::Surface,
@@ -63,9 +63,12 @@ impl<'a> State<'a> {
 
         let _size = window.inner_size();
         let instance = wgpu::Instance::default();
-        let surface = instance
-            .create_surface(&window)
-            .expect("Failed to create a surface");
+
+        let surface = unsafe {
+            instance
+                .create_surface(&window)
+                .expect("Failed to createate surface")
+        };
 
         let adapter: wgpu::Adapter = futures::executor::block_on(req_adapter(
             instance,
@@ -384,60 +387,64 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn app_loop(&mut self, event: &Event<()>, control_flow: &mut ControlFlow) {
+    pub fn app_loop(&mut self, event: &Event<()>, target: &EventLoopWindowTarget<()>) {
         match event {
-            Event::RedrawEventsCleared => self.window.request_redraw(),
-            Event::RedrawRequested(_) => {
-                if !self.closed {
-                    log::debug!("Frame start");
-                    self.render();
-                    log::debug!("Frame end");
-                }
-            }
             Event::WindowEvent {
                 window_id: _,
                 event,
             } => match event {
-                winit::event::WindowEvent::CloseRequested => {
-                    *control_flow = ControlFlow::Exit;
-                    self.closed = true;
-                }
                 winit::event::WindowEvent::Resized(size) => {
                     self.surface_config.width = size.width;
                     self.surface_config.height = size.height;
+
                     self.depth_stencil.descriptor.size.width = size.width;
                     self.depth_stencil.descriptor.size.height = size.height;
+
                     self.surface.configure(&self.device, &self.surface_config);
                     self.depth_stencil.texture =
                         self.device.create_texture(&self.depth_stencil.descriptor);
                 }
+                winit::event::WindowEvent::CloseRequested => {
+                    target.exit();
+                    self.closed = true;
+                }
+                winit::event::WindowEvent::RedrawRequested => {
+                    if self.closed {
+                        return;
+                    }
+                    log::debug!("Frame start");
+                    self.render();
+                    log::debug!("Frame end");
+                    self.window.request_redraw();
+                }
                 winit::event::WindowEvent::KeyboardInput {
                     device_id: _,
-                    input,
+                    event,
                     is_synthetic: _,
-                } => {
-                    if input
-                        .virtual_keycode
-                        .is_some_and(|k| k == VirtualKeyCode::P)
-                    {
-                        self.screenshot = true;
-                    }
+                } if event.physical_key == PhysicalKey::Code(winit::keyboard::KeyCode::KeyP)
+                    && event.state == ElementState::Pressed =>
+                {
+                    self.screenshot = true;
+                    log::info!("Taking a screenshot");
                 }
                 // winit::event::WindowEvent::CursorMoved {
                 //     device_id,
                 //     position,
-                //     modifiers,
-                // } => {}
+                // } => todo!(),
+                // winit::event::WindowEvent::CursorEntered { device_id } => todo!(),
+                // winit::event::WindowEvent::CursorLeft { device_id } => todo!(),
+                // winit::event::WindowEvent::MouseWheel {
+                //     device_id,
+                //     delta,
+                //     phase,
+                // } => todo!(),
                 // winit::event::WindowEvent::MouseInput {
                 //     device_id,
                 //     state,
                 //     button,
-                //     modifiers,
-                // } => {}
-                // winit::event::WindowEvent::Occluded(_) => {}
+                // } => todo!(),
                 _ => {}
             },
-
             _ => {}
         }
     }
@@ -509,17 +516,19 @@ impl<'a> State<'a> {
                             b: 0.0,
                             a: 0.0,
                         }),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
             });
 
             render_pass.set_pipeline(&self.pipeline.pipeline);
