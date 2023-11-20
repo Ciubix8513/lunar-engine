@@ -9,7 +9,7 @@ fn main() {
         .filter_module("wgpu", log::LevelFilter::Info)
         .filter_module("renderer", log::LevelFilter::Info)
         .init();
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().expect("Failed to create event loop");
     let mut state = State::new(&event_loop);
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();

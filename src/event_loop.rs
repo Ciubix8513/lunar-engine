@@ -15,6 +15,7 @@ use wgpu::{util::StagingBelt, BufferSize, Extent3d, Features};
 use winit::{
     event::Event,
     event_loop::{ControlFlow, EventLoop},
+    raw_window_handle::HasRawWindowHandle,
     window::Window,
 };
 
@@ -43,9 +44,9 @@ pub struct State<'a> {
     ind_len: u32,
     staging_belt: wgpu::util::StagingBelt,
     depth_stencil: DepthStencil<'a>,
-    recording_buffer: wgpu::Buffer,
+    screenshot_buffer: wgpu::Buffer,
     frame: u64,
-    recording: bool,
+    screenshot: bool,
 }
 
 #[repr(C)]
@@ -61,13 +62,10 @@ impl<'a> State<'a> {
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
         let _size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::PRIMARY,
-            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
-        });
-
-        let surface =
-            unsafe { instance.create_surface(&window) }.expect("Failed to create a surface");
+        let instance = wgpu::Instance::default();
+        let surface = instance
+            .create_surface(&window)
+            .expect("Failed to create a surface");
 
         let adapter: wgpu::Adapter = futures::executor::block_on(req_adapter(
             instance,
@@ -381,8 +379,8 @@ impl<'a> State<'a> {
                 descriptor,
             },
             frame: 0,
-            recording_buffer,
-            recording: true,
+            screenshot_buffer: recording_buffer,
+            screenshot: false,
         }
     }
 
@@ -413,6 +411,30 @@ impl<'a> State<'a> {
                     self.depth_stencil.texture =
                         self.device.create_texture(&self.depth_stencil.descriptor);
                 }
+                winit::event::WindowEvent::KeyboardInput {
+                    device_id: _,
+                    input,
+                    is_synthetic: _,
+                } => {
+                    if input
+                        .virtual_keycode
+                        .is_some_and(|k| k == VirtualKeyCode::P)
+                    {
+                        self.screenshot = true;
+                    }
+                }
+                // winit::event::WindowEvent::CursorMoved {
+                //     device_id,
+                //     position,
+                //     modifiers,
+                // } => {}
+                // winit::event::WindowEvent::MouseInput {
+                //     device_id,
+                //     state,
+                //     button,
+                //     modifiers,
+                // } => {}
+                // winit::event::WindowEvent::Occluded(_) => {}
                 _ => {}
             },
 
@@ -511,10 +533,8 @@ impl<'a> State<'a> {
             render_pass.draw_indexed(0..self.ind_len, 0, 0..1);
         }
 
-        if self.recording {
+        if self.screenshot {
             let image_size = frame.texture.size();
-            log::info!("Image size = {image_size:?}");
-
             let mut bpr = image_size.width * frame.texture.format().block_size(None).unwrap();
             if bpr % 256 != 0 {
                 bpr = bpr + (256 - (bpr % 256));
@@ -522,7 +542,7 @@ impl<'a> State<'a> {
             encoder.copy_texture_to_buffer(
                 frame.texture.as_image_copy(),
                 wgpu::ImageCopyBufferBase {
-                    buffer: &self.recording_buffer,
+                    buffer: &self.screenshot_buffer,
                     layout: wgpu::ImageDataLayout {
                         offset: 0,
                         bytes_per_row: Some(bpr), //(image_size.width * 4 * 4),
@@ -535,7 +555,7 @@ impl<'a> State<'a> {
             self.queue.submit(Some(encoder.finish()));
             self.staging_belt.recall();
 
-            let slice = self.recording_buffer.slice(..);
+            let slice = self.screenshot_buffer.slice(..);
             slice.map_async(wgpu::MapMode::Read, |_| {});
             self.device.poll(wgpu::Maintain::Wait);
             let buffer = slice
@@ -543,20 +563,20 @@ impl<'a> State<'a> {
                 .iter()
                 .copied()
                 .collect::<Vec<u8>>();
-            self.recording_buffer.unmap();
+            self.screenshot_buffer.unmap();
 
-            let p = Path::new(grimoire::RECORDING_DIRECTORY);
+            let p = Path::new(grimoire::SCREENSHOT_DIRECTORY);
             if !p.exists() {
                 if let Err(e) = std::fs::create_dir(p) {
-                    log::error!("Failed to create recording directory {e}");
+                    log::error!("Failed to create screenshots directory {e}");
                 }
             }
             let filename = format!(
-                "{}/recording_frame_{}.png",
-                grimoire::RECORDING_DIRECTORY,
-                self.frame
+                "{}/screenshot_{}.png",
+                grimoire::SCREENSHOT_DIRECTORY,
+                chrono::Local::now().format(grimoire::FILE_TIME_FORMAT)
             );
-            log::info!("Filename = {filename}");
+            log::info!("Screenshot filename = {filename}");
 
             let image = renderer_lib::helpers::arr_to_image(
                 &buffer,
@@ -570,13 +590,10 @@ impl<'a> State<'a> {
             if let Err(e) = std::fs::write(filename, image) {
                 log::error!("Failed to write image {e}");
             }
+            self.screenshot = false;
         } else {
             self.queue.submit(Some(encoder.finish()));
             self.staging_belt.recall();
-        }
-
-        if self.frame > 31 {
-            self.recording = false;
         }
 
         self.frame += 1;
