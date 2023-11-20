@@ -10,7 +10,7 @@ use renderer_lib::math::{
     mat4x4::Mat4x4,
     vec3::Vec3,
 };
-use std::{mem::size_of, path::Path};
+use std::{mem::size_of, path::Path, thread};
 use wgpu::{util::StagingBelt, BufferSize, Extent3d, Features};
 use winit::{
     event::{ElementState, Event},
@@ -587,18 +587,20 @@ impl<'a> State<'a> {
             );
             log::info!("Screenshot filename = {filename}");
 
-            let image = renderer_lib::helpers::arr_to_image(
-                &buffer,
-                bpr / 4,
-                image_size.width,
-                image_size.height,
-                image::ImageOutputFormat::Png,
-            )
-            .unwrap();
+            thread::spawn(move || {
+                let image = renderer_lib::helpers::arr_to_image(
+                    &buffer,
+                    bpr / 4,
+                    image_size.width,
+                    image_size.height,
+                    image::ImageOutputFormat::Png,
+                )
+                .unwrap();
 
-            if let Err(e) = std::fs::write(filename, image) {
-                log::error!("Failed to write image {e}");
-            }
+                if let Err(e) = std::fs::write(filename, image) {
+                    log::error!("Failed to write image {e}");
+                }
+            });
             self.screenshot = false;
         } else {
             self.queue.submit(Some(encoder.finish()));
