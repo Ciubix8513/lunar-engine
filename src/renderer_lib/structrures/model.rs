@@ -9,10 +9,11 @@ pub struct Vertex {
     pub texture: Vec2,
     pub normal: Vec3,
 }
+pub type Index = u32;
 
 #[repr(C)]
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
-    pub indecies: Vec<u32>,
+    pub indecies: Vec<Index>,
 }

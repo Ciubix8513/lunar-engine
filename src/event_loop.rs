@@ -19,7 +19,10 @@ use winit::{
     // window::Window,
 };
 
-use crate::grimoire;
+use crate::{
+    abstractions::{self, model::Model, DEVICE},
+    grimoire,
+};
 pub struct Pipeline {
     pipeline: wgpu::RenderPipeline,
     bind_groups: Vec<wgpu::BindGroup>,
@@ -34,14 +37,11 @@ struct DepthStencil<'a> {
 pub struct State<'a> {
     closed: bool,
     window: winit::window::Window,
-    device: wgpu::Device,
     queue: wgpu::Queue,
     surface: wgpu::Surface,
     surface_config: wgpu::SurfaceConfiguration,
     pipeline: Pipeline,
-    v_buffer: wgpu::Buffer,
-    i_buffer: wgpu::Buffer,
-    ind_len: u32,
+    models: Vec<abstractions::model::Model>,
     staging_belt: wgpu::util::StagingBelt,
     depth_stencil: DepthStencil<'a>,
     screenshot_buffer: wgpu::Buffer,
@@ -87,6 +87,9 @@ impl<'a> State<'a> {
             },
         ))
         .expect("Failed to create a device and a queue");
+
+        //This variable will not be reassigned after this, and i don't wanna deal with mutexes, so
+        //using an unsafe block
 
         let capabilities = surface.get_capabilities(&adapter);
         let format = capabilities
@@ -311,26 +314,9 @@ impl<'a> State<'a> {
 
         // l
         // let data: [[f32; 3]; 3] = [[-0.5, -0.5, 0.0], [0.0, 0.5, 0.0], [0.5, -0.5, 0.0]];
-        let binding =
+        let mut binding =
             renderer_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
-        let data = binding.first().unwrap();
-
-        let v_buffer = wgpu::util::DeviceExt::create_buffer_init(
-            &device,
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex buffer"),
-                contents: bytemuck::cast_slice(data.vertices.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX,
-            },
-        );
-        let i_buffer = wgpu::util::DeviceExt::create_buffer_init(
-            &device,
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index buffer"),
-                contents: bytemuck::cast_slice(data.indecies.as_slice()),
-                usage: wgpu::BufferUsages::INDEX,
-            },
-        );
+        let model = Model::new(binding.remove(0));
 
         let descriptor = wgpu::TextureDescriptor {
             label: Some("Depth stencil"),
@@ -361,10 +347,11 @@ impl<'a> State<'a> {
             mapped_at_creation: false,
         });
 
+        DEVICE.set(device).unwrap();
+
         Self {
             closed: false,
             window,
-            device,
             queue,
             surface,
             surface_config,
@@ -373,10 +360,7 @@ impl<'a> State<'a> {
                 bind_groups: vec![bind_group_v, bind_group_f],
                 buffers: Box::new([uniform]),
             },
-            v_buffer,
-            i_buffer,
             staging_belt: StagingBelt::new(1024),
-            ind_len: data.indecies.len() as u32,
             depth_stencil: DepthStencil {
                 texture: depth_stencil,
                 descriptor,
@@ -384,6 +368,7 @@ impl<'a> State<'a> {
             frame: 0,
             screenshot_buffer: recording_buffer,
             screenshot: false,
+            models: vec![model],
         }
     }
 
@@ -400,9 +385,11 @@ impl<'a> State<'a> {
                     self.depth_stencil.descriptor.size.width = size.width;
                     self.depth_stencil.descriptor.size.height = size.height;
 
-                    self.surface.configure(&self.device, &self.surface_config);
+                    let device = DEVICE.get().unwrap();
+
+                    self.surface.configure(device, &self.surface_config);
                     self.depth_stencil.texture =
-                        self.device.create_texture(&self.depth_stencil.descriptor);
+                        device.create_texture(&self.depth_stencil.descriptor);
                 }
                 winit::event::WindowEvent::CloseRequested => {
                     target.exit();
@@ -468,8 +455,10 @@ impl<'a> State<'a> {
             10000.0,
         );
 
+        let device = DEVICE.get().unwrap();
+
         let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
-            self.surface.configure(&self.device, &self.surface_config);
+            self.surface.configure(device, &self.surface_config);
             self.surface
                 .get_current_texture()
                 .expect("Failed to get the next surface")
@@ -485,9 +474,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
         {
             self.staging_belt
                 .write_buffer(
@@ -495,7 +482,7 @@ impl<'a> State<'a> {
                     &self.pipeline.buffers[0],
                     0,
                     BufferSize::new(size_of::<TransformationMatrices>() as u64).unwrap(),
-                    &self.device,
+                    device,
                 )
                 .copy_from_slice(bytes_of(&TransformationMatrices {
                     world: world_matrix.transpose(),
@@ -535,11 +522,13 @@ impl<'a> State<'a> {
             for (index, g) in self.pipeline.bind_groups.iter().enumerate() {
                 render_pass.set_bind_group(index as u32, g, &[]);
             }
-            render_pass.set_vertex_buffer(0, self.v_buffer.slice(..));
-            render_pass.set_index_buffer(self.i_buffer.slice(..), wgpu::IndexFormat::Uint32);
+            for m in self.models.iter() {
+                render_pass.set_vertex_buffer(0, m.vertex_buffer.slice(..));
+                render_pass.set_index_buffer(m.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
-            //Draw the mesh
-            render_pass.draw_indexed(0..self.ind_len, 0, 0..1);
+                //Draw the mesh
+                render_pass.draw_indexed(0..m.mesh.indecies.len() as u32, 0, 0..1);
+            }
         }
 
         if self.screenshot {
@@ -566,7 +555,7 @@ impl<'a> State<'a> {
 
             let slice = self.screenshot_buffer.slice(..);
             slice.map_async(wgpu::MapMode::Read, |_| {});
-            self.device.poll(wgpu::Maintain::Wait);
+            device.poll(wgpu::Maintain::Wait);
             let buffer = slice
                 .get_mapped_range()
                 .iter()
