@@ -1,8 +1,11 @@
+use std::num::NonZeroU64;
+
 use crate::grimoire;
 
 use super::{transfomation::Transformation, DEVICE};
+use bytemuck::bytes_of;
 use renderer_lib::{math::mat4x4::Mat4x4, structrures::model::Mesh};
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, RenderPass};
 
 #[derive(Debug)]
 pub struct Model {
@@ -61,5 +64,35 @@ impl Model {
             vertex_buffer: v_buffer,
             index_buffer: i_buffer,
         }
+    }
+    pub fn update_uniforms(
+        &self,
+        staging_belt: &mut wgpu::util::StagingBelt,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        let device = DEVICE.get().unwrap();
+        staging_belt
+            .write_buffer(
+                encoder,
+                &self.transform_uniform,
+                0,
+                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
+                device,
+            )
+            .copy_from_slice(bytes_of(&self.transform.matrix().transpose()));
+    }
+
+    pub fn render<'a, 'b>(&'a self, render_pass: &mut RenderPass<'b>)
+    where
+        'a: 'b,
+    {
+        render_pass.set_bind_group(
+            grimoire::TRANS_BIND_GROUP_INDEX,
+            &self.transform_bind_group,
+            &[],
+        );
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        render_pass.draw_indexed(0..self.mesh.indecies.len() as u32, 0, 0..1);
     }
 }

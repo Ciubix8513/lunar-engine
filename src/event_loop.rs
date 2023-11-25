@@ -7,9 +7,10 @@
 use bytemuck::bytes_of;
 use renderer_lib::math::{
     complex_shit::{look_at_matrix, perspercive_projection},
+    mat4x4,
     vec3::Vec3,
 };
-use std::{path::Path, thread};
+use std::{num::NonZeroU64, path::Path, thread};
 use wgpu::{
     util::{DeviceExt, StagingBelt},
     Extent3d, Features,
@@ -40,12 +41,25 @@ pub struct Camera {
     pub uniform: wgpu::Buffer,
     pub bind_group: wgpu::BindGroup,
 }
+impl Camera {
+    pub fn matrix(&self) -> mat4x4::Mat4x4 {
+        //Todo actual camera stuff
+        let camera_matrix = look_at_matrix(
+            self.position,
+            Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, -1.0),
+        );
+        let projection_matrix =
+            perspercive_projection(self.fov, self.screen_aspect, self.near, self.far);
+        camera_matrix * projection_matrix
+    }
+}
 struct DepthStencil<'a> {
     texture: wgpu::Texture,
     descriptor: wgpu::TextureDescriptor<'a>,
 }
 
-pub struct State<'stencil, 'material_a, 'material_b> {
+pub struct State<'stencil> {
     closed: bool,
     window: winit::window::Window,
     surface: wgpu::Surface,
@@ -57,13 +71,10 @@ pub struct State<'stencil, 'material_a, 'material_b> {
     frame: u64,
     screenshot: bool,
     camera: Camera,
-    materials: Vec<Box<dyn Material<'material_a, 'material_b>>>,
+    materials: Vec<Box<dyn Material>>,
 }
 
-impl<'stencil, 'material_a, 'material_b> State<'stencil, 'material_a, 'material_b>
-where
-    'material_b: 'material_a,
-{
+impl<'stencil> State<'_> {
     pub fn new(event_loop: &EventLoop<()>) -> Self {
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
@@ -199,7 +210,8 @@ where
 
         let mut model =
             renderer_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
-        let blahaj = Model::new(model.remove(0));
+        let mut blahaj = Model::new(model.remove(0));
+        blahaj.transform.position.z = -3.5;
 
         Self {
             closed: false,
@@ -232,6 +244,8 @@ where
 
                     self.depth_stencil.descriptor.size.width = size.width;
                     self.depth_stencil.descriptor.size.height = size.height;
+
+                    self.camera.screen_aspect = size.width as f32 / size.height as f32;
 
                     let device = DEVICE.get().unwrap();
 
@@ -305,6 +319,22 @@ where
 
         //Render pass
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+
+        //update models
+        for m in self.models.iter() {
+            m.update_uniforms(&mut self.staging_belt, &mut encoder);
+        }
+        self.staging_belt
+            .write_buffer(
+                &mut encoder,
+                &self.camera.uniform,
+                0,
+                NonZeroU64::new(std::mem::size_of::<mat4x4::Mat4x4>() as u64).unwrap(),
+                device,
+            )
+            .copy_from_slice(bytes_of(&self.camera.matrix()));
+        self.staging_belt.finish();
+
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
@@ -335,10 +365,9 @@ where
             });
 
             //Set the material
-            {
-                let mat = self.materials.get(0).unwrap();
-                mat.render(&mut render_pass);
-            }
+
+            self.materials.get(0).unwrap().render(&mut render_pass);
+
             render_pass.set_bind_group(
                 grimoire::CAMERA_BIND_GROUP_INDEX,
                 &self.camera.bind_group,
@@ -346,11 +375,7 @@ where
             );
 
             for m in self.models.iter() {
-                render_pass.set_vertex_buffer(0, m.vertex_buffer.slice(..));
-                render_pass.set_index_buffer(m.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-
-                //Draw the mesh
-                render_pass.draw_indexed(0..m.mesh.indecies.len() as u32, 0, 0..1);
+                m.render(&mut render_pass);
             }
         }
 

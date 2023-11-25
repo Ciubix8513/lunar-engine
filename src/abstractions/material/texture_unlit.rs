@@ -72,7 +72,6 @@ impl TextureUnlit {
                 depth_or_array_layers: 1,
             },
         );
-        drop(queue);
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: None,
@@ -192,8 +191,8 @@ impl TextureUnlit {
     }
 }
 
-impl<'a, 'b> Material<'a, 'b> for TextureUnlit {
-    fn render(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+impl Material for TextureUnlit {
+    fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
     where
         'a: 'b,
     {
