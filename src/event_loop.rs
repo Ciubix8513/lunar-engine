@@ -5,6 +5,7 @@
     clippy::too_many_lines
 )]
 use bytemuck::bytes_of;
+use rand::Rng;
 use renderer_lib::math::{
     complex_shit::{look_at_matrix, perspercive_projection},
     mat4x4,
@@ -123,7 +124,7 @@ impl<'stencil> State<'_> {
             format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::AutoNoVsync,
             view_formats: vec![format],
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
@@ -148,8 +149,8 @@ impl<'stencil> State<'_> {
         let depth_stencil = device.create_texture(&descriptor);
 
         let bpr = helpers::calculate_bpr(size.width, format);
-        let recording_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Recording buff"),
+        let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Screenshot buffer"),
             size: bpr * u64::from(size.height),
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
@@ -224,7 +225,7 @@ impl<'stencil> State<'_> {
                 descriptor,
             },
             frame: 0,
-            screenshot_buffer: recording_buffer,
+            screenshot_buffer,
             screenshot: false,
             models: vec![blahaj],
             camera,
@@ -252,6 +253,15 @@ impl<'stencil> State<'_> {
                     self.surface.configure(device, &self.surface_config);
                     self.depth_stencil.texture =
                         device.create_texture(&self.depth_stencil.descriptor);
+                    let bpr =
+                        helpers::calculate_bpr(size.width, *abstractions::FORMAT.get().unwrap());
+
+                    self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Screenshot buffer"),
+                        size: bpr * size.height as u64,
+                        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                        mapped_at_creation: false,
+                    });
                 }
                 winit::event::WindowEvent::CloseRequested => {
                     target.exit();
@@ -270,11 +280,23 @@ impl<'stencil> State<'_> {
                     device_id: _,
                     event,
                     is_synthetic: _,
-                } if event.physical_key == PhysicalKey::Code(winit::keyboard::KeyCode::KeyP)
-                    && event.state == ElementState::Pressed =>
-                {
-                    self.screenshot = true;
-                    log::info!("Taking a screenshot");
+                } if event.state == ElementState::Pressed => {
+                    if let PhysicalKey::Code(key) = event.physical_key {
+                        match key {
+                            winit::keyboard::KeyCode::KeyP => {
+                                self.screenshot = true;
+                                log::info!("Taking a screenshot");
+                            }
+                            winit::keyboard::KeyCode::KeyS => {
+                                let mut new_blahaj =
+                                    Model::new(self.models.get(0).unwrap().mesh.clone());
+                                new_blahaj.transform.position = Vec3::random(-10.0, 10.0);
+                                new_blahaj.transform.scale = Vec3::random(0.01, 2.0);
+                                self.models.push(new_blahaj);
+                            }
+                            _ => {}
+                        }
+                    }
                 }
                 // winit::event::WindowEvent::CursorMoved {
                 //     device_id,

@@ -1,6 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 use bytemuck::{Pod, Zeroable};
+use rand::Rng;
 
 use crate::math::traits::Vector;
 
@@ -25,6 +26,14 @@ impl Vec3 {
             self.z.mul_add(other.x, -self.x * other.z),
             self.x.mul_add(other.y, -self.y * other.x),
         )
+    }
+    pub fn random(min: f32, max: f32) -> Self {
+        let mut random = rand::thread_rng();
+        Self {
+            x: random.gen_range(min..max),
+            y: random.gen_range(min..max),
+            z: random.gen_range(min..max),
+        }
     }
 }
 
