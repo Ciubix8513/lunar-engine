@@ -9,9 +9,10 @@ My current streaming project, all code is writen live on my [twitch streams](htt
 - [x] Wavefront obj loading
 - [x] .bmp loading
 - [x] textured rendering
-#### Stage 2: Vtube overlay preparations   
-- [ ] Rendering abstraction
+#### Stage 2: Game engine? idk why not 
+- [x] Rendering abstraction
 - [ ] Complex scenes
+  - [ ] Ecs, or at least ecs like
 - [ ] Lit rendering 
 - [ ] gltf loading
 - [ ] png/other common image format loading
