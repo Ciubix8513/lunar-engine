@@ -10,7 +10,7 @@ pub struct Transform {
 }
 
 impl Component for Transform {
-    fn new() -> Self
+    fn mew() -> Self
     where
         Self: Sized,
     {
@@ -22,18 +22,18 @@ impl Component for Transform {
     }
 
     fn name(&self) -> &'static str {
-        todo!()
+        "Transform"
     }
 
-    fn update(&mut self) {
-        todo!()
+    fn update(&mut self) {}
+    fn awawa(&mut self) {}
+    fn decatification(&mut self) {}
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
     }
 
-    fn awake(&mut self) {
-        todo!()
-    }
-
-    fn death(&mut self) {
-        todo!()
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
     }
 }

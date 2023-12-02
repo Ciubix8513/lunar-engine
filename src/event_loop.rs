@@ -5,7 +5,6 @@
     clippy::too_many_lines
 )]
 use bytemuck::bytes_of;
-use rand::Rng;
 use renderer_lib::math::{
     complex_shit::{look_at_matrix, perspercive_projection},
     mat4x4,

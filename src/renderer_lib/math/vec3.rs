@@ -27,6 +27,7 @@ impl Vec3 {
             self.x.mul_add(other.y, -self.y * other.x),
         )
     }
+    #[must_use]
     pub fn random(min: f32, max: f32) -> Self {
         let mut random = rand::thread_rng();
         Self {
