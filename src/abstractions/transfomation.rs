@@ -1,4 +1,4 @@
-use renderer_lib::math::{complex_shit, mat4x4::Mat4x4, vec3::Vec3};
+use renderer_lib::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 #[derive(Debug)]
 pub struct Transformation {
@@ -24,6 +24,6 @@ impl Default for Transformation {
 impl Transformation {
     #[inline(always)]
     pub fn matrix(&self) -> Mat4x4 {
-        complex_shit::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
+        Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
     }
 }

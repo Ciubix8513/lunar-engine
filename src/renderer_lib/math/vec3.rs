@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use bytemuck::{Pod, Zeroable};
 use rand::Rng;
 
-use crate::math::traits::Vector;
+pub use crate::math::traits::Vector;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
@@ -39,10 +39,6 @@ impl Vec3 {
 }
 
 impl Vector for Vec3 {
-    fn length(&self) -> f32 {
-        self.square_length().sqrt()
-    }
-
     fn square_length(&self) -> f32 {
         self.z
             .mul_add(self.z, self.x.mul_add(self.x, self.y * self.y))
@@ -51,10 +47,6 @@ impl Vector for Vec3 {
     fn dot_product(&self, other: &Self) -> f32 {
         self.z
             .mul_add(other.z, self.x.mul_add(other.x, self.y * other.y))
-    }
-
-    fn normalized(&self) -> Self {
-        *self / self.length()
     }
 }
 

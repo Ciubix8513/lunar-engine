@@ -1,7 +1,8 @@
-use renderer_lib::math::vec3::Vec3;
+use renderer_lib::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 use crate::ecs::component::Component;
 
+///Transform  component contains function and data to determine the position of the entity
 #[derive(Debug)]
 pub struct Transform {
     pub position: Vec3,
@@ -35,5 +36,12 @@ impl Component for Transform {
 
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self as &mut dyn std::any::Any
+    }
+}
+
+impl Transform {
+    ///Returns transformation of the entity
+    pub fn matrix(&self) -> Mat4x4 {
+        Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
     }
 }

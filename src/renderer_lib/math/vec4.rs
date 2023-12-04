@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::math::traits::Vector;
+pub use crate::math::traits::Vector;
 
 use super::vec3::Vec3;
 
@@ -24,10 +24,6 @@ impl Vec4 {
 }
 
 impl Vector for Vec4 {
-    fn length(&self) -> f32 {
-        self.square_length().sqrt()
-    }
-
     fn square_length(&self) -> f32 {
         self.w.mul_add(
             self.w,
@@ -42,10 +38,6 @@ impl Vector for Vec4 {
             self.z
                 .mul_add(other.z, self.x.mul_add(other.x, self.y * other.y)),
         )
-    }
-
-    fn normalized(&self) -> Self {
-        *self / self.length()
     }
 }
 

@@ -2,6 +2,9 @@
 use std::ops::{Add, Mul, Sub};
 
 use crate::math::vec4::Vec4;
+use crate::math::vec3::Vec3;
+
+use super::traits::Vector;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
@@ -295,6 +298,8 @@ impl Mat4x4 {
     }
 
     #[must_use]
+    ///Inverts the matrix does not consume the matrix
+    ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
     fn inverted(&self) -> Option<Self> {
         let det = self.determinant();
         if det == 0.0 {
@@ -316,6 +321,141 @@ impl Mat4x4 {
 
         Some((a - b + c - cubed) * (1.0 / det))
     }
+
+    #[must_use]
+    ///Inverts the matrix consuming it the process 
+    ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
+    fn invert(self) -> Option<Self> {
+        let det = self.determinant();
+        if det == 0.0 {
+            return None;
+        }
+
+        let squared = self * self;
+        let cubed = squared * self;
+        let trace = self.trace();
+
+        let a = IDENTITY
+            * (0.166_667
+                * 2.0f32.mul_add(
+                    cubed.trace(),
+                    (3.0 * trace).mul_add(-squared.trace(), trace.powi(3)),
+                ));
+        let b = self * (0.5 * trace.mul_add(trace, -squared.trace()));
+        let c = squared * trace;
+
+        Some((a - b + c - cubed) * (1.0 / det))
+    }
+
+
+    #[must_use]
+    ///Creates a perspective projection matrix with the given parameters
+    pub fn perspercive_projection(
+        fov: f32,
+        screen_aspect: f32,
+        screen_near: f32,
+        screen_far: f32,
+    ) -> Mat4x4 {
+        let (sin_fov, cos_fov) = f32::sin_cos(0.5 * fov);
+        // 1/ tan(FOV / 2 ) = cot(FOV / 2)
+        let h = cos_fov / sin_fov;
+        let w = h / screen_aspect;
+        let r = screen_far / (screen_near - screen_far);
+
+        Mat4x4 {
+            m00: w,
+            m11: h,
+            m22: r,
+            m23: -1.0,
+            m32: r * screen_near,
+            m33: 0.0,
+            ..Default::default()
+        }
+    }
+
+    #[must_use]
+    ///Creates a scale matrix for the given vector
+    pub fn scale_matrix(scale: &Vec3) -> Mat4x4 {
+        Mat4x4 {
+            m00: scale.x,
+            m11: scale.y,
+            m22: scale.z,
+            ..Default::default()
+        }
+    }
+
+    #[must_use]
+    ///Creates a translation matrix for the given vector
+    pub fn translation_matrix(translation: &Vec3) -> Mat4x4 {
+        Mat4x4 {
+            m03: translation.x,
+            m13: translation.y,
+            m23: translation.z,
+            ..Default::default()
+        }
+    }
+
+    #[must_use]
+    ///Creates a rotation matrix for the given euler angles
+    pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
+        let sin_x = rotation.x.sin();
+        let cos_x = rotation.x.cos();
+
+        let sin_y = rotation.y.sin();
+        let cos_y = rotation.y.cos();
+
+        let sin_z = rotation.z.sin();
+        let cos_z = rotation.z.cos();
+
+        Mat4x4 {
+            m00: cos_y * cos_z,
+            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z),
+            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z),
+            m10: cos_y * sin_z,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z),
+            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z),
+            m20: -sin_y,
+            m21: sin_x * cos_y,
+            m22: cos_x * cos_y,
+            ..Default::default()
+        }
+    }
+
+    #[must_use]
+    ///Crates a transformation matrix with the following order of operations:
+    ///1. Scale
+    ///2. Rotation 
+    ///3. Translation
+    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
+        Self::translation_matrix(translation)
+            * Self::rotation_matrix_euler(rotation)
+            * Self::scale_matrix(scale)
+    }
+
+    #[must_use]
+    ///Creates a view matrix
+    pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
+        let z_axis = (camera_forward - camera_position).normalized();
+        let x_axis = camera_up.normalized();
+        let y_axis = z_axis.cross(&x_axis).normalized();
+        Mat4x4 {
+            m00: y_axis.x,
+            m10: y_axis.y,
+            m20: y_axis.z,
+            m01: x_axis.x,
+            m11: x_axis.y,
+            m21: x_axis.z,
+            m12: -z_axis.y,
+            m02: -z_axis.x,
+            m22: -z_axis.z,
+            m30: -(y_axis.dot_product(&camera_position)),
+            m31: -(x_axis.dot_product(&camera_position)),
+            m32: (z_axis.dot_product(&camera_position)),
+            ..Default::default()
+        }
+    }
+
+
 }
 
 impl Mul<f32> for Mat4x4 {

@@ -6,8 +6,7 @@
 )]
 use bytemuck::bytes_of;
 use renderer_lib::math::{
-    complex_shit::{look_at_matrix, perspercive_projection},
-    mat4x4,
+    mat4x4::{self, Mat4x4},
     vec3::Vec3,
 };
 use std::{num::NonZeroU64, path::Path, thread};
@@ -44,13 +43,13 @@ pub struct Camera {
 impl Camera {
     pub fn matrix(&self) -> mat4x4::Mat4x4 {
         //Todo actual camera stuff
-        let camera_matrix = look_at_matrix(
+        let camera_matrix = Mat4x4::look_at_matrix(
             self.position,
             Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
         let projection_matrix =
-            perspercive_projection(self.fov, self.screen_aspect, self.near, self.far);
+            Mat4x4::perspercive_projection(self.fov, self.screen_aspect, self.near, self.far);
         camera_matrix * projection_matrix
     }
 }
@@ -155,12 +154,12 @@ impl<'stencil> State<'_> {
             mapped_at_creation: false,
         });
 
-        let camera_matrix = look_at_matrix(
+        let camera_matrix = Mat4x4::look_at_matrix(
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(0.0, 1.0, 0.0),
             Vec3::new(0.0, 0.0, -1.0),
         );
-        let projection_matrix = perspercive_projection(
+        let projection_matrix = Mat4x4::perspercive_projection(
             std::f32::consts::FRAC_PI_3,
             surface_config.width as f32 / surface_config.height as f32,
             0.1,
