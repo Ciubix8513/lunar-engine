@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 
-use std::{
-    cell::{Ref, RefCell},
-    ops::Deref,
-};
+use std::cell::{Ref, RefCell, RefMut};
 
 use rand::Rng;
 
@@ -22,25 +19,25 @@ pub enum ComponentError {
     ComponentAlreadyExists,
 }
 
-pub struct ComponentGuard<'a, T> {
-    guard: Ref<'a, T>,
-}
-impl<'b, T> Deref for ComponentGuard<'b, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.guard
-    }
-}
-
-pub struct ComponentRefernce<'a, T> {
+///A wrapper around the component structure of easier access
+pub struct ComponentReference<'a, T> {
     phantom: std::marker::PhantomData<T>,
     cell: &'a RefCell<Box<dyn Component + 'static>>,
 }
-impl<'a, T: 'static> ComponentRefernce<'a, T> {
-    fn borrow(&self) -> &'a T {
-        let binding = self.cell.borrow();
-        binding.as_any().downcast_ref::<T>().unwrap()
+
+impl<'a, T: 'static> ComponentReference<'a, T> {
+    ///Borrows the underlying component
+    pub fn borrow(&self) -> Ref<'a, T> {
+        Ref::map(self.cell.borrow(), |c| {
+            c.as_any().downcast_ref::<T>().unwrap()
+        })
+    }
+
+    ///Mutably borrows the underlying component
+    pub fn borrow_mut(&self) -> RefMut<'a, T> {
+        RefMut::map(self.cell.borrow_mut(), |c| {
+            c.as_any_mut().downcast_mut::<T>().unwrap()
+        })
     }
 }
 
@@ -61,7 +58,8 @@ impl Entity {
     ///Checks if the entity has component of type T
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in self.components.iter() {
-            let any = c.borrow().as_any().downcast_ref::<T>();
+            let c = c.borrow();
+            let any = c.as_any().downcast_ref::<T>();
             if any.is_some() {
                 return true;
             }
@@ -106,15 +104,18 @@ impl Entity {
         Ok(())
     }
 
-    ///Gets a reference to a component of type T
-    pub fn get_component<T: 'static>(&self) -> Result<&RefCell<Box<dyn Component>>, ComponentError>
+    ///Acquires a reference to the component of type T
+    pub fn get_component<T: 'static>(&self) -> Result<ComponentReference<T>, ComponentError>
     where
         T: Component,
     {
         for c in self.components.iter() {
             let binding = c.borrow();
             if binding.as_any().downcast_ref::<T>().is_some() {
-                return Ok(c);
+                return Ok(ComponentReference {
+                    cell: c,
+                    phantom: std::marker::PhantomData,
+                });
             }
         }
         Err(ComponentError::ComponentDoesNotExist)
@@ -216,14 +217,8 @@ mod entity_tests {
         entity.add_component::<TestComponent>().unwrap();
         entity.update();
 
-        // let c = entity
-        //     .get_component::<TestComponent>()
-        //     .unwrap()
-        //     .borrow()
-        //     .as_any()
-        //     .downcast_ref::<TestComponent>()
-        //     .unwrap();
-        // assert_eq!(c.value, 10)
+        let c = entity.get_component::<TestComponent>().unwrap().borrow();
+        assert_eq!(c.value, 10)
     }
 
     #[test]
@@ -233,8 +228,8 @@ mod entity_tests {
         entity.add_component::<TestComponent>().unwrap();
         entity.update();
 
-        // let c = entity.get_component::<TestComponent>().unwrap();
-        // assert_eq!(c.value, 10);
+        let c = entity.get_component::<TestComponent>().unwrap();
+        assert_eq!(c.borrow().value, 10);
 
         entity.decatify();
     }

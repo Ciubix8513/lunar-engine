@@ -1,4 +1,4 @@
-use renderer_lib::math::{mat4x4::Mat4x4, vec3::Vec3};
+use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 use crate::ecs::component::Component;
 
