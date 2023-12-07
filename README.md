@@ -11,11 +11,11 @@ My current streaming project, all code is writen live on my [twitch streams](htt
 - [x] textured rendering
 #### Stage 2: Game engine? idk why not 
 - [x] Rendering abstraction
-- [ ] Complex scenes
-  - [ ] Ecs, or at least ecs like
-- [ ] Lit rendering 
+- [ ] Ecs, or at least ecs like
+- [ ] PBR rendering 
+- [ ] png format loading
+- [ ] post proccessing stuff
 - [ ] gltf loading
-- [ ] png/other common image format loading
 - [ ] Skeletal animations
 
 Note: some of these goals may never get acomplished or be rearranged, no guarantees
