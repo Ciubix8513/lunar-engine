@@ -355,14 +355,14 @@ impl Mat4x4 {
         screen_aspect: f32,
         screen_near: f32,
         screen_far: f32,
-    ) -> Mat4x4 {
+    ) -> Self {
         let (sin_fov, cos_fov) = f32::sin_cos(0.5 * fov);
         // 1/ tan(FOV / 2 ) = cot(FOV / 2)
         let h = cos_fov / sin_fov;
         let w = h / screen_aspect;
         let r = screen_far / (screen_near - screen_far);
 
-        Mat4x4 {
+        Self {
             m00: w,
             m11: h,
             m22: r,
@@ -375,8 +375,8 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a scale matrix for the given vector
-    pub fn scale_matrix(scale: &Vec3) -> Mat4x4 {
-        Mat4x4 {
+    pub fn scale_matrix(scale: &Vec3) -> Self {
+        Self {
             m00: scale.x,
             m11: scale.y,
             m22: scale.z,
@@ -386,8 +386,8 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a translation matrix for the given vector
-    pub fn translation_matrix(translation: &Vec3) -> Mat4x4 {
-        Mat4x4 {
+    pub fn translation_matrix(translation: &Vec3) -> Self {
+        Self {
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
@@ -397,7 +397,7 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a rotation matrix for the given euler angles
-    pub fn rotation_matrix_euler(rotation: &Vec3) -> Mat4x4 {
+    pub fn rotation_matrix_euler(rotation: &Vec3) -> Self {
         let sin_x = rotation.x.sin();
         let cos_x = rotation.x.cos();
 
@@ -407,7 +407,7 @@ impl Mat4x4 {
         let sin_z = rotation.z.sin();
         let cos_z = rotation.z.cos();
 
-        Mat4x4 {
+        Self {
             m00: cos_y * cos_z,
             m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z),
             m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z),
@@ -426,7 +426,7 @@ impl Mat4x4 {
     ///1. Scale
     ///2. Rotation 
     ///3. Translation
-    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Mat4x4 {
+    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
         Self::translation_matrix(translation)
             * Self::rotation_matrix_euler(rotation)
             * Self::scale_matrix(scale)
@@ -434,11 +434,11 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a view matrix
-    pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Mat4x4 {
+    pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Self {
         let z_axis = (camera_forward - camera_position).normalized();
         let x_axis = camera_up.normalized();
         let y_axis = z_axis.cross(&x_axis).normalized();
-        Mat4x4 {
+        Self {
             m00: y_axis.x,
             m10: y_axis.y,
             m20: y_axis.z,

@@ -4,17 +4,19 @@ use std::cell::RefCell;
 use super::entity::Entity;
 
 ///Manages all the entities
+#[derive(Default)]
 pub struct World {
     entities: Vec<RefCell<Entity>>,
 }
 #[derive(Debug)]
-pub enum WorldError {
+pub enum Error {
     EntityDoesNotExist,
 }
 
 impl World {
     ///Creates a new World
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             entities: Vec::new(),
         }
@@ -26,7 +28,10 @@ impl World {
     }
 
     ///Finds and removes the entity by its reference
-    pub fn remove_entity_by_ref(&mut self, entity: &Entity) -> Result<(), WorldError> {
+    ///# Errors
+    ///
+    ///Returns an error if the enity doesn't exist in the world
+    pub fn remove_entity_by_ref(&mut self, entity: &Entity) -> Result<(), Error> {
         let mut id = None;
         for (index, e) in self.entities.iter().enumerate() {
             if e.borrow().get_id() == entity.get_id() {
@@ -39,15 +44,15 @@ impl World {
             self.entities.remove(id).into_inner().decatify();
             Ok(())
         } else {
-            Err(WorldError::EntityDoesNotExist)
+            Err(Error::EntityDoesNotExist)
         }
     }
 
     ///Finds and removes the entity by its id
-    pub fn remove_entity_by_id(
-        &mut self,
-        entity_id: super::entity::UUID,
-    ) -> Result<(), WorldError> {
+    ///# Errors
+    ///
+    ///Returns an error if the entity with the `enity_id` doesn't exist in the world
+    pub fn remove_entity_by_id(&mut self, entity_id: super::entity::UUID) -> Result<(), Error> {
         let mut id = None;
         for (index, e) in self.entities.iter().enumerate() {
             if e.borrow().get_id() == entity_id {
@@ -60,25 +65,22 @@ impl World {
             self.entities.remove(id).into_inner().decatify();
             Ok(())
         } else {
-            Err(WorldError::EntityDoesNotExist)
+            Err(Error::EntityDoesNotExist)
         }
     }
 
     ///Returns the total number of entities
+    ///# Errors
+    ///
+    ///Returns an error if the entity with a given id doesn't exist
+    #[must_use]
     pub fn get_entity_count(&self) -> usize {
         self.entities.len()
     }
 
-    pub fn get_entity_by_id<'a>(
-        &'a self,
-        id: super::entity::UUID,
-    ) -> Result<&'a RefCell<Entity>, WorldError> {
-        for e in &self.entities {
-            if e.borrow().get_id() == id {
-                return Ok(e);
-            }
-        }
-        Err(WorldError::EntityDoesNotExist)
+    #[must_use]
+    pub fn get_entity_by_id(&self, id: super::entity::UUID) -> Option<&RefCell<Entity>> {
+        self.entities.iter().find(|e| e.borrow().get_id() == id)
     }
 }
 

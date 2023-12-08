@@ -2,7 +2,8 @@
     dead_code,
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::single_match
 )]
 use bytemuck::bytes_of;
 use renderer_lib::math::{
@@ -12,7 +13,7 @@ use renderer_lib::math::{
 use std::{num::NonZeroU64, path::Path, thread};
 use wgpu::{
     util::{DeviceExt, StagingBelt},
-    Extent3d, Features,
+    Extent3d,
 };
 use winit::{
     event::{ElementState, Event},
@@ -57,8 +58,14 @@ struct DepthStencil<'a> {
     texture: wgpu::Texture,
     descriptor: wgpu::TextureDescriptor<'a>,
 }
+//Datastructure to keep track of all the active, supported feautres
+#[derive(Default)]
+pub struct Features {
+    pub screenshot: bool,
+}
 
 pub struct State<'stencil> {
+    features: Features,
     closed: bool,
     window: winit::window::Window,
     surface: wgpu::Surface,
@@ -73,8 +80,9 @@ pub struct State<'stencil> {
     materials: Vec<Box<dyn Material>>,
 }
 
-impl<'stencil> State<'_> {
+impl State<'_> {
     pub fn new(event_loop: &EventLoop<()>) -> Self {
+        let mut features = Features::default();
         let window = winit::window::Window::new(event_loop).expect("Failed to create new window");
 
         let size = window.inner_size();
@@ -98,7 +106,7 @@ impl<'stencil> State<'_> {
         let (device, queue): (wgpu::Device, wgpu::Queue) = futures::executor::block_on(req_device(
             &adapter,
             &wgpu::DeviceDescriptor {
-                features: Features::DEPTH_CLIP_CONTROL,
+                features: wgpu::Features::DEPTH_CLIP_CONTROL,
                 ..Default::default()
             },
         ))
@@ -116,9 +124,18 @@ impl<'stencil> State<'_> {
             .copied()
             .expect("Did not have last format");
         FORMAT.set(format).unwrap();
+        assert!(capabilities.usages & wgpu::TextureUsages::RENDER_ATTACHMENT == wgpu::TextureUsages::RENDER_ATTACHMENT, "Rendering not supported... What shitty ancient piece of shit are you fucking using wtf?");
 
         let surface_config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            usage: if capabilities.usages & wgpu::TextureUsages::COPY_SRC
+                != wgpu::TextureUsages::COPY_SRC
+            {
+                log::warn!("Screenshot feature not supported!");
+                wgpu::TextureUsages::RENDER_ATTACHMENT
+            } else {
+                features.screenshot = true;
+                wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
+            },
             format,
             width: size.width,
             height: size.height,
@@ -126,7 +143,7 @@ impl<'stencil> State<'_> {
             view_formats: vec![format],
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
-        surface.configure(&device, &surface_config);
+        surface.configure(device, &surface_config);
 
         let descriptor = wgpu::TextureDescriptor {
             label: Some("Depth stencil"),
@@ -213,6 +230,7 @@ impl<'stencil> State<'_> {
         blahaj.transform.position.z = -3.5;
 
         Self {
+            features,
             closed: false,
             window,
             surface,
@@ -282,8 +300,10 @@ impl<'stencil> State<'_> {
                     if let PhysicalKey::Code(key) = event.physical_key {
                         match key {
                             winit::keyboard::KeyCode::KeyP => {
-                                self.screenshot = true;
-                                log::info!("Taking a screenshot");
+                                if self.features.screenshot {
+                                    self.screenshot = true;
+                                    log::info!("Taking a screenshot");
+                                }
                             }
                             winit::keyboard::KeyCode::KeyS => {
                                 let mut new_blahaj =
@@ -355,51 +375,49 @@ impl<'stencil> State<'_> {
             .copy_from_slice(bytes_of(&self.camera.matrix()));
         self.staging_belt.finish();
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &frame_view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
-                            a: 0.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &frame_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.0,
                     }),
-                    stencil_ops: None,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &depth_view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
                 }),
-                timestamp_writes: None,
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
 
-                occlusion_query_set: None,
-            });
+            occlusion_query_set: None,
+        });
 
-            //Set the material
+        //Set the material
+        self.materials.get(0).unwrap().render(&mut render_pass);
 
-            self.materials.get(0).unwrap().render(&mut render_pass);
+        render_pass.set_bind_group(
+            grimoire::CAMERA_BIND_GROUP_INDEX,
+            &self.camera.bind_group,
+            &[],
+        );
 
-            render_pass.set_bind_group(
-                grimoire::CAMERA_BIND_GROUP_INDEX,
-                &self.camera.bind_group,
-                &[],
-            );
-
-            for m in self.models.iter() {
-                m.render(&mut render_pass);
-            }
+        for m in self.models.iter() {
+            m.render(&mut render_pass);
         }
+        drop(render_pass);
 
-        if self.screenshot {
+        if self.screenshot && self.features.screenshot {
             let image_size = frame.texture.size();
             let bpr = helpers::calculate_bpr(image_size.width, frame.texture.format()) as u32;
 

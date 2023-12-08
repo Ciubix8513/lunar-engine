@@ -177,7 +177,7 @@ impl TextureUnlit {
                 module: &f_shader,
                 entry_point: "main",
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: FORMAT.get().unwrap().clone(),
+                    format: *FORMAT.get().unwrap(),
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -196,7 +196,6 @@ impl Material for TextureUnlit {
     where
         'a: 'b,
     {
-        let render_pass = render_pass;
         render_pass.set_pipeline(&self.pipeline);
         for (index, b) in self.bind_groups.iter().enumerate() {
             render_pass.set_bind_group(index as u32 + 2, b, &[]);

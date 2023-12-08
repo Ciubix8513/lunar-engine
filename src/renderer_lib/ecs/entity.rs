@@ -68,6 +68,9 @@ impl Entity {
     }
 
     ///Adds component of type T to the entity
+    ///# Errors
+    ///
+    ///Returns an error if the entity already has the component of type `T`
     pub fn add_component<T: 'static>(&mut self) -> Result<(), ComponentError>
     where
         T: Component,
@@ -83,6 +86,9 @@ impl Entity {
     }
 
     ///Removes component of type T from the entity
+    ///# Errors
+    ///
+    ///Returns an error if the entity doesn't have the component of type `T`
     pub fn remove_component<T: 'static>(&mut self) -> Result<(), ComponentError>
     where
         T: Component,
@@ -105,32 +111,29 @@ impl Entity {
     }
 
     ///Acquires a reference to the component of type T
-    pub fn get_component<T: 'static>(&self) -> Result<ComponentReference<T>, ComponentError>
-    where
-        T: Component,
-    {
-        for c in self.components.iter() {
+    pub fn get_component<T: 'static>(&self) -> Option<ComponentReference<T>> {
+        for c in &self.components {
             let binding = c.borrow();
             if binding.as_any().downcast_ref::<T>().is_some() {
-                return Ok(ComponentReference {
+                return Some(ComponentReference {
                     cell: c,
                     phantom: std::marker::PhantomData,
                 });
             }
         }
-        Err(ComponentError::ComponentDoesNotExist)
+        None
     }
 
     ///Performs update on all components of the entity
     pub fn update(&mut self) {
-        for c in self.components.iter_mut() {
+        for c in &mut self.components {
             c.borrow_mut().update();
         }
     }
 
     ///Destroys the entity and calls decatification on all of it components
     pub fn decatify(mut self) {
-        for c in self.components.iter_mut() {
+        for c in &mut self.components {
             c.borrow_mut().decatification();
         }
     }
@@ -203,11 +206,11 @@ mod entity_tests {
         let mut entity = Entity::new();
         entity.add_component::<Transform>().unwrap();
         let c = entity.get_component::<Transform>();
-        assert!(c.is_ok());
+        assert!(c.is_some());
         entity.remove_component::<Transform>().unwrap();
 
         let c = entity.get_component::<Transform>();
-        assert!(c.is_err());
+        assert!(c.is_none());
     }
 
     #[test]
