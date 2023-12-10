@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 
 use rand::Rng;
 
@@ -10,7 +11,7 @@ pub type UUID = u64;
 #[derive(Default, Debug)]
 pub struct Entity {
     id: UUID,
-    components: Vec<std::cell::RefCell<Box<dyn Component + 'static>>>,
+    components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -20,21 +21,21 @@ pub enum ComponentError {
 }
 
 ///A wrapper around the component structure of easier access
-pub struct ComponentReference<'a, T> {
+pub struct ComponentReference<T> {
     phantom: std::marker::PhantomData<T>,
-    cell: &'a RefCell<Box<dyn Component + 'static>>,
+    cell: Rc<RefCell<Box<dyn Component + 'static>>>,
 }
 
-impl<'a, T: 'static> ComponentReference<'a, T> {
+impl<T: 'static> ComponentReference<T> {
     ///Borrows the underlying component
-    pub fn borrow(&self) -> Ref<'a, T> {
+    pub fn borrow<'a>(&'a self) -> Ref<'a, T> {
         Ref::map(self.cell.borrow(), |c| {
             c.as_any().downcast_ref::<T>().unwrap()
         })
     }
 
     ///Mutably borrows the underlying component
-    pub fn borrow_mut(&self) -> RefMut<'a, T> {
+    pub fn borrow_mut<'a>(&'a self) -> RefMut<'a, T> {
         RefMut::map(self.cell.borrow_mut(), |c| {
             c.as_any_mut().downcast_mut::<T>().unwrap()
         })
@@ -43,21 +44,24 @@ impl<'a, T: 'static> ComponentReference<'a, T> {
 
 impl Entity {
     ///Creates a new entity with no components
+    #[must_use]
     pub fn new() -> Self {
-        Entity {
+        Self {
             id: rand::thread_rng().gen(),
             components: Vec::new(),
         }
     }
 
     ///Returns internal entity id
-    pub fn get_id(&self) -> UUID {
+    #[must_use]
+    pub const fn get_id(&self) -> UUID {
         self.id
     }
 
     ///Checks if the entity has component of type T
+    #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
-        for c in self.components.iter() {
+        for c in &self.components {
             let c = c.borrow();
             let any = c.as_any().downcast_ref::<T>();
             if any.is_some() {
@@ -71,16 +75,15 @@ impl Entity {
     ///# Errors
     ///
     ///Returns an error if the entity already has the component of type `T`
-    pub fn add_component<T: 'static>(&mut self) -> Result<(), ComponentError>
-    where
-        T: Component,
-    {
+    pub fn add_component<T: 'static + Component>(&mut self) -> Result<(), ComponentError> {
         //Check if already have that component
         if self.has_component::<T>() {
             return Err(ComponentError::ComponentAlreadyExists);
         }
-        self.components.push(RefCell::new(Box::new(T::mew())));
-        self.components.last().unwrap().borrow_mut().awawa();
+        let mut c = T::mew();
+        c.awawa();
+        self.components
+            .push(Rc::new(RefCell::new(Box::new(T::mew()))));
 
         Ok(())
     }
@@ -89,10 +92,7 @@ impl Entity {
     ///# Errors
     ///
     ///Returns an error if the entity doesn't have the component of type `T`
-    pub fn remove_component<T: 'static>(&mut self) -> Result<(), ComponentError>
-    where
-        T: Component,
-    {
+    pub fn remove_component<T: 'static + Component>(&mut self) -> Result<(), ComponentError> {
         let mut ind = None;
         for (index, c) in self.components.iter().enumerate() {
             let binding = c.borrow();
@@ -102,21 +102,22 @@ impl Entity {
                 break;
             }
         }
-        if ind.is_none() {
-            return Err(ComponentError::ComponentDoesNotExist);
+        if let Some(ind) = ind {
+            self.components.remove(ind);
+            Ok(())
+        } else {
+            Err(ComponentError::ComponentDoesNotExist)
         }
-
-        self.components.remove(ind.unwrap());
-        Ok(())
     }
 
     ///Acquires a reference to the component of type T
+    #[must_use]
     pub fn get_component<T: 'static>(&self) -> Option<ComponentReference<T>> {
         for c in &self.components {
             let binding = c.borrow();
             if binding.as_any().downcast_ref::<T>().is_some() {
                 return Some(ComponentReference {
-                    cell: c,
+                    cell: c.clone(),
                     phantom: std::marker::PhantomData,
                 });
             }
@@ -220,7 +221,8 @@ mod entity_tests {
         entity.add_component::<TestComponent>().unwrap();
         entity.update();
 
-        let c = entity.get_component::<TestComponent>().unwrap().borrow();
+        let c = entity.get_component::<TestComponent>().unwrap();
+        let c = c.borrow();
         assert_eq!(c.value, 10)
     }
 

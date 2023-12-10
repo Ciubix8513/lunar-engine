@@ -1,12 +1,15 @@
 #![allow(dead_code)]
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
-use super::entity::Entity;
+use super::{
+    component::Component,
+    entity::{self, Entity},
+};
 
 ///Manages all the entities
 #[derive(Default)]
 pub struct World {
-    entities: Vec<RefCell<Entity>>,
+    entities: Vec<Rc<RefCell<Entity>>>,
 }
 #[derive(Debug)]
 pub enum Error {
@@ -24,7 +27,7 @@ impl World {
 
     ///Adds entity to the world, consuming it in the process
     pub fn add_entity(&mut self, entity: Entity) {
-        self.entities.push(RefCell::new(entity));
+        self.entities.push(Rc::new(RefCell::new(entity)));
     }
 
     ///Finds and removes the entity by its reference
@@ -41,7 +44,7 @@ impl World {
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).into_inner().decatify();
+            self.entities.remove(id).take().decatify();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -62,7 +65,7 @@ impl World {
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).into_inner().decatify();
+            self.entities.remove(id).take().decatify();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -79,14 +82,54 @@ impl World {
     }
 
     #[must_use]
-    pub fn get_entity_by_id(&self, id: super::entity::UUID) -> Option<&RefCell<Entity>> {
-        self.entities.iter().find(|e| e.borrow().get_id() == id)
+    pub fn get_entity_by_id(&self, id: super::entity::UUID) -> Option<Rc<RefCell<Entity>>> {
+        self.entities
+            .iter()
+            .find(|e| e.borrow().get_id() == id)
+            .cloned()
+    }
+    /// Returns a vector of all components of type T
+    /// The vector may be empty if there are no entities that have component T
+    #[must_use]
+    pub fn get_all_components<T>(&self) -> Option<Vec<entity::ComponentReference<T>>>
+    where
+        T: 'static + Component,
+    {
+        let o = self
+            .entities
+            .iter()
+            .filter_map(|e| e.borrow().get_component::<T>())
+            .collect::<Vec<_>>();
+        if o.len() > 1 {
+            Some(o)
+        } else {
+            None
+        }
+    }
+    /// Returns a vector of all components of type T
+    /// The vector may be empty if there are no entities that have component T
+    #[must_use]
+    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
+    where
+        T: 'static + Component,
+    {
+        let o = self
+            .entities
+            .iter()
+            .filter(|e| e.borrow().has_component::<T>())
+            .cloned()
+            .collect::<Vec<_>>();
+        if o.len() > 1 {
+            Some(o)
+        } else {
+            None
+        }
     }
 }
 
 #[cfg(test)]
 mod world_tests {
-    use crate::ecs::entity::Entity;
+    use crate::ecs::{components::transform::Transform, entity::Entity};
 
     use super::World;
 
@@ -117,7 +160,8 @@ mod world_tests {
 
     #[test]
     fn get_entity_test() {
-        let e = Entity::new();
+        let mut e = Entity::new();
+        e.add_component::<Transform>().unwrap();
         let id = e.get_id();
         let mut w = World::new();
         w.add_entity(e);
@@ -125,8 +169,33 @@ mod world_tests {
         let e = w.get_entity_by_id(id).unwrap();
 
         let e1 = e.borrow();
+        let c = e1.get_component::<Transform>().unwrap();
         drop(e1);
+        c.borrow();
 
         w.remove_entity_by_id(id).unwrap();
+    }
+
+    #[test]
+    fn get_all_componenents_test() {
+        let mut w = World::new();
+        let o = w.get_all_components::<Transform>();
+        assert!(o.is_none());
+
+        let mut e = Entity::new();
+        e.add_component::<Transform>().unwrap();
+        w.add_entity(e);
+        let mut e = Entity::new();
+        e.add_component::<Transform>().unwrap();
+        w.add_entity(e);
+        let mut e = Entity::new();
+        e.add_component::<Transform>().unwrap();
+        w.add_entity(e);
+
+        let o = w.get_all_components::<Transform>();
+        // let o = w.get_all_components::<(Transform, i32)>();
+        assert!(o.is_some());
+        assert_eq!(o.unwrap().len(), 3)
+        // w.remove_entity_by_id().unwrap();
     }
 }
