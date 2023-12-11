@@ -1,14 +1,14 @@
 [package]
-name = "renderer"
-version = "0.1.0"
+name = "lunar-engine"
+version = "0.0.1"
 edition = "2021"
 
 [lib]
-name="renderer_lib"
-path="./src/renderer_lib/lib.rs"
+name="lunar_lib"
+path="./src/lunar-lib/lib.rs"
 
 [[bin]]
-name="renderer"
+name="lunar_engine"
 path="./src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

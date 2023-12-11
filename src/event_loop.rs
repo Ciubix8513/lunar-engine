@@ -7,7 +7,7 @@
     clippy::single_match
 )]
 use bytemuck::bytes_of;
-use renderer_lib::math::{
+use lunar_lib::math::{
     mat4x4::{self, Mat4x4},
     vec3::Vec3,
 };
@@ -222,11 +222,11 @@ impl State<'_> {
         };
 
         let texture_data =
-            renderer_lib::import::bmp::parse(include_bytes!("../assets/blahaj1.bmp")).unwrap();
+            lunar_lib::import::bmp::parse(include_bytes!("../assets/blahaj1.bmp")).unwrap();
         let blahaj_material = TextureUnlit::new(&texture_data);
 
         let mut model =
-            renderer_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
+            lunar_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
         let mut blahaj = Model::new(model.remove(0));
         blahaj.transform.position.z = -3.5;
 
@@ -462,7 +462,7 @@ impl State<'_> {
             log::info!("Screenshot filename = {filename}");
 
             thread::spawn(move || {
-                let image = renderer_lib::helpers::arr_to_image(
+                let image = lunar_lib::helpers::arr_to_image(
                     &buffer,
                     bpr / 4,
                     image_size.width,

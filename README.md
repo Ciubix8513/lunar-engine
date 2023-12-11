@@ -1,5 +1,5 @@
-# renderer
-A realtime renderer writen in Rust using wgpu, plus all supporting infrastructure, including a math library, and model and image loading 
+# lunar-engine 
+A game engine written in Rust using wgpu, includes a math library, a renderer, an ECS(like) and various file format asset loading
 
 My current streaming project, all code is writen live on my [twitch streams](https://twitch.tv/ciubix8513), VODs are available on my [youtube channel](https://youtube.com/@ciubix8513)
 
@@ -18,5 +18,5 @@ My current streaming project, all code is writen live on my [twitch streams](htt
 - [ ] gltf loading
 - [ ] Skeletal animations
 
-Note: some of these goals may never get acomplished or be rearranged, no guarantees
+Note: This is just my personal project, some of these goals may never get accomplished or be rearranged, no guarantees. 
   

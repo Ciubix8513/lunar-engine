@@ -5,7 +5,7 @@ use crate::grimoire;
 
 use super::{transfomation::Transformation, DEVICE};
 use bytemuck::bytes_of;
-use renderer_lib::{math::mat4x4::Mat4x4, structrures::model::Mesh};
+use lunar_lib::{math::mat4x4::Mat4x4, structrures::model::Mesh};
 use wgpu::{util::DeviceExt, RenderPass};
 
 #[derive(Debug)]

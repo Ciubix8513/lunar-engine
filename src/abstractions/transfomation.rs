@@ -1,4 +1,4 @@
-use renderer_lib::math::{mat4x4::Mat4x4, vec3::Vec3};
+use lunar_lib::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 #[derive(Debug)]
 pub struct Transformation {

@@ -12,7 +12,7 @@ pub struct TextureUnlit {
 }
 
 impl TextureUnlit {
-    pub fn new(texture: &renderer_lib::structrures::image::Image) -> Self {
+    pub fn new(texture: &lunar_lib::structrures::image::Image) -> Self {
         let device = DEVICE.get().unwrap();
 
         let v_shader =
