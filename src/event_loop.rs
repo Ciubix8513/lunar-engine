@@ -1,5 +1,6 @@
 #![allow(
     dead_code,
+    clippy::cast_lossless,
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
     clippy::too_many_lines,
@@ -128,13 +129,13 @@ impl State<'_> {
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: if capabilities.usages & wgpu::TextureUsages::COPY_SRC
-                != wgpu::TextureUsages::COPY_SRC
+                == wgpu::TextureUsages::COPY_SRC
             {
-                log::warn!("Screenshot feature not supported!");
-                wgpu::TextureUsages::RENDER_ATTACHMENT
-            } else {
                 features.screenshot = true;
                 wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
+            } else {
+                log::warn!("Screenshot feature not supported!");
+                wgpu::TextureUsages::RENDER_ATTACHMENT
             },
             format,
             width: size.width,
@@ -222,7 +223,7 @@ impl State<'_> {
 
         let texture_data =
             renderer_lib::import::bmp::parse(include_bytes!("../assets/blahaj1.bmp")).unwrap();
-        let blahaj_material = TextureUnlit::new(texture_data);
+        let blahaj_material = TextureUnlit::new(&texture_data);
 
         let mut model =
             renderer_lib::import::obj::parse(include_str!("../assets/blahaj.obj")).unwrap();
@@ -361,7 +362,7 @@ impl State<'_> {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
 
         //update models
-        for m in self.models.iter() {
+        for m in &self.models {
             m.update_uniforms(&mut self.staging_belt, &mut encoder);
         }
         self.staging_belt
@@ -412,7 +413,7 @@ impl State<'_> {
             &[],
         );
 
-        for m in self.models.iter() {
+        for m in &self.models {
             m.render(&mut render_pass);
         }
         drop(render_pass);

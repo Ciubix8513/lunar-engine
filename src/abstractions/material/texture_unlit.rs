@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::too_many_lines)]
 use crate::{
     abstractions::{DEVICE, FORMAT, QUEUE},
     grimoire,
@@ -11,7 +12,7 @@ pub struct TextureUnlit {
 }
 
 impl TextureUnlit {
-    pub fn new(texture: renderer_lib::structrures::image::Image) -> TextureUnlit {
+    pub fn new(texture: &renderer_lib::structrures::image::Image) -> Self {
         let device = DEVICE.get().unwrap();
 
         let v_shader =
@@ -184,7 +185,7 @@ impl TextureUnlit {
             }),
             multiview: None,
         });
-        TextureUnlit {
+        Self {
             pipeline,
             bind_groups: vec![bind_group_f],
         }

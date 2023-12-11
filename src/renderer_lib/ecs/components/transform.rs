@@ -15,17 +15,12 @@ impl Component for Transform {
     where
         Self: Sized,
     {
-        Transform {
+        Self {
             rotation: Vec3::default(),
             scale: Vec3::new(1.0, 1.0, 1.0),
             position: Vec3::default(),
         }
     }
-
-    fn name(&self) -> &'static str {
-        "Transform"
-    }
-
     fn update(&mut self) {}
     fn awawa(&mut self) {}
     fn decatification(&mut self) {}
@@ -41,6 +36,7 @@ impl Component for Transform {
 
 impl Transform {
     ///Returns transformation of the entity
+    #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
         Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
     }

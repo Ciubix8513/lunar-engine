@@ -3,9 +3,6 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     fn mew() -> Self
     where
         Self: Sized;
-    //to be able to get component by name
-    ///Returns the name of the component
-    fn name(&self) -> &'static str;
     //Updates every frame
     ///Called every frame
     fn update(&mut self);

@@ -10,8 +10,8 @@ pub struct Transformation {
 impl Default for Transformation {
     fn default() -> Self {
         Self {
-            position: Default::default(),
-            rotation: Default::default(),
+            position: Vec3::default(),
+            rotation: Vec3::default(),
             scale: Vec3 {
                 x: 1.0,
                 y: 1.0,
@@ -22,7 +22,7 @@ impl Default for Transformation {
 }
 
 impl Transformation {
-    #[inline(always)]
+    #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
         Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
     }

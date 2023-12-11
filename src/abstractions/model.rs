@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation)]
 use std::num::NonZeroU64;
 
 use crate::grimoire;

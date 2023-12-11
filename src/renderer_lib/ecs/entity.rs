@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, clippy::missing_panics_doc)]
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
@@ -28,14 +28,16 @@ pub struct ComponentReference<T> {
 
 impl<T: 'static> ComponentReference<T> {
     ///Borrows the underlying component
-    pub fn borrow<'a>(&'a self) -> Ref<'a, T> {
+    #[must_use]
+    pub fn borrow(&self) -> Ref<'_, T> {
         Ref::map(self.cell.borrow(), |c| {
             c.as_any().downcast_ref::<T>().unwrap()
         })
     }
 
     ///Mutably borrows the underlying component
-    pub fn borrow_mut<'a>(&'a self) -> RefMut<'a, T> {
+    #[must_use]
+    pub fn borrow_mut(&self) -> RefMut<'_, T> {
         RefMut::map(self.cell.borrow_mut(), |c| {
             c.as_any_mut().downcast_mut::<T>().unwrap()
         })
@@ -157,10 +159,6 @@ mod entity_tests {
             Self: Sized,
         {
             Self { value: 0 }
-        }
-
-        fn name(&self) -> &'static str {
-            "Test entity"
         }
 
         fn update(&mut self) {
