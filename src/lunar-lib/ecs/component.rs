@@ -1,6 +1,8 @@
+use super::entity;
+
 pub trait Component: std::any::Any + std::fmt::Debug {
     ///Creates a new instance of the component
-    fn mew() -> Self
+    fn mew(entity_id: entity::UUID) -> Self
     where
         Self: Sized;
     //Updates every frame

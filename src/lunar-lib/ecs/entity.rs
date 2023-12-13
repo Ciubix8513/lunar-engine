@@ -2,6 +2,7 @@
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use rand::Rng;
 
@@ -11,7 +12,7 @@ pub type UUID = u64;
 #[derive(Default, Debug)]
 pub struct Entity {
     id: UUID,
-    components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
+    components: Vec<Arc<RwLock<Box<dyn Component + Send + Sync + 'static>>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -82,10 +83,10 @@ impl Entity {
         if self.has_component::<T>() {
             return Err(ComponentError::ComponentAlreadyExists);
         }
-        let mut c = T::mew();
+        let mut c = T::mew(&self);
         c.awawa();
-        self.components
-            .push(Rc::new(RefCell::new(Box::new(T::mew()))));
+
+        self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
         Ok(())
     }
@@ -154,7 +155,7 @@ mod entity_tests {
     }
 
     impl Component for TestComponent {
-        fn mew() -> Self
+        fn mew<'a>(entity: &'a Entity) -> Self
         where
             Self: Sized,
         {
