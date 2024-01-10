@@ -1,4 +1,4 @@
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 use ecs::world::World;
 
@@ -13,5 +13,3 @@ pub mod structrures;
 pub static DEVICE: OnceLock<wgpu::Device> = OnceLock::new();
 pub static QUEUE: OnceLock<wgpu::Queue> = OnceLock::new();
 pub static FORMAT: OnceLock<wgpu::TextureFormat> = OnceLock::new();
-
-pub static WORLD: OnceLock<Mutex<World>> = OnceLock::new();

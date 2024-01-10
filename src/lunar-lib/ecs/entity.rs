@@ -1,8 +1,6 @@
 #![allow(dead_code, clippy::missing_panics_doc)]
-
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
-use std::sync::{Arc, RwLock};
 
 use rand::Rng;
 
@@ -12,7 +10,7 @@ pub type UUID = u64;
 #[derive(Default, Debug)]
 pub struct Entity {
     id: UUID,
-    components: Vec<Arc<RwLock<Box<dyn Component + Send + Sync + 'static>>>>,
+    components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -35,7 +33,6 @@ impl<T: 'static> ComponentReference<T> {
             c.as_any().downcast_ref::<T>().unwrap()
         })
     }
-
     ///Mutably borrows the underlying component
     #[must_use]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
@@ -83,9 +80,8 @@ impl Entity {
         if self.has_component::<T>() {
             return Err(ComponentError::ComponentAlreadyExists);
         }
-        let mut c = T::mew(&self);
+        let mut c = T::mew();
         c.awawa();
-
         self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
         Ok(())
@@ -143,6 +139,76 @@ impl Entity {
     }
 }
 
+#[derive(Default)]
+pub struct EntityBuilder {
+    components: Vec<Box<dyn Component>>,
+}
+
+impl EntityBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    #[must_use]
+    pub fn add_component<T>(self) -> Self
+    where
+        T: 'static + Component,
+    {
+        for i in &self.components {
+            if i.as_any().is::<T>() {
+                return self;
+            }
+        }
+        let mut s = self;
+
+        let c = Box::new(T::mew());
+        s.components.push(c);
+        s
+    }
+
+    #[must_use]
+    pub fn add_existing_component(self, component: Box<dyn Component>) -> Self {
+        for i in &self.components {
+            if i.as_any().type_id() == component.as_any().type_id() {
+                return self;
+            }
+        }
+
+        let mut s = self;
+        s.components.push(component);
+        s
+    }
+
+    #[must_use]
+    pub fn create_component<F>(self, f: F) -> Self
+    where
+        F: FnOnce() -> Box<dyn Component>,
+    {
+        let c = f();
+
+        for i in &self.components {
+            if i.as_any().type_id() == c.as_any().type_id() {
+                return self;
+            }
+        }
+
+        let mut s = self;
+        s.components.push(c);
+        s
+    }
+
+    #[must_use]
+    pub fn create(self) -> Entity {
+        Entity {
+            id: rand::thread_rng().gen(),
+            components: self
+                .components
+                .into_iter()
+                .map(|c| Rc::new(RefCell::new(c)))
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod entity_tests {
     use crate::ecs::components::transform::Transform;
@@ -150,12 +216,12 @@ mod entity_tests {
     use super::*;
 
     #[derive(Debug)]
-    struct TestComponent {
+    struct TestComponent1 {
         pub value: i32,
     }
 
-    impl Component for TestComponent {
-        fn mew<'a>(entity: &'a Entity) -> Self
+    impl Component for TestComponent1 {
+        fn mew() -> Self
         where
             Self: Sized,
         {
@@ -169,6 +235,32 @@ mod entity_tests {
         fn awawa(&mut self) {}
         fn decatification(&mut self) {}
 
+        fn as_any(&self) -> &dyn std::any::Any {
+            self as &dyn std::any::Any
+        }
+
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+            self as &mut dyn std::any::Any
+        }
+    }
+
+    #[derive(Debug)]
+    struct TestComponent {
+        pub value: i32,
+    }
+
+    impl Component for TestComponent {
+        fn mew() -> Self
+        where
+            Self: Sized,
+        {
+            Self { value: 0 }
+        }
+
+        fn update(&mut self) {
+            self.value += 10;
+        }
+        fn awawa(&mut self) {}
         fn as_any(&self) -> &dyn std::any::Any {
             self as &dyn std::any::Any
         }
@@ -199,6 +291,51 @@ mod entity_tests {
 
         assert_eq!(e, Ok(()));
         assert!(!entity.has_component::<crate::ecs::components::transform::Transform>());
+    }
+    #[test]
+    fn entity_builder_test() {
+        let mut c = TestComponent1::mew();
+        c.value = 20;
+        let entitiy = EntityBuilder::new()
+            .add_component::<Transform>()
+            .create_component(|| {
+                let mut c = TestComponent::mew();
+                c.value = 10;
+                Box::new(c)
+            })
+            .add_existing_component(Box::new(c))
+            .create();
+
+        assert!(entitiy.has_component::<Transform>());
+        assert!(entitiy.has_component::<TestComponent>());
+        assert!(entitiy.has_component::<TestComponent1>());
+
+        assert_eq!(
+            entitiy
+                .get_component::<TestComponent>()
+                .unwrap()
+                .borrow()
+                .value,
+            10
+        );
+
+        assert_eq!(
+            entitiy
+                .get_component::<TestComponent1>()
+                .unwrap()
+                .borrow()
+                .value,
+            20
+        );
+
+        let t = Transform::mew();
+        let e = EntityBuilder::new()
+            .add_component::<Transform>()
+            .add_existing_component(Box::new(t))
+            .create_component(|| Box::new(Transform::mew()))
+            .create();
+
+        assert_eq!(1, e.components.len());
     }
 
     #[test]

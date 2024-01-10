@@ -1,14 +1,6 @@
 use wgpu::util::DeviceExt;
 
-use crate::{
-    ecs::{
-        component::Component,
-        entity::{self},
-    },
-    grimoire,
-    math::mat4x4::Mat4x4,
-    DEVICE,
-};
+use crate::{ecs::component::Component, grimoire, math::mat4x4::Mat4x4, DEVICE};
 
 #[derive(Debug, Default)]
 pub struct Mesh {
@@ -22,21 +14,12 @@ pub struct Mesh {
 }
 
 impl Component for Mesh {
-    fn mew(entity_id: entity::UUID) -> Self
+    fn mew() -> Self
     where
         Self: Sized,
     {
-        Mesh {
-            // entity: Some(entity),
-            ..Default::default()
-        }
+        Mesh::default()
     }
-
-    fn update(&mut self) {}
-
-    fn awawa(&mut self) {}
-
-    fn decatification(&mut self) {}
 
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any

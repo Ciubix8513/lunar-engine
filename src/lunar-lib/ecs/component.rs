@@ -1,19 +1,41 @@
 use super::entity;
 
+///The trait all components that are used within the ECS must implement
 pub trait Component: std::any::Any + std::fmt::Debug {
     ///Creates a new instance of the component
-    fn mew(entity_id: entity::UUID) -> Self
+    fn mew() -> Self
     where
         Self: Sized;
-    //Updates every frame
     ///Called every frame
-    fn update(&mut self);
-    //Post creation initialization function, called after the component is pushed uwu :3
+    fn update(&mut self) {}
     ///Called after the component is created
-    fn awawa(&mut self);
-    //Called when either the component is removed or the entity is
+    fn awawa(&mut self) {}
     ///Called upon component deletion
-    fn decatification(&mut self);
+    fn decatification(&mut self) {}
+    ///Sets the id of the entity
+    ///
+    ///# Panics
+    ///Panics if the entity id was already set
+    fn set_entity_id(&self, id: entity::UUID) {}
+
+    //Will not be needed after Rust 1.75.0
+    //Cannot be implemented automatically, well... likely can be, but i can't be bothered
+    ///Converts trait object to a `std::any::Any` reference
+    ///
+    ///This function should be implemented as follows
+    ///```
+    /// fn as_any(&self) -> &dyn std::any::Any {
+    ///     self as &dyn std::any::Any
+    /// }
+    ///```
     fn as_any(&self) -> &dyn std::any::Any;
+    ///Converts trait object to a mutable `std::any::Any` reference
+    ///
+    ///This function should be implemented as follows
+    ///```
+    /// fn as_any(&self) -> &dyn std::any::Any {
+    ///     self as &mut dyn std::any::Any
+    /// }
+    ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }

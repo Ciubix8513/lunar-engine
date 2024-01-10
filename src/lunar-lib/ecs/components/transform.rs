@@ -1,4 +1,3 @@
-use crate::ecs::entity::Entity;
 use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 use crate::ecs::component::Component;
@@ -12,7 +11,7 @@ pub struct Transform {
 }
 
 impl Component for Transform {
-    fn mew<'a>(entity: &'a Entity) -> Self
+    fn mew() -> Self
     where
         Self: Sized,
     {
@@ -22,10 +21,6 @@ impl Component for Transform {
             position: Vec3::default(),
         }
     }
-    fn update(&mut self) {}
-    fn awawa(&mut self) {}
-    fn decatification(&mut self) {}
-
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any
     }

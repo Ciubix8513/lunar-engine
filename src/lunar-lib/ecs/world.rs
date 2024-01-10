@@ -1,10 +1,6 @@
 #![allow(dead_code)]
-use std::{
-    borrow::Borrow,
-    cell::RefCell,
-    rc::Rc,
-    sync::{Arc, RwLock},
-};
+
+use std::{cell::RefCell, rc::Rc};
 
 use super::{
     component::Component,
@@ -14,7 +10,7 @@ use super::{
 ///Manages all the entities
 #[derive(Default)]
 pub struct World {
-    entities: Vec<Arc<RwLock<Entity>>>,
+    entities: Vec<Rc<RefCell<Entity>>>,
 }
 #[derive(Debug)]
 pub enum Error {
@@ -32,7 +28,7 @@ impl World {
 
     ///Adds entity to the world, consuming it in the process
     pub fn add_entity(&mut self, entity: Entity) {
-        self.entities.push(Arc::new(RwLock::new(entity)));
+        self.entities.push(Rc::new(RefCell::new(entity)));
     }
 
     ///Finds and removes the entity by its reference
@@ -42,14 +38,14 @@ impl World {
     pub fn remove_entity_by_ref(&mut self, entity: &Entity) -> Result<(), Error> {
         let mut id = None;
         for (index, e) in self.entities.iter().enumerate() {
-            if e.read().unwrap().get_id() == entity.get_id() {
+            if e.borrow().get_id() == entity.get_id() {
                 id = Some(index);
                 break;
             }
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).into_inner().unwrap().decatify();
+            self.entities.remove(id).take().decatify();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -63,14 +59,14 @@ impl World {
     pub fn remove_entity_by_id(&mut self, entity_id: super::entity::UUID) -> Result<(), Error> {
         let mut id = None;
         for (index, e) in self.entities.iter().enumerate() {
-            if e.read().unwrap().get_id() == entity_id {
+            if e.borrow().get_id() == entity_id {
                 id = Some(index);
                 break;
             }
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).into_inner().unwrap().decatify();
+            self.entities.remove(id).take().decatify();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -87,10 +83,10 @@ impl World {
     }
 
     #[must_use]
-    pub fn get_entity_by_id(&self, id: super::entity::UUID) -> Option<Arc<RwLock<Entity>>> {
+    pub fn get_entity_by_id(&self, id: super::entity::UUID) -> Option<Rc<RefCell<Entity>>> {
         self.entities
             .iter()
-            .find(|e| e.read().unwrap().get_id() == id)
+            .find(|e| e.borrow().get_id() == id)
             .cloned()
     }
     /// Returns a vector of all components of type T
@@ -103,7 +99,7 @@ impl World {
         let o = self
             .entities
             .iter()
-            .filter_map(|e| e.read().unwrap().get_component::<T>())
+            .filter_map(|e| e.borrow().get_component::<T>())
             .collect::<Vec<_>>();
         if o.len() > 1 {
             Some(o)
@@ -114,14 +110,14 @@ impl World {
     /// Returns a vector of all components of type T
     /// The vector may be empty if there are no entities that have component T
     #[must_use]
-    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Arc<RwLock<Entity>>>>
+    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
     where
         T: 'static + Component,
     {
         let o = self
             .entities
             .iter()
-            .filter(|e| e.read().unwrap().has_component::<T>())
+            .filter(|e| e.borrow().has_component::<T>())
             .cloned()
             .collect::<Vec<_>>();
         if o.len() > 1 {
@@ -173,7 +169,7 @@ mod world_tests {
 
         let e = w.get_entity_by_id(id).unwrap();
 
-        let e1 = e.read().unwrap();
+        let e1 = e.borrow();
         let c = e1.get_component::<Transform>().unwrap();
         drop(e1);
         _ = c.borrow();
