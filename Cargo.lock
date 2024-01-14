@@ -1078,6 +1078,7 @@ dependencies = [
  "image",
  "log",
  "rand",
+ "vec_key_value_pair",
  "wgpu",
  "winit",
 ]
@@ -1938,6 +1939,12 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
+name = "vec_key_value_pair"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7014fe6bb0e05b34bdaa7ec63a7516070589f8194fd973790715a276c7f39674"
 
 [[package]]
 name = "version_check"

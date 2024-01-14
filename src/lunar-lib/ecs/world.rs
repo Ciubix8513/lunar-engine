@@ -1,16 +1,68 @@
 #![allow(dead_code)]
 
-use std::{cell::RefCell, rc::Rc};
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+
+use vec_key_value_pair::VecMap;
 
 use super::{
     component::Component,
     entity::{self, Entity},
 };
 
+//Oh god this is gonna be a mess
+#[derive(Debug)]
+pub(crate) struct ComponentsModified {
+    map: VecMap<std::any::TypeId, bool>,
+    entity_modified: bool,
+}
+
+impl Default for ComponentsModified {
+    fn default() -> Self {
+        Self {
+            map: VecMap::new(),
+            entity_modified: Default::default(),
+        }
+    }
+}
+
+impl ComponentsModified {
+    ///Sets all caches modified to false
+    pub fn reset(&mut self) {
+        for i in self.map.values_mut() {
+            *i = false
+        }
+        self.entity_modified = false;
+    }
+
+    ///Must be called upon component addition or removal
+    pub fn component_changed<T: Component>(&mut self) {
+        self.map.entry(std::any::TypeId::of::<T>()).or_insert(true);
+    }
+
+    ///Must be called upon new entity creation or entity delition
+    pub fn entity_changed(&mut self) {
+        self.entity_modified = true;
+    }
+}
+
 ///Manages all the entities
-#[derive(Default)]
 pub struct World {
     entities: Vec<Rc<RefCell<Entity>>>,
+    modified: Rc<RefCell<ComponentsModified>>,
+    //Gotta box it, this is so stupid
+    component_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
+    entity_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
+}
+
+impl Default for World {
+    fn default() -> Self {
+        Self {
+            entities: Vec::new(),
+            modified: Rc::new(RefCell::new(ComponentsModified::default())),
+            component_cache: RefCell::new(VecMap::new()),
+            entity_cache: RefCell::new(VecMap::new()),
+        }
+    }
 }
 #[derive(Debug)]
 pub enum Error {
@@ -20,15 +72,18 @@ pub enum Error {
 impl World {
     ///Creates a new World
     #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            entities: Vec::new(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     ///Adds entity to the world, consuming it in the process
     pub fn add_entity(&mut self, entity: Entity) {
-        self.entities.push(Rc::new(RefCell::new(entity)));
+        let mut e = entity;
+        e.world_modified = Some(self.modified.clone());
+
+        self.entities.push(Rc::new(RefCell::new(e)));
+
+        self.modified.borrow_mut().entity_changed();
     }
 
     ///Finds and removes the entity by its reference
@@ -37,6 +92,7 @@ impl World {
     ///Returns an error if the enity doesn't exist in the world
     pub fn remove_entity_by_ref(&mut self, entity: &Entity) -> Result<(), Error> {
         let mut id = None;
+
         for (index, e) in self.entities.iter().enumerate() {
             if e.borrow().get_id() == entity.get_id() {
                 id = Some(index);
@@ -46,6 +102,8 @@ impl World {
 
         if let Some(id) = id {
             self.entities.remove(id).take().decatify();
+            self.modified.borrow_mut().entity_changed();
+
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -67,6 +125,8 @@ impl World {
 
         if let Some(id) = id {
             self.entities.remove(id).take().decatify();
+            self.modified.borrow_mut().entity_changed();
+
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -96,6 +156,10 @@ impl World {
     where
         T: 'static + Component,
     {
+        let stuff = self
+            .component_cache
+            .borrow_mut()
+            .entry(std::any::TypeId::of::<T>());
         let o = self
             .entities
             .iter()

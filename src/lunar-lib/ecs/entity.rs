@@ -5,12 +5,14 @@ use std::rc::Rc;
 use rand::Rng;
 
 use super::component::Component;
+use super::world::ComponentsModified;
 pub type UUID = u64;
 
 #[derive(Default, Debug)]
 pub struct Entity {
     id: UUID,
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
+    pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -48,7 +50,7 @@ impl Entity {
     pub fn new() -> Self {
         Self {
             id: rand::thread_rng().gen(),
-            components: Vec::new(),
+            ..Default::default()
         }
     }
 
@@ -84,6 +86,10 @@ impl Entity {
         c.awawa();
         self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
+        if let Some(w) = &self.world_modified {
+            w.borrow_mut().component_changed::<T>()
+        }
+
         Ok(())
     }
 
@@ -103,6 +109,11 @@ impl Entity {
         }
         if let Some(ind) = ind {
             self.components.remove(ind);
+
+            if let Some(w) = &self.world_modified {
+                w.borrow_mut().component_changed::<T>()
+            }
+
             Ok(())
         } else {
             Err(ComponentError::ComponentDoesNotExist)
@@ -205,6 +216,7 @@ impl EntityBuilder {
                 .into_iter()
                 .map(|c| Rc::new(RefCell::new(c)))
                 .collect(),
+            ..Default::default()
         }
     }
 }

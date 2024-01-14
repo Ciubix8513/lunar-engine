@@ -22,15 +22,7 @@ use winit::{
     keyboard::PhysicalKey,
 };
 
-use crate::{
-    abstractions::{
-        self,
-        material::{texture_unlit::TextureUnlit, Material},
-        model::Model,
-        DEVICE, FORMAT, QUEUE,
-    },
-    grimoire, helpers,
-};
+use crate::{grimoire, helpers};
 
 pub struct Camera {
     pub position: Vec3,

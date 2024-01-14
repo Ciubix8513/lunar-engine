@@ -1,7 +1,6 @@
 use event_loop::State;
 use winit::event_loop::EventLoop;
 
-mod abstractions;
 mod event_loop;
 mod grimoire;
 mod helpers;
