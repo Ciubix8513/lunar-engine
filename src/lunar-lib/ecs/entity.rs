@@ -27,6 +27,17 @@ pub struct ComponentReference<T> {
     cell: Rc<RefCell<Box<dyn Component + 'static>>>,
 }
 
+//Have to use the manual iplementation, so that it doesn't require T to implement clone
+//bc it literally doesn't need clone
+impl<T> Clone for ComponentReference<T> {
+    fn clone(&self) -> Self {
+        Self {
+            phantom: self.phantom.clone(),
+            cell: self.cell.clone(),
+        }
+    }
+}
+
 impl<T: 'static> ComponentReference<T> {
     ///Borrows the underlying component
     #[must_use]

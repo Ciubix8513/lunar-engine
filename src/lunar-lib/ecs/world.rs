@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use vec_key_value_pair::VecMap;
 
@@ -10,33 +10,22 @@ use super::{
 };
 
 //Oh god this is gonna be a mess
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct ComponentsModified {
-    map: VecMap<std::any::TypeId, bool>,
+    modified_components: Vec<std::any::TypeId>,
     entity_modified: bool,
-}
-
-impl Default for ComponentsModified {
-    fn default() -> Self {
-        Self {
-            map: VecMap::new(),
-            entity_modified: Default::default(),
-        }
-    }
 }
 
 impl ComponentsModified {
     ///Sets all caches modified to false
     pub fn reset(&mut self) {
-        for i in self.map.values_mut() {
-            *i = false
-        }
+        self.modified_components.clear();
         self.entity_modified = false;
     }
 
     ///Must be called upon component addition or removal
     pub fn component_changed<T: Component>(&mut self) {
-        self.map.entry(std::any::TypeId::of::<T>()).or_insert(true);
+        self.modified_components.push(std::any::TypeId::of::<T>());
     }
 
     ///Must be called upon new entity creation or entity delition
@@ -83,7 +72,7 @@ impl World {
 
         self.entities.push(Rc::new(RefCell::new(e)));
 
-        self.modified.borrow_mut().entity_changed();
+        (*self.modified).borrow_mut().entity_changed();
     }
 
     ///Finds and removes the entity by its reference
@@ -102,7 +91,7 @@ impl World {
 
         if let Some(id) = id {
             self.entities.remove(id).take().decatify();
-            self.modified.borrow_mut().entity_changed();
+            (*self.modified).borrow_mut().entity_changed();
 
             Ok(())
         } else {
@@ -125,8 +114,7 @@ impl World {
 
         if let Some(id) = id {
             self.entities.remove(id).take().decatify();
-            self.modified.borrow_mut().entity_changed();
-
+            (*self.modified).borrow_mut().entity_changed();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -149,6 +137,25 @@ impl World {
             .find(|e| e.borrow().get_id() == id)
             .cloned()
     }
+    ///Checks the modified data and deletes all modified caches;
+    fn upate_caches(&self) {
+        let mut modified = (*self.modified).borrow_mut();
+        if modified.entity_modified {
+            modified.reset();
+            self.component_cache.borrow_mut().clear();
+            self.entity_cache.borrow_mut().clear();
+            return;
+        }
+        let mut cache = self.component_cache.borrow_mut();
+        if modified.modified_components.len() != 0 {
+            //Remove caches for all modified components
+            for i in &modified.modified_components {
+                cache.remove(i);
+            }
+            modified.reset();
+        }
+    }
+
     /// Returns a vector of all components of type T
     /// The vector may be empty if there are no entities that have component T
     #[must_use]
@@ -156,21 +163,31 @@ impl World {
     where
         T: 'static + Component,
     {
-        let stuff = self
-            .component_cache
-            .borrow_mut()
-            .entry(std::any::TypeId::of::<T>());
-        let o = self
-            .entities
-            .iter()
-            .filter_map(|e| e.borrow().get_component::<T>())
-            .collect::<Vec<_>>();
-        if o.len() > 1 {
-            Some(o)
+        self.upate_caches();
+
+        let mut binding = self.component_cache.borrow_mut();
+        let entry = binding
+            .entry(std::any::TypeId::of::<T>())
+            .or_insert_with(|| {
+                Box::new(
+                    self.entities
+                        .iter()
+                        .filter_map(|e| e.borrow().get_component::<T>())
+                        .collect::<Vec<_>>(),
+                )
+            });
+
+        let vec = entry
+            .downcast_ref::<Vec<entity::ComponentReference<T>>>()
+            .unwrap();
+
+        if vec.len() > 1 {
+            Some((*vec).clone())
         } else {
             None
         }
     }
+
     /// Returns a vector of all components of type T
     /// The vector may be empty if there are no entities that have component T
     #[must_use]
@@ -178,14 +195,21 @@ impl World {
     where
         T: 'static + Component,
     {
-        let o = self
-            .entities
-            .iter()
-            .filter(|e| e.borrow().has_component::<T>())
-            .cloned()
-            .collect::<Vec<_>>();
-        if o.len() > 1 {
-            Some(o)
+        self.upate_caches();
+
+        let mut entry = self.entity_cache.borrow_mut();
+        let entry = entry.entry(std::any::TypeId::of::<T>()).or_insert_with(|| {
+            Box::new(
+                self.entities
+                    .iter()
+                    .filter(|e| e.borrow().has_component::<T>())
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            )
+        });
+        let vec = entry.downcast_ref::<Vec<Rc<RefCell<Entity>>>>().unwrap();
+        if vec.len() > 1 {
+            Some(vec.clone())
         } else {
             None
         }
@@ -257,10 +281,10 @@ mod world_tests {
         e.add_component::<Transform>().unwrap();
         w.add_entity(e);
 
-        let o = w.get_all_components::<Transform>();
-        // let o = w.get_all_components::<(Transform, i32)>();
-        assert!(o.is_some());
-        assert_eq!(o.unwrap().len(), 3)
-        // w.remove_entity_by_id().unwrap();
+        for _ in 0..100000 {
+            let o = w.get_all_components::<Transform>();
+            assert!(o.is_some());
+            assert_eq!(o.unwrap().len(), 3)
+        }
     }
 }
