@@ -146,11 +146,13 @@ impl World {
             self.entity_cache.borrow_mut().clear();
             return;
         }
-        let mut cache = self.component_cache.borrow_mut();
-        if modified.modified_components.len() != 0 {
+        let mut c_cache = self.component_cache.borrow_mut();
+        let mut e_cache = self.entity_cache.borrow_mut();
+        if !modified.modified_components.is_empty() {
             //Remove caches for all modified components
             for i in &modified.modified_components {
-                cache.remove(i);
+                c_cache.remove(i);
+                e_cache.remove(i);
             }
             modified.reset();
         }
@@ -158,6 +160,7 @@ impl World {
 
     /// Returns a vector of all components of type T
     /// The vector may be empty if there are no entities that have component T
+    #[allow(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_all_components<T>(&self) -> Option<Vec<entity::ComponentReference<T>>>
     where
@@ -190,6 +193,7 @@ impl World {
 
     /// Returns a vector of all components of type T
     /// The vector may be empty if there are no entities that have component T
+    #[allow(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
     where
@@ -271,20 +275,49 @@ mod world_tests {
         let o = w.get_all_components::<Transform>();
         assert!(o.is_none());
 
-        let mut e = Entity::new();
-        e.add_component::<Transform>().unwrap();
-        w.add_entity(e);
-        let mut e = Entity::new();
-        e.add_component::<Transform>().unwrap();
-        w.add_entity(e);
+        for _ in 0..200 {
+            let mut e = Entity::new();
+            e.add_component::<Transform>().unwrap();
+            w.add_entity(e);
+        }
+
+        //To test speed
+        for _ in 0..10000 {
+            let o = w.get_all_components::<Transform>();
+            assert!(o.is_some());
+            assert_eq!(o.unwrap().len(), 200);
+
+            let o = w.get_all_entities_with_component::<Transform>();
+            assert!(o.is_some());
+            assert_eq!(o.unwrap().len(), 200);
+            // w.modified.borrow_mut().entity_changed();
+        }
+
         let mut e = Entity::new();
         e.add_component::<Transform>().unwrap();
         w.add_entity(e);
 
-        for _ in 0..100000 {
-            let o = w.get_all_components::<Transform>();
-            assert!(o.is_some());
-            assert_eq!(o.unwrap().len(), 3)
-        }
+        //Test cache invalidation for components
+        let o = w.get_all_components::<Transform>();
+        assert!(o.is_some());
+        assert_eq!(o.unwrap().len(), 201);
+
+        //Test cache invalidation for components
+        let o = w.get_all_entities_with_component::<Transform>();
+        assert!(o.is_some());
+        let o = o.unwrap();
+        assert_eq!(o.len(), 201);
+
+        let mut e = o.get(0).unwrap().borrow_mut();
+        e.remove_component::<Transform>().unwrap();
+        drop(e);
+
+        let o = w.get_all_components::<Transform>();
+        assert!(o.is_some());
+        assert_eq!(o.unwrap().len(), 200);
+
+        let o = w.get_all_entities_with_component::<Transform>();
+        assert!(o.is_some());
+        assert_eq!(o.unwrap().len(), 200);
     }
 }

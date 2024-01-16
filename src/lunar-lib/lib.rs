@@ -1,7 +1,5 @@
 use std::sync::OnceLock;
 
-use ecs::world::World;
-
 pub mod abstractions;
 pub mod ecs;
 pub mod grimoire;

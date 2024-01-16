@@ -16,6 +16,7 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     ///
     ///# Panics
     ///Panics if the entity id was already set
+    #[allow(unused_variables)]
     fn set_entity_id(&self, id: entity::UUID) {}
 
     //Will not be needed after Rust 1.75.0

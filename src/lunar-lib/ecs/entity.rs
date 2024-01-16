@@ -32,7 +32,7 @@ pub struct ComponentReference<T> {
 impl<T> Clone for ComponentReference<T> {
     fn clone(&self) -> Self {
         Self {
-            phantom: self.phantom.clone(),
+            phantom: self.phantom,
             cell: self.cell.clone(),
         }
     }
@@ -98,7 +98,7 @@ impl Entity {
         self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
         if let Some(w) = &self.world_modified {
-            w.borrow_mut().component_changed::<T>()
+            w.borrow_mut().component_changed::<T>();
         }
 
         Ok(())
@@ -122,7 +122,7 @@ impl Entity {
             self.components.remove(ind);
 
             if let Some(w) = &self.world_modified {
-                w.borrow_mut().component_changed::<T>()
+                w.borrow_mut().component_changed::<T>();
             }
 
             Ok(())
@@ -162,11 +162,13 @@ impl Entity {
 }
 
 #[derive(Default)]
+#[allow(clippy::module_name_repetitions)]
 pub struct EntityBuilder {
     components: Vec<Box<dyn Component>>,
 }
 
 impl EntityBuilder {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
