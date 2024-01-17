@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 use std::sync::OnceLock;
 
 pub mod abstractions;

@@ -1,6 +1,6 @@
 use wgpu::util::DeviceExt;
 
-use crate::{ecs::component::Component, grimoire, math::mat4x4::Mat4x4, DEVICE};
+use crate::{ecs::Component, grimoire, math::mat4x4::Mat4x4, DEVICE};
 
 #[derive(Debug, Default)]
 pub struct Mesh {

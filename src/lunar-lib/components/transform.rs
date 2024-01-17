@@ -1,6 +1,6 @@
 use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
 
-use crate::ecs::component::Component;
+use crate::ecs::Component;
 
 ///Transform  component contains function and data to determine the position of the entity
 #[derive(Debug)]
