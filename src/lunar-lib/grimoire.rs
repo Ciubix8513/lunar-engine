@@ -33,3 +33,4 @@ pub const CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR: wgpu::BindGroupLayoutDescriptor =
 
 pub const CAMERA_BIND_GROUP_INDEX: u32 = 1;
 pub const TRANS_BIND_GROUP_INDEX: u32 = 0;
+pub const NUM_THREADS: usize = 8;
