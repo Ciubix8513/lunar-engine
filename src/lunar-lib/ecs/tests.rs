@@ -173,7 +173,6 @@ fn entity_builder_test() {
     let mut c = TestComponent1::mew();
     c.value = 20;
     let entitiy = EntityBuilder::new()
-        .add_component::<TestComponent>()
         .create_component(|| {
             let mut c = TestComponent::mew();
             c.value = 10;
@@ -182,7 +181,6 @@ fn entity_builder_test() {
         .add_existing_component(Box::new(c))
         .create();
 
-    assert!(entitiy.has_component::<TestComponent>());
     assert!(entitiy.has_component::<TestComponent>());
     assert!(entitiy.has_component::<TestComponent1>());
 
