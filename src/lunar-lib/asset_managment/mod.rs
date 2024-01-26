@@ -27,15 +27,21 @@ use crate::grimoire;
 mod tests;
 
 #[derive(Debug)]
+///Error type for asset management
 pub enum Error {
+    ///Id of an asset is already set
     IdAlreadySet,
+    ///Requested asset does not exist or is not registered
     DoesNotExist,
+    ///An error ocured during initialization
+    ///
+    ///The enclosed `Box<dyn std::error::Error>` contains the error that occured
     InitializationError(Box<dyn std::error::Error>),
 }
 
 //Potentially use ecs::UUID
 ///Type the management system uses for a sset IDs
-type UUID = u128;
+pub type UUID = u128;
 
 //Send and sync for parallel initialization
 ///Trait all assets must implement
@@ -87,9 +93,9 @@ pub trait Asset: Send + Sync + std::any::Any {
     ///
     ///This function should be implemented as follows
     ///```
-    /// fn as_any_mut(&self) -> &dyn std::any::Any {
-    ///     self as &mut dyn std::any::Any
-    /// }
+    ///fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+    ///    self as &mut dyn std::any::Any
+    ///}
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
@@ -100,8 +106,13 @@ pub struct AssetReference<T: 'static> {
     phantom: std::marker::PhantomData<T>,
 }
 
+///Type to hide the ugly original type
+pub type AssetGuard<'a, T> = lock_api::MappedRwLockReadGuard<'a, parking_lot::RawRwLock, T>;
+///Type to hide the ugly original type
+pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot::RawRwLock, T>;
+
 impl<T> AssetReference<T> {
-    pub fn borrow(&self) -> lock_api::MappedRwLockReadGuard<'_, parking_lot::RawRwLock, T> {
+    pub fn borrow(&self) -> AssetGuard<'_, T> {
         let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             read,
@@ -109,7 +120,7 @@ impl<T> AssetReference<T> {
         )
     }
 
-    pub fn borrow_mut(&self) -> lock_api::MappedRwLockWriteGuard<'_, parking_lot::RawRwLock, T> {
+    pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             write,
@@ -204,7 +215,7 @@ impl AssetStore {
         Ok(())
     }
 
-    ///Returns the [AssetRefence] to an asset inside the AssetStore by id
+    ///Returns the [AssetReference] to an asset inside the AssetStore by id
     pub fn get_by_id<T: Asset>(&self, id: UUID) -> Result<AssetReference<T>, Error> {
         let this = self.assets.get(&id);
         match this {

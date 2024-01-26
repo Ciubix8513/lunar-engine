@@ -33,17 +33,26 @@ const HEADER_SIZE: usize = 54;
 ///Parses a byte array as a bmp image
 ///# Errors
 ///fails if the file isn't 32 bit or has multiple color planes
-pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
+pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error + Send>> {
     if data.len() <= HEADER_SIZE {
-        return Err("Invalid data, header too small".into());
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Wrong header size",
+        )));
     }
 
     let header: &Header = bytemuck::from_bytes(&data[..14]);
     if header.signature != [0x42, 0x4D] {
-        return Err("Invalid data, wrong signature".into());
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Wrong signature",
+        )));
     }
     if header.size != data.len() as u32 {
-        return Err("Invalid data, invalid size".into());
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid size",
+        )));
     }
 
     let info_header: &InfoHeader = bytemuck::from_bytes(&data[14..54]);
@@ -55,7 +64,10 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
     //     .into());
     // }
     if info_header.color_planes != 1 {
-        return Err("Invalid data, wrong number of color planes != 1".into());
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Wrong number of color planes != 1",
+        )));
     }
     // if info_header.compression_method != 0 {
     //     let a = info_header.compression_method;
@@ -63,7 +75,10 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error>> {
     // }
     // (info_header.bpp == 24)  ||
     if !info_header.bpp == 32 {
-        return Err("Unsported bits per pixel".into());
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Unsported bits per pixel",
+        )));
     }
     let mut out = Vec::new();
 

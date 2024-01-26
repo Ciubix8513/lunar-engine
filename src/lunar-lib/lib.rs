@@ -2,6 +2,7 @@ use std::sync::OnceLock;
 
 pub mod abstractions;
 pub mod asset_managment;
+pub mod assets;
 pub mod components;
 pub mod ecs;
 pub mod grimoire;
