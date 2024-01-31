@@ -5,7 +5,11 @@ use std::{
 
 use wgpu::util::DeviceExt;
 
-use crate::{asset_managment::Asset, asset_managment::UUID, structrures::image::Image};
+use crate::{asset_managment::Asset, asset_managment::UUID, structrures::image::Image, DEVICE};
+
+//============================================================
+//===========================Texture==========================
+//============================================================
 
 ///Stores texture data
 pub struct Texture {
@@ -40,6 +44,7 @@ enum ImageFormat {
 #[allow(unused_variables)]
 impl Texture {
     ///Initializes a texture to load a bmp file in runtime
+    #[must_use]
     pub fn new_bmp(path: &Path) -> Self {
         Self {
             id: None,
@@ -59,6 +64,7 @@ impl Texture {
     ///Initializes a texture to parse the texture in runtime, but being loaded at comp time
     ///
     ///Is only supposed to be used for small textures that are always needed
+    #[must_use]
     pub fn static_bmp(data: &'static [u8]) -> Self {
         Self {
             id: None,
@@ -75,7 +81,8 @@ impl Texture {
         }
     }
 
-    fn load_into_gpu(&mut self, image: Arc<RwLock<Image>>) {
+    /// Loads image data into `wgpu::Texture`
+    fn load_into_gpu(&mut self, image: &Arc<RwLock<Image>>) {
         let device = crate::DEVICE.get().unwrap();
         let queue = crate::QUEUE.get().unwrap();
         let image = image.read().unwrap();
@@ -104,6 +111,8 @@ impl Texture {
             },
             bytemuck::cast_slice(&image.data),
         );
+
+        drop(image);
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label,
@@ -148,7 +157,7 @@ impl Asset for Texture {
 
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         if let Static::Yes(_, Some(img)) = &self.r#static {
-            self.load_into_gpu(img.clone());
+            self.load_into_gpu(&img.clone());
             self.initialized = true;
             return Ok(());
         }
@@ -179,10 +188,10 @@ impl Asset for Texture {
 
         //This is so trash
         let image = Arc::new(RwLock::new(image));
-        self.load_into_gpu(image.clone());
+        self.load_into_gpu(&image);
 
         if let Static::Yes(_, arc) = &mut self.r#static {
-            *arc = Some(image.clone());
+            *arc = Some(image);
         }
         self.initialized = true;
 
@@ -198,12 +207,171 @@ impl Asset for Texture {
     }
 
     fn set_id(&mut self, id: UUID) -> Result<(), crate::asset_managment::Error> {
-        match self.id {
-            Some(_) => Err(crate::asset_managment::Error::IdAlreadySet),
-            None => {
-                self.id = Some(id);
-                Ok(())
+        if self.id.is_some() {
+            Err(crate::asset_managment::Error::IdAlreadySet)
+        } else {
+            self.id = Some(id);
+            Ok(())
+        }
+    }
+
+    fn is_initialized(&self) -> bool {
+        self.initialized
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+}
+
+//============================================================
+//===========================Mesh=============================
+//============================================================
+//Yea this trash is not expandale later on, gltf may be a bit too complex for loading into
+//separate assets, who knows tho
+//
+//Actually, thinking about it, i think loading a gltf should produce an entire set of assets
+
+///Asset that stores mesh data
+pub struct Mesh {
+    id: Option<UUID>,
+    initialized: bool,
+    path: PathBuf,
+    mode: MeshMode,
+    vertex_buffer: Option<wgpu::Buffer>,
+    index_buffer: Option<wgpu::Buffer>,
+    vert_count: Option<u32>,
+    tris_count: Option<u32>,
+}
+
+///Ways the mesh can be loaded from file
+enum MeshMode {
+    ///An obj file that contains a single mesh
+    SingleObjectOBJ,
+}
+
+impl Mesh {
+    ///Creates a new asset that will load the first object in a waveform obj file
+    pub fn new_from_obj(path: &Path) -> Result<Self, std::io::Error> {
+        //Verify that file exists
+        std::fs::File::options().read(true).open(path)?;
+        Ok(Self {
+            id: None,
+            initialized: false,
+            path: path.to_owned(),
+            mode: MeshMode::SingleObjectOBJ,
+            vertex_buffer: None,
+            index_buffer: None,
+            tris_count: None,
+            vert_count: None,
+        })
+    }
+
+    ///Returns the vertex buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    pub fn get_vertex_buffer(&self) -> &wgpu::Buffer {
+        self.vertex_buffer.as_ref().unwrap()
+    }
+
+    ///Returns the index buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    pub fn get_index_buffer(&self) -> &wgpu::Buffer {
+        self.index_buffer.as_ref().unwrap()
+    }
+
+    ///Returns the vertex count of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    pub fn get_tris_count(&self) -> u32 {
+        self.tris_count.unwrap()
+    }
+
+    ///Returns the vertex count of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    pub fn get_vert_count(&self) -> u32 {
+        self.vert_count.unwrap()
+    }
+}
+
+impl Asset for Mesh {
+    fn get_id(&self) -> UUID {
+        self.id.unwrap()
+    }
+
+    fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
+        //This is horrific, but i LOVE this :3
+        let mesh = match self.mode {
+            MeshMode::SingleObjectOBJ => {
+                //Prase file
+                match crate::import::obj::parse(
+                    //Load file
+                    &(match std::fs::read_to_string(&self.path) {
+                        Ok(it) => it,
+                        Err(err) => return Err(Box::new(err)),
+                    }),
+                )
+                //Get the first mesh
+                .and_then(|i| i.into_iter().nth(0))
+                {
+                    Some(it) => it,
+                    None => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Invalid file",
+                        )));
+                    }
+                }
             }
+        };
+
+        let device = DEVICE.get().unwrap();
+        let name = format!("Mesh {}", self.get_id());
+
+        let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(&name),
+            contents: bytemuck::cast_slice(&mesh.vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let ib = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(&name),
+            contents: bytemuck::cast_slice(&mesh.indecies),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        self.vertex_buffer = Some(vb);
+        self.index_buffer = Some(ib);
+        self.vert_count = Some(mesh.vertices.len() as u32);
+        self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
+
+        self.initialized = true;
+        Ok(())
+    }
+
+    fn dispose(&mut self) {
+        //Unload index and vertex buffers, clearing memory
+        self.vertex_buffer = None;
+        self.index_buffer = None;
+        self.initialized = false;
+    }
+
+    fn set_id(&mut self, id: UUID) -> Result<(), crate::asset_managment::Error> {
+        if self.id.is_some() {
+            Err(crate::asset_managment::Error::IdAlreadySet)
+        } else {
+            self.id = Some(id);
+            Ok(())
         }
     }
 

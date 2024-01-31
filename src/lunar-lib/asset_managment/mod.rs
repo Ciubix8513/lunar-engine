@@ -17,7 +17,6 @@
 
 use std::{sync::Arc, thread};
 
-use lock_api::RwLock;
 use rand::Rng;
 use vec_key_value_pair::VecMap;
 
@@ -100,9 +99,9 @@ pub trait Asset: Send + Sync + std::any::Any {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
-///Reference to an asset inside [AssetStore]
+///Reference to an asset inside [`AssetStore`]
 pub struct AssetReference<T: 'static> {
-    refernce: Arc<RwLock<parking_lot::RawRwLock, Box<dyn Asset + 'static>>>,
+    refernce: Arc<RwLock<Box<dyn Asset + 'static>>>,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -116,7 +115,7 @@ impl<T> AssetReference<T> {
         let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             read,
-            |i| i.as_any().downcast_ref::<T>().unwrap(),
+            |i| unsafe { i.as_any().downcast_ref::<T>().unwrap_unchecked() },
         )
     }
 
@@ -124,22 +123,19 @@ impl<T> AssetReference<T> {
         let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             write,
-            |i| i.as_any_mut().downcast_mut::<T>().unwrap(),
+            |i| unsafe { i.as_any_mut().downcast_mut::<T>().unwrap_unchecked() },
         )
     }
 }
 
+type RwLock<T> = lock_api::RwLock<parking_lot::RawRwLock, T>;
+
 ///Asset manager
 ///
 ///Manages the initialization of assets, borrowing of assets and disposal of assets
+#[allow(clippy::type_complexity)]
 pub struct AssetStore {
-    assets: VecMap<
-        UUID,
-        (
-            Arc<RwLock<parking_lot::RawRwLock, Box<dyn Asset>>>,
-            std::any::TypeId,
-        ),
-    >,
+    assets: VecMap<UUID, (Arc<RwLock<Box<dyn Asset>>>, std::any::TypeId)>,
 }
 
 impl Default for AssetStore {
@@ -152,11 +148,15 @@ impl Default for AssetStore {
 
 impl AssetStore {
     ///Creates a new asset store
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     ///Registers a new asset in the store
+    ///
+    ///# Panics
+    ///Panics if the id of the asset was previously set
     pub fn register<T>(&mut self, asset: T) -> UUID
     where
         T: Asset + 'static,
@@ -177,6 +177,9 @@ impl AssetStore {
     ///Initializes all of the assets in the assetstore
     ///
     ///Utilizes threads to initialize assets in parallel
+    ///
+    ///# Errors
+    ///Returns an error if one of the assets fails to initialize
     pub fn intialize_all(&mut self) -> Result<(), Error> {
         let size = self.assets.len();
         let threads = grimoire::NUM_THREADS;
@@ -187,12 +190,10 @@ impl AssetStore {
             chunk_size = 1;
         }
 
-        let collect = binding
+        let handles = binding
             .chunks(chunk_size)
             .map(|c| c.iter().map(|i| (*i).clone()).collect::<Vec<_>>())
-            .collect::<Vec<_>>();
-
-        let handles = collect
+            .collect::<Vec<_>>()
             .into_iter()
             .map(|c| {
                 thread::spawn(move || {
@@ -205,7 +206,7 @@ impl AssetStore {
             .collect::<Vec<_>>();
 
         for h in handles {
-            for r in h.join().unwrap().into_iter() {
+            for r in unsafe { h.join().unwrap_unchecked() } {
                 if let Err(r) = r {
                     return Err(Error::InitializationError(r));
                 }
@@ -215,7 +216,10 @@ impl AssetStore {
         Ok(())
     }
 
-    ///Returns the [AssetReference] to an asset inside the AssetStore by id
+    ///Returns the [`AssetReference`] to an asset inside the `AssetStore` by id
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
     pub fn get_by_id<T: Asset>(&self, id: UUID) -> Result<AssetReference<T>, Error> {
         let this = self.assets.get(&id);
         match this {
@@ -224,6 +228,7 @@ impl AssetStore {
                     let mut x = x.0.write();
                     if !x.is_initialized() {
                         let r = x.initialize();
+                        drop(x);
                         if let Err(r) = r {
                             return Err(Error::InitializationError(r));
                         }
@@ -239,6 +244,9 @@ impl AssetStore {
     }
 
     ///Returns the first asset of type T
+    ///
+    ///# Errors
+    ///Returns an error if the object of the given type doesn't exist
     pub fn get_by_type<T: Asset + 'static>(&self) -> Result<AssetReference<T>, Error> {
         let type_id = std::any::TypeId::of::<T>();
 
@@ -247,6 +255,7 @@ impl AssetStore {
                 let mut x = i.0.write();
                 if !x.is_initialized() {
                     let r = x.initialize();
+                    drop(x);
                     if let Err(r) = r {
                         return Err(Error::InitializationError(r));
                     }
@@ -262,6 +271,9 @@ impl AssetStore {
     }
 
     ///Disposes of the asset with id
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
     pub fn dispose_by_id(&self, id: UUID) -> Result<(), Error> {
         match self.assets.get(&id) {
             Some(it) => it.0.write().dispose(),
@@ -273,7 +285,7 @@ impl AssetStore {
     ///Disposes of all assets
     pub fn dispose_all(&self) {
         for a in self.assets.values().map(|v| v.0.clone()) {
-            a.write().dispose()
+            a.write().dispose();
         }
     }
 }

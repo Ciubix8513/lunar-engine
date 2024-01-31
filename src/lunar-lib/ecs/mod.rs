@@ -92,15 +92,15 @@ impl<T: 'static> ComponentReference<T> {
     ///Borrows the underlying component
     #[must_use]
     pub fn borrow(&self) -> Ref<'_, T> {
-        Ref::map(self.cell.borrow(), |c| {
-            c.as_any().downcast_ref::<T>().unwrap()
+        Ref::map(self.cell.borrow(), |c| unsafe {
+            c.as_any().downcast_ref::<T>().unwrap_unchecked()
         })
     }
     ///Mutably borrows the underlying component
     #[must_use]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
-        RefMut::map(self.cell.borrow_mut(), |c| {
-            c.as_any_mut().downcast_mut::<T>().unwrap()
+        RefMut::map(self.cell.borrow_mut(), |c| unsafe {
+            c.as_any_mut().downcast_mut::<T>().unwrap_unchecked()
         })
     }
 }

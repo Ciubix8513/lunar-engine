@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use wgpu::util::DeviceExt;
 
 use crate::{ecs::Component, grimoire, math::mat4x4::Mat4x4, DEVICE};
@@ -18,7 +19,7 @@ impl Component for Mesh {
     where
         Self: Sized,
     {
-        Mesh::default()
+        Self::default()
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -32,7 +33,7 @@ impl Component for Mesh {
 
 impl Mesh {
     pub fn set_model(&mut self, mesh: &crate::structrures::model::Mesh) {
-        let device = DEVICE.get().unwrap();
+        let device = unsafe { DEVICE.get().unwrap_unchecked() };
 
         self.vertex_buffer = Some(
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
