@@ -70,10 +70,16 @@ pub trait Asset: Send + Sync + std::any::Any {
     ///Returns id of the entity
     fn get_id(&self) -> UUID;
     ///Performs initialization of the asset
+    ///
+    ///# Errors
+    ///May return an error if the initialization of an asset fails
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>>;
     ///Disposes of all all the resources used by the asset
     fn dispose(&mut self);
     ///Sets the id for the asset, may only be called internally, and only once
+    ///
+    ///# Errors
+    ///Returns an error if the id was already set
     fn set_id(&mut self, id: UUID) -> Result<(), Error>;
     ///Returns wether or not the asset is initialized
     fn is_initialized(&self) -> bool;

@@ -7,6 +7,9 @@ use wgpu::util::DeviceExt;
 
 use crate::{asset_managment::Asset, asset_managment::UUID, structrures::image::Image, DEVICE};
 
+#[cfg(test)]
+mod tests;
+
 //============================================================
 //===========================Texture==========================
 //============================================================
@@ -104,10 +107,7 @@ impl Texture {
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba8Unorm,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                view_formats: &[
-                    wgpu::TextureFormat::Rgba8Unorm,
-                    wgpu::TextureFormat::Rgba8UnormSrgb,
-                ],
+                view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
             },
             bytemuck::cast_slice(&image.data),
         );
@@ -256,9 +256,16 @@ enum MeshMode {
 
 impl Mesh {
     ///Creates a new asset that will load the first object in a waveform obj file
+    ///
+    ///# Errors
+    ///Returns an error if the file does not exist
     pub fn new_from_obj(path: &Path) -> Result<Self, std::io::Error> {
         //Verify that file exists
         std::fs::File::options().read(true).open(path)?;
+        #[cfg(build = "debug")]
+        {
+            println!("DEBUG");
+        }
         Ok(Self {
             id: None,
             initialized: false,
@@ -309,6 +316,7 @@ impl Asset for Mesh {
         self.id.unwrap()
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         //This is horrific, but i LOVE this :3
         let mesh = match self.mode {
