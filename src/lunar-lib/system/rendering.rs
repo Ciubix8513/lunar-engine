@@ -1,4 +1,11 @@
 //! Contains the rendering system, used with the ecs
+//!
+//! # Rendering system
+//!
+//! A scene consists of a world and an asset store.
+//! The asset store consists ONLY of the assets needed for the scene, nothing else.
+//! The render function accepts a world and an asset store
+//! The rendering function gets the asset ids and queries them from the store
 
 use log::info;
 

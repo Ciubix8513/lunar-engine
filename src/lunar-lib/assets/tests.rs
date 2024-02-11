@@ -44,10 +44,8 @@ fn test_texture_load() {
 fn test_mesh_load() {
     generate_gpu();
     let mut mesh = super::Mesh::new_from_obj(Path::new("assets/test-data/cube.obj")).unwrap();
-    //You're not supposed to set ids manually, but it's fine :3
     mesh.set_id(1).unwrap();
 
-    //All assets MUST be tested this way
     mesh.initialize().unwrap();
     mesh.dispose();
     mesh.initialize().unwrap();
