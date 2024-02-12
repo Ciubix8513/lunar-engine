@@ -53,7 +53,7 @@ impl Mesh {
         let uniform = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(&label),
             size: std::mem::size_of::<Mat4x4>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::MAP_WRITE,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

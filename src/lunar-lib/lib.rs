@@ -11,6 +11,8 @@ pub mod import;
 pub mod math;
 pub mod structrures;
 pub mod system;
+#[cfg(test)]
+mod test_utils;
 
 pub static DEVICE: OnceLock<wgpu::Device> = OnceLock::new();
 pub static QUEUE: OnceLock<wgpu::Queue> = OnceLock::new();
