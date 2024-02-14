@@ -51,6 +51,35 @@ impl Component for TestComponent {
     }
 }
 
+struct TestComponent2 {
+    weak: Option<SelfReferenceGuard>,
+}
+
+impl std::fmt::Debug for TestComponent2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TestComponent2").finish()
+    }
+}
+impl Component for TestComponent2 {
+    fn mew() -> Self
+    where
+        Self: Sized,
+    {
+        Self { weak: None }
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+
+    fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
+        self.weak = Some(reference);
+    }
+}
+
 #[test]
 fn add_enitity_test() {
     let e = Entity::new();
@@ -247,4 +276,25 @@ fn component_decatification_test() {
     assert_eq!(c.borrow().value, 10);
 
     entity.decatify();
+}
+
+#[test]
+fn self_refernce_test() {
+    let mut world = World::new();
+
+    world.add_entity(
+        EntityBuilder::new()
+            .add_component::<TestComponent1>()
+            .add_component::<TestComponent2>()
+            .create(),
+    );
+
+    let binding = world
+        .get_all_entities_with_component::<TestComponent2>()
+        .unwrap();
+
+    let e = binding.first().unwrap();
+
+    let c = e.borrow();
+    _ = c.get_component::<TestComponent1>().unwrap();
 }

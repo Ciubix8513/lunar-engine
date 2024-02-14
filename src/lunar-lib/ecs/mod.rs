@@ -24,6 +24,16 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     #[allow(unused_variables)]
     fn set_entity_id(&self, id: UUID) {}
 
+    ///Called when the entity containing this component is added to a world
+    ///
+    ///May be used to get a weak reference to the entity for acquring other components on this
+    ///entity
+    ///
+    ///If the entity is in a world, this function will be called when the component is added,
+    ///otherwise it will be called when the entity is added to the world
+    #[allow(unused_variables)]
+    fn set_self_reference(&mut self, reference: SelfReferenceGuard) {}
+
     //Will not be needed after Rust 1.75.0
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
     ///Converts trait object to a `std::any::Any` reference
@@ -57,7 +67,29 @@ pub type UUID = u64;
 pub struct Entity {
     id: UUID,
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
+    self_reference: Option<Weak<RefCell<Self>>>,
     pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
+}
+
+///A guard around the reference to the entity that contains this component
+pub struct SelfReferenceGuard {
+    weak: Weak<RefCell<Entity>>,
+}
+
+impl SelfReferenceGuard {
+    ///Calls get_component on this entity
+    pub fn get_component<T>(&self) -> Result<ComponentReference<T>, Error>
+    where
+        T: Component + 'static,
+    {
+        match self.weak.upgrade() {
+            Some(it) => match it.borrow().get_component::<T>() {
+                Some(it) => Ok(it),
+                None => return Err(Error::ComponentDoesNotExist),
+            },
+            None => Err(Error::EntityDoesNotExist),
+        }
+    }
 }
 
 ///ECS errors
@@ -145,6 +177,10 @@ impl Entity {
         }
         let mut c = T::mew();
         c.awawa();
+        if let Some(w) = &self.self_reference {
+            c.set_self_reference(SelfReferenceGuard { weak: w.clone() })
+        }
+
         self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
         if let Some(w) = &self.world_modified {
@@ -290,6 +326,7 @@ impl EntityBuilder {
     }
 }
 
+use std::rc::Weak;
 use std::{cell::RefCell, rc::Rc};
 
 use vec_key_value_pair::VecMap;
@@ -351,7 +388,11 @@ impl World {
         let mut e = entity;
         e.world_modified = Some(self.modified.clone());
 
-        self.entities.push(Rc::new(RefCell::new(e)));
+        let rc = Rc::new(RefCell::new(e));
+        //Add a self reference
+
+        rc.borrow_mut().self_reference = Some(Rc::downgrade(&rc));
+        self.entities.push(rc);
 
         (*self.modified).borrow_mut().entity_changed();
     }
@@ -441,7 +482,8 @@ impl World {
     }
 
     /// Returns a vector of all components of type T
-    /// The vector may be empty if there are no entities that have component T
+    ///
+    /// Will return None if no components are found
     #[allow(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_all_components<T>(&self) -> Option<Vec<ComponentReference<T>>>
@@ -472,7 +514,8 @@ impl World {
     }
 
     /// Returns a vector of all components of type T
-    /// The vector may be empty if there are no entities that have component T
+    ///
+    /// Will return None, if no entities are found
     #[allow(clippy::missing_panics_doc)]
     #[must_use]
     pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
@@ -492,10 +535,11 @@ impl World {
             )
         });
         let vec = entry.downcast_ref::<Vec<Rc<RefCell<Entity>>>>().unwrap();
-        if vec.len() > 1 {
-            Some(vec.clone())
-        } else {
+
+        if vec.is_empty() {
             None
+        } else {
+            Some(vec.clone())
         }
     }
 }
