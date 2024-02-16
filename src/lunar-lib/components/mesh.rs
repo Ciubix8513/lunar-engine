@@ -5,6 +5,7 @@ use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
     math::mat4x4::Mat4x4,
+    DEVICE, STAGING_BELT,
 };
 
 use super::transform::Transform;
@@ -12,7 +13,8 @@ use super::transform::Transform;
 #[derive(Debug, Default)]
 pub struct Mesh {
     entity_id: crate::ecs::UUID,
-    asset_id: Option<UUID>,
+    mesh_id: Option<UUID>,
+    material_id: Option<UUID>,
     transform_uniform: Option<wgpu::Buffer>,
     transform_bind_group: Option<wgpu::BindGroup>,
     transform_reference: Option<ComponentReference<Transform>>,
@@ -39,21 +41,36 @@ impl Component for Mesh {
     }
 
     #[allow(unused_variables)]
-    fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {}
+    fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
+        self.transform_reference = Some(reference.get_component().unwrap())
+    }
 }
 
 impl Mesh {
     ///Changes the asset used by the component
     ///Does not chedk if the provided id is valid
     pub fn set_mesh(&mut self, id: UUID) {
-        self.asset_id = Some(id);
+        self.mesh_id = Some(id);
     }
 
     ///Returns asset id of the component
     ///
     ///Returns none if it is not set
     pub const fn get_mesh_id(&self) -> Option<UUID> {
-        self.asset_id
+        self.mesh_id
+    }
+
+    ///Changes the asset used by the component
+    ///Does not check if the provided id is valid
+    pub fn set_material(&mut self, id: UUID) {
+        self.material_id = Some(id);
+    }
+
+    ///Returns asset id of the component
+    ///
+    ///Returns none if it is not set
+    pub const fn get_material_id(&self) -> Option<UUID> {
+        self.material_id
     }
 
     ///Creates the buffers and loads data into them
@@ -96,5 +113,25 @@ impl Mesh {
 
         self.transform_bind_group = Some(bind_group);
         self.transform_uniform = Some(uniform);
+    }
+
+    pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
+        let transform = self.transform_reference.as_ref().unwrap().borrow();
+        let mat = transform.matrix();
+        drop(transform);
+
+        let uniform = self.transform_uniform.as_ref().unwrap();
+        let device = DEVICE.get().unwrap();
+        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
+
+        staging_belt
+            .write_buffer(
+                encoder,
+                uniform,
+                0,
+                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
+                device,
+            )
+            .copy_from_slice(bytemuck::bytes_of(&mat));
     }
 }

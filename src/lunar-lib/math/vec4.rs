@@ -21,6 +21,14 @@ impl Vec4 {
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
+
+    pub fn xyz(self) -> Vec3 {
+        Vec3 {
+            x: self.x,
+            y: self.y,
+            z: self.z,
+        }
+    }
 }
 
 impl Vector for Vec4 {

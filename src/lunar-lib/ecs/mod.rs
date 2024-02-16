@@ -17,12 +17,6 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     fn awawa(&mut self) {}
     ///Called upon component deletion
     fn decatification(&mut self) {}
-    ///Sets the id of the entity
-    ///
-    ///# Panics
-    ///Panics if the entity id was already set
-    #[allow(unused_variables)]
-    fn set_entity_id(&self, id: UUID) {}
 
     ///Called when the entity containing this component is added to a world
     ///
