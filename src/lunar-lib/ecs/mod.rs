@@ -85,13 +85,14 @@ impl SelfReferenceGuard {
     where
         T: Component + 'static,
     {
-        match self.weak.upgrade() {
-            Some(it) => match it.borrow().get_component::<T>() {
-                Some(it) => Ok(it),
-                None => Err(Error::ComponentDoesNotExist),
+        self.weak.upgrade().map_or_else(
+            || Err(Error::EntityDoesNotExist),
+            |it| {
+                it.borrow()
+                    .get_component::<T>()
+                    .map_or_else(|| Err(Error::ComponentDoesNotExist), Ok)
             },
-            None => Err(Error::EntityDoesNotExist),
-        }
+        )
     }
 }
 
@@ -124,55 +125,30 @@ impl<T> Clone for ComponentReference<T> {
     }
 }
 
-//NO way this actually works lol
-struct ComponentBorrow<'a, T> {
-    upgrade: Rc<RefCell<Box<dyn Component>>>,
-    borrow: Option<Ref<'a, T>>,
-}
-impl<'a, T: 'static> ComponentBorrow<'a, T> {
-    fn new(rc: Rc<RefCell<Box<dyn Component>>>) -> Self {
-        let mut c = ComponentBorrow {
-            upgrade: rc.clone(),
-            borrow: None,
-        };
-        let a = c.upgrade.clone();
-        c.borrow = Some(Ref::map((a).borrow(), |c: &Box<dyn Component>| unsafe {
-            c.as_any().downcast_ref::<T>().unwrap_unchecked()
-        }));
-        c
-    }
-}
-
-impl<'a, T: 'static> std::ops::Deref for ComponentBorrow<'a, T> {
-    type Target = Ref<'a, T>;
-
-    fn deref(&self) -> &Self::Target {
-        self.borrow.as_ref().unwrap()
-    }
-}
-
 impl<T: 'static> ComponentReference<T> {
     ///Borrows the underlying component
+    ///
+    ///# Panics
+    ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
-    pub fn borrow(&self) -> ComponentBorrow<'_, T> {
+    pub fn borrow(&self) -> Ref<'_, T> {
         let upgrade = self.cell.upgrade().unwrap();
-        // let borrow = &upgrade.borrow();
-        ComponentBorrow::new(upgrade.clone())
-        // let c_borrow = ComponentBorrow {
-        //     upgrade.clone(),
-        //     borrow: Ref::map(*borrow, |c: &Box<dyn Component>| unsafe {
-        //         c.as_any().downcast_ref::<T>().unwrap_unchecked()
-        //     }),
-        // };
-        // c_borrow
+        Ref::map(
+            unsafe { Rc::as_ptr(&upgrade).as_ref().unwrap().borrow() },
+            |c| c.as_any().downcast_ref::<T>().unwrap(),
+        )
     }
     ///Mutably borrows the underlying component
+    ///
+    ///# Panics
+    ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
-        // RefMut::map(self.cell.upgrade().unwrap().borrow_mut(), |c| unsafe {
-        //     c.as_any_mut().downcast_mut::<T>().unwrap_unchecked()
-        // })
-        todo!()
+        let upgrade = self.cell.upgrade().unwrap();
+        RefMut::map(
+            unsafe { Rc::as_ptr(&upgrade).as_ref().unwrap().borrow_mut() },
+            |c| unsafe { c.as_any_mut().downcast_mut::<T>().unwrap_unchecked() },
+        )
     }
 }
 
@@ -264,7 +240,7 @@ impl Entity {
             let binding = c.borrow();
             if binding.as_any().downcast_ref::<T>().is_some() {
                 return Some(ComponentReference {
-                    cell: Rc::downgrade(&c),
+                    cell: Rc::downgrade(c),
                     phantom: std::marker::PhantomData,
                 });
             }

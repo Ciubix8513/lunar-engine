@@ -38,6 +38,7 @@ impl Component for Mesh {
         self.gen_gpu();
     }
 
+    #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {}
 }
 
