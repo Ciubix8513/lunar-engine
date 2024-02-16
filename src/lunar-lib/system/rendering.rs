@@ -13,12 +13,17 @@ use crate::ecs::World;
 
 ///Renders all the entities in the world
 pub fn render(world: &World) {
+    //This is cached, so should be reasonably fast
     let meshes = world.get_all_components::<crate::components::mesh::Mesh>();
+    //Need to be able to get a component from the same entity
+    //Oh god i'm gonna have to pass the entity reference to the component...
 
     //No rendering needs to be done
+    //NO there IS work to be done here, like theskybox and shit
     if meshes.is_none() {
         info!("Rendered 0 meshes");
         return;
     }
+
     todo!();
 }

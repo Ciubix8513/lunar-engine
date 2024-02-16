@@ -1,7 +1,13 @@
 #![allow(dead_code)]
 use std::num::NonZeroU64;
 
-use crate::{asset_managment::UUID, ecs::Component, math::mat4x4::Mat4x4};
+use crate::{
+    asset_managment::UUID,
+    ecs::{Component, ComponentReference},
+    math::mat4x4::Mat4x4,
+};
+
+use super::transform::Transform;
 
 #[derive(Debug, Default)]
 pub struct Mesh {
@@ -9,6 +15,7 @@ pub struct Mesh {
     asset_id: Option<UUID>,
     transform_uniform: Option<wgpu::Buffer>,
     transform_bind_group: Option<wgpu::BindGroup>,
+    transform_reference: Option<ComponentReference<Transform>>,
 }
 
 impl Component for Mesh {
@@ -30,6 +37,8 @@ impl Component for Mesh {
     fn awawa(&mut self) {
         self.gen_gpu();
     }
+
+    fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {}
 }
 
 impl Mesh {
