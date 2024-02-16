@@ -5,10 +5,18 @@ use std::{
 
 use wgpu::util::DeviceExt;
 
-use crate::{asset_managment::Asset, asset_managment::UUID, structrures::image::Image, DEVICE};
+use crate::{
+    asset_managment::Asset,
+    asset_managment::{AssetStore, UUID},
+    structrures::image::Image,
+    DEVICE,
+};
 
 #[cfg(test)]
 mod tests;
+
+///Contains implemented materials
+pub mod materials;
 
 //============================================================
 //===========================Texture==========================
@@ -393,5 +401,84 @@ impl Asset for Mesh {
 
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self as &mut dyn std::any::Any
+    }
+}
+
+//============================================================
+//===========================MATERIAL==========================
+//============================================================
+
+#[derive(Clone, Copy)]
+pub enum BindgroupState {
+    Uninitialized,
+    Initialized,
+}
+
+pub trait MaterialTrait {
+    fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+    where
+        'a: 'b;
+    fn intialize(&mut self);
+    fn dispose(&mut self);
+    fn set_bindgroups(&mut self, asset_store: &AssetStore);
+    fn bindgroup_sate(&self) -> BindgroupState;
+}
+
+///Stores material data
+struct Material {
+    id: Option<UUID>,
+    initialized: bool,
+    material: Box<dyn MaterialTrait + Sync + Send>,
+}
+
+impl Asset for Material {
+    fn get_id(&self) -> UUID {
+        self.id.unwrap()
+    }
+
+    fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
+        self.material.intialize();
+        Ok(())
+    }
+
+    fn dispose(&mut self) {
+        self.material.dispose();
+    }
+
+    fn set_id(&mut self, id: UUID) -> Result<(), crate::asset_managment::Error> {
+        if self.id.is_some() {
+            Err(crate::asset_managment::Error::IdAlreadySet)
+        } else {
+            self.id = Some(id);
+            Ok(())
+        }
+    }
+
+    fn is_initialized(&self) -> bool {
+        self.initialized
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+}
+
+impl Material {
+    pub fn get_bindgroup_state(&self) -> BindgroupState {
+        self.material.bindgroup_sate()
+    }
+
+    pub fn initialize_bindgroups(&mut self, asset_store: &AssetStore) {
+        self.material.set_bindgroups(asset_store);
+    }
+
+    pub fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+    where
+        'a: 'b,
+    {
+        self.material.render(render_pass);
     }
 }
