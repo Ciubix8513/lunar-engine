@@ -1,9 +1,12 @@
+use std::num::NonZeroU64;
+
 use proc_macros::alias;
 
 use crate::{
     ecs::{self, Component, ComponentReference},
+    grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
     math::{mat4x4::Mat4x4, vec4::Vec4},
-    RESOLUTION,
+    DEVICE, RESOLUTION, STAGING_BELT,
 };
 
 use super::transform::Transform;
@@ -14,6 +17,8 @@ pub struct Camera {
     pub near: f32,
     pub far: f32,
     transorm_reference: Option<ComponentReference<Transform>>,
+    buffer: Option<wgpu::Buffer>,
+    bind_group: Option<wgpu::BindGroup>,
 }
 
 impl Component for Camera {
@@ -43,7 +48,7 @@ impl Camera {
             fov,
             near,
             far,
-            transorm_reference: None,
+            ..Default::default()
         }
     }
 
@@ -64,6 +69,55 @@ impl Camera {
             Mat4x4::perspercive_projection(self.fov, aspect, self.near, self.far);
 
         camera_matrix * projection_matrix
+    }
+
+    pub fn initialize_gpu(&mut self) {
+        let device = DEVICE.get().unwrap();
+        let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
+
+        let bind_layout_group_descriptor =
+            device.create_bind_group_layout(&CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Camera"),
+            layout: &bind_layout_group_descriptor,
+            entries: &[wgpu::BindGroupEntry {
+                binding: CAMERA_BIND_GROUP_INDEX,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &buf,
+                    offset: 0,
+                    size: None,
+                }),
+            }],
+        });
+
+        self.buffer = Some(buf);
+        self.bind_group = Some(bind_group);
+    }
+
+    pub fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
+
+        staging_belt
+            .write_buffer(
+                encoder,
+                self.buffer.as_ref().unwrap(),
+                0,
+                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
+                DEVICE.get().unwrap(),
+            )
+            .copy_from_slice(bytemuck::bytes_of(&self.matrix()));
+    }
+
+    pub fn set_bindgroup<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+    where
+        'a: 'b,
+    {
+        render_pass.set_bind_group(
+            CAMERA_BIND_GROUP_INDEX,
+            self.bind_group.as_ref().unwrap(),
+            &[],
+        )
     }
 }
 
