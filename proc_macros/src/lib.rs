@@ -40,10 +40,22 @@ fn is_struct_declaration(item: &TokenStream) -> Option<StructType> {
         return None;
     }
 
-    if items.last().unwrap().span().source_text().unwrap() == ";" {
+    if items
+        .last()
+        .unwrap()
+        .span()
+        .source_text()
+        .unwrap_or_default()
+        == ";"
+    {
         if items.len() >= 4 {
             if let TokenTree::Group(_) = items[items.len() - 2] {
-                if items[items.len() - 4].span().source_text().unwrap() == "struct" {
+                if items[items.len() - 4]
+                    .span()
+                    .source_text()
+                    .unwrap_or_default()
+                    == "struct"
+                {
                     return Some(StructType::Tupple);
                 }
                 return None;
@@ -51,7 +63,12 @@ fn is_struct_declaration(item: &TokenStream) -> Option<StructType> {
         }
 
         if items.len() >= 3 {
-            if items[items.len() - 3].span().source_text().unwrap() != "struct" {
+            if items[items.len() - 3]
+                .span()
+                .source_text()
+                .unwrap_or_default()
+                != "struct"
+            {
                 return None;
             }
         }
@@ -59,7 +76,12 @@ fn is_struct_declaration(item: &TokenStream) -> Option<StructType> {
         return Some(StructType::Empty);
     }
 
-    if items[items.len() - 3].span().source_text().unwrap() != "struct" {
+    if items[items.len() - 3]
+        .span()
+        .source_text()
+        .unwrap_or_default()
+        != "struct"
+    {
         return None;
     }
 
@@ -95,9 +117,12 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Implement Deref, DerefMut
     //Implement Componnent pass all calls to the inner
 
-    let base = attrs[0].span().source_text().unwrap();
+    let base = attrs[0].span().source_text().unwrap_or_default();
     let items = item.into_iter().collect::<Vec<_>>();
-    let name = items[items.len() - 2].span().source_text().unwrap();
+    let name = items[items.len() - 2]
+        .span()
+        .source_text()
+        .unwrap_or_default();
 
     // Define all the needed blocks
 
