@@ -77,12 +77,7 @@ impl Mesh {
     fn gen_gpu(&mut self) {
         let device = crate::DEVICE.get().unwrap();
         let label = format!("Mesh {}", self.entity_id);
-        let uniform = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&label),
-            size: std::mem::size_of::<Mat4x4>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let uniform = crate::helpers::create_uniform_matrix(Some(&label));
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some(&label),
             entries: &[wgpu::BindGroupLayoutEntry {

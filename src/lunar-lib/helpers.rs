@@ -3,6 +3,8 @@ use std::io::Cursor;
 
 use image::{ImageBuffer, ImageError, Rgba};
 
+use crate::DEVICE;
+
 pub fn arr_to_image(
     img: &[u8],
     bytes_per_row: u32,
@@ -54,4 +56,15 @@ pub fn arr_to_image(
     image_buffer.write_to(&mut Cursor::new(&mut byte_stream), format)?;
 
     Ok(byte_stream)
+}
+
+pub fn create_uniform_matrix(label: Option<&str>) -> wgpu::Buffer {
+    let device = DEVICE.get().unwrap();
+
+    device.create_buffer(&wgpu::BufferDescriptor {
+        label,
+        size: std::mem::size_of::<crate::math::mat4x4::Mat4x4>() as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    })
 }
