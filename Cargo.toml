@@ -14,6 +14,7 @@ path="./src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+proc_macros = {path = "./proc_macros", version="0.1.0"}
 bytemuck = { version = "1.14.0", features = ["derive"] }
 chrono = "0.4.31"
 env_logger = "0.10.0"
@@ -26,3 +27,9 @@ rand = "0.8.5"
 vec_key_value_pair = "0.1.0"
 wgpu = "0.18.0"
 winit = { version = "0.29.0", features = ["rwh_05"] }
+
+[workspace]
+
+members = [
+  "proc_macros",
+]

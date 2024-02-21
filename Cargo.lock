@@ -1079,6 +1079,7 @@ dependencies = [
  "lock_api",
  "log",
  "parking_lot",
+ "proc_macros",
  "rand",
  "vec_key_value_pair",
  "wgpu",
@@ -1474,6 +1475,10 @@ checksum = "134c189feb4956b20f6f547d2cf727d4c0fe06722b20a0eec87ed445a97f92da"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "proc_macros"
+version = "0.1.0"
 
 [[package]]
 name = "profiling"
