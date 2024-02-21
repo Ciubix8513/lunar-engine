@@ -1,9 +1,10 @@
 #![allow(dead_code)]
-use std::num::NonZeroU64;
+use std::{num::NonZeroU64, rc::Rc};
 
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
+    grimoire::TRANS_BIND_GROUP_INDEX,
     math::mat4x4::Mat4x4,
     DEVICE, STAGING_BELT,
 };
@@ -16,7 +17,7 @@ pub struct Mesh {
     mesh_id: Option<UUID>,
     material_id: Option<UUID>,
     transform_uniform: Option<wgpu::Buffer>,
-    transform_bind_group: Option<wgpu::BindGroup>,
+    transform_bind_group: Option<std::rc::Rc<wgpu::BindGroup>>,
     transform_reference: Option<ComponentReference<Transform>>,
 }
 
@@ -106,7 +107,7 @@ impl Mesh {
             }],
         });
 
-        self.transform_bind_group = Some(bind_group);
+        self.transform_bind_group = Some(Rc::new(bind_group));
         self.transform_uniform = Some(uniform);
     }
 
@@ -128,5 +129,16 @@ impl Mesh {
                 device,
             )
             .copy_from_slice(bytemuck::bytes_of(&mat));
+    }
+
+    pub(crate) fn set_bindgroup(&self, pass: &mut wgpu::RenderPass) {
+        let rc = self.transform_bind_group.as_ref().unwrap().clone();
+
+        //I don't like this
+        //but i don't see any other sollutions
+        //TODO look into other sollutions
+        let rc = unsafe { Rc::as_ptr(&rc).as_ref().unwrap() };
+
+        pass.set_bind_group(TRANS_BIND_GROUP_INDEX, rc, &[]);
     }
 }

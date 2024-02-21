@@ -14,13 +14,23 @@ use log::info;
 
 use crate::{
     asset_managment::AssetStore,
-    assets::{BindgroupState, Material},
+    assets::{BindgroupState, Material, Mesh},
+    components::{self},
     ecs::World,
-    DEVICE,
+    DEVICE, FORMAT,
 };
+pub struct AttachmentData {
+    pub color: wgpu::Texture,
+    pub depth_stencil: wgpu::Texture,
+}
 
 ///Renders all the entities in the world
-pub fn render(world: &World, asset_store: &AssetStore) {
+pub fn render(world: &World, asset_store: &AssetStore, attachments: AttachmentData) {
+    let binding = world
+        .get_all_components::<components::camera::MainCamera>()
+        .expect("Could not find the main camera");
+    let camera = binding.first().unwrap();
+
     //This is cached, so should be reasonably fast
     let meshes = world.get_all_components::<crate::components::mesh::Mesh>();
     // let main_camera = world.get_all_components::crate
@@ -36,10 +46,13 @@ pub fn render(world: &World, asset_store: &AssetStore) {
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
+    let mut camera = camera.borrow_mut();
+
+    camera.update_gpu(&mut encoder);
     let mut materials = Vec::new();
 
     //Update the gpu data for every Mesh
-    for m in meshes {
+    for m in &meshes {
         let m = m.borrow();
         m.update_gpu(&mut encoder);
         materials.push(m.get_material_id().unwrap());
@@ -57,5 +70,71 @@ pub fn render(world: &World, asset_store: &AssetStore) {
         m.initialize_bindgroups(asset_store);
     }
 
+    let color_view = attachments.color.create_view(&wgpu::TextureViewDescriptor {
+        label: Some("Color attachment view"),
+        format: Some(*FORMAT.get().unwrap()),
+        dimension: Some(wgpu::TextureViewDimension::D2),
+        aspect: wgpu::TextureAspect::All,
+        base_mip_level: 0,
+        mip_level_count: None,
+        base_array_layer: 0,
+        array_layer_count: None,
+    });
+
+    let depth_setencil_veiw = attachments
+        .depth_stencil
+        .create_view(&wgpu::TextureViewDescriptor {
+            label: Some("Depth stencil attachment"),
+            format: Some(wgpu::TextureFormat::Depth32Float),
+            dimension: Some(wgpu::TextureViewDimension::D2),
+            aspect: wgpu::TextureAspect::DepthOnly,
+            base_mip_level: 0,
+            mip_level_count: None,
+            base_array_layer: 0,
+            array_layer_count: None,
+        });
+
+    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("First pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: &color_view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+            view: &depth_setencil_veiw,
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(0.0),
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }),
+        timestamp_writes: None,
+        occlusion_query_set: None,
+    });
+
+    //Set the camera
+    camera.set_bindgroup(&mut render_pass);
+
+    //Iterate through the meshes and render them
+    for m in &meshes {
+        let m = m.borrow();
+        m.set_bindgroup(&mut render_pass);
+        let mesh = m.get_mesh_id();
+        let mesh = asset_store.get_by_id::<Mesh>(mesh.unwrap()).unwrap();
+        let mesh = mesh.borrow();
+        render_pass.set_vertex_buffer(0, mesh.get_vertex_buffer().slice(..));
+        let mat = m.get_material_id();
+    }
+
+    drop(render_pass);
     todo!();
 }

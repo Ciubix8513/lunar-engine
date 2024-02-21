@@ -250,8 +250,8 @@ pub struct Mesh {
     initialized: bool,
     path: PathBuf,
     mode: MeshMode,
-    vertex_buffer: Option<wgpu::Buffer>,
-    index_buffer: Option<wgpu::Buffer>,
+    vertex_buffer: Option<Arc<wgpu::Buffer>>,
+    index_buffer: Option<Arc<wgpu::Buffer>>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
 }
@@ -270,10 +270,6 @@ impl Mesh {
     pub fn new_from_obj(path: &Path) -> Result<Self, std::io::Error> {
         //Verify that file exists
         std::fs::File::options().read(true).open(path)?;
-        #[cfg(build = "debug")]
-        {
-            println!("DEBUG");
-        }
         Ok(Self {
             id: None,
             initialized: false,
@@ -316,6 +312,23 @@ impl Mesh {
     ///Panics if the asset was not initialized
     pub fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
+    }
+
+    pub fn render(&self, pass: wgpu::RenderPass) {
+        let i_buffer = unsafe {
+            Arc::as_ptr(self.index_buffer.as_ref().unwrap())
+                .as_ref()
+                .unwrap()
+        };
+        let v_buffer = unsafe {
+            Arc::as_ptr(self.vertex_buffer.as_ref().unwrap())
+                .as_ref()
+                .unwrap()
+        };
+
+        pass.set_vertex_buffer(0, v_buffer.slice(..));
+        pass.set_index_buffer(i_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        pass.draw_indexed(0..self, 0, 1..1);
     }
 }
 
@@ -366,8 +379,8 @@ impl Asset for Mesh {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        self.vertex_buffer = Some(vb);
-        self.index_buffer = Some(ib);
+        self.vertex_buffer = Some(Arc::new(vb));
+        self.index_buffer = Some(Arc::new(ib));
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
 
