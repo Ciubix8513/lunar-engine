@@ -1,5 +1,7 @@
+use proc_macros::alias;
+
 use crate::{
-    ecs::{Component, ComponentReference},
+    ecs::{self, Component, ComponentReference},
     math::{mat4x4::Mat4x4, vec4::Vec4},
     RESOLUTION,
 };
@@ -7,7 +9,7 @@ use crate::{
 use super::transform::Transform;
 
 #[derive(Debug, Default)]
-struct Camera {
+pub struct Camera {
     pub fov: f32,
     pub near: f32,
     pub far: f32,
@@ -64,3 +66,7 @@ impl Camera {
         camera_matrix * projection_matrix
     }
 }
+
+#[alias(Camera)]
+#[derive(Debug)]
+pub struct MainCamera;

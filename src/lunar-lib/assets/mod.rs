@@ -425,7 +425,7 @@ pub trait MaterialTrait {
 }
 
 ///Stores material data
-struct Material {
+pub struct Material {
     id: Option<UUID>,
     initialized: bool,
     material: Box<dyn MaterialTrait + Sync + Send>,

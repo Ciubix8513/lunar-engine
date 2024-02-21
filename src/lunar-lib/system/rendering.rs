@@ -14,7 +14,8 @@ use log::info;
 
 use crate::{
     asset_managment::AssetStore,
-    ecs::{Component, World},
+    assets::{BindgroupState, Material},
+    ecs::World,
     DEVICE,
 };
 
@@ -22,6 +23,7 @@ use crate::{
 pub fn render(world: &World, asset_store: &AssetStore) {
     //This is cached, so should be reasonably fast
     let meshes = world.get_all_components::<crate::components::mesh::Mesh>();
+    // let main_camera = world.get_all_components::crate
     //
     //No rendering needs to be done
     //NO there IS work to be done here, like the skybox and shit
@@ -34,9 +36,25 @@ pub fn render(world: &World, asset_store: &AssetStore) {
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
+    let mut materials = Vec::new();
+
+    //Update the gpu data for every Mesh
     for m in meshes {
         let m = m.borrow();
         m.update_gpu(&mut encoder);
+        materials.push(m.get_material_id().unwrap());
+    }
+
+    //Initialize bindgroups for all needed materials
+    for m in materials {
+        let m = asset_store.get_by_id::<Material>(m).unwrap();
+        let mut m = m.borrow_mut();
+
+        if let BindgroupState::Initialized = m.get_bindgroup_state() {
+            continue;
+        }
+
+        m.initialize_bindgroups(asset_store);
     }
 
     todo!();
