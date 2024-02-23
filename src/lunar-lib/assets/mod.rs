@@ -314,7 +314,7 @@ impl Mesh {
         self.vert_count.unwrap()
     }
 
-    pub fn render(&self, pass: wgpu::RenderPass) {
+    pub fn render(&self, pass: &mut wgpu::RenderPass) {
         let i_buffer = unsafe {
             Arc::as_ptr(self.index_buffer.as_ref().unwrap())
                 .as_ref()
@@ -328,7 +328,7 @@ impl Mesh {
 
         pass.set_vertex_buffer(0, v_buffer.slice(..));
         pass.set_index_buffer(i_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        pass.draw_indexed(0..self, 0, 1..1);
+        pass.draw_indexed(0..self.vert_count.unwrap(), 0, 1..1);
     }
 }
 
@@ -428,9 +428,7 @@ pub enum BindgroupState {
 }
 
 pub trait MaterialTrait {
-    fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
-    where
-        'a: 'b;
+    fn render(&self, render_pass: &mut wgpu::RenderPass);
     fn intialize(&mut self);
     fn dispose(&mut self);
     fn set_bindgroups(&mut self, asset_store: &AssetStore);
@@ -488,10 +486,7 @@ impl Material {
         self.material.set_bindgroups(asset_store);
     }
 
-    pub fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
-    where
-        'a: 'b,
-    {
+    pub fn render(&self, render_pass: &mut wgpu::RenderPass) {
         self.material.render(render_pass);
     }
 }

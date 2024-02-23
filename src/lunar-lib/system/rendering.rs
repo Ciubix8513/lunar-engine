@@ -10,14 +10,16 @@
 //!
 //! The rendering function gets the asset ids and queries them from the store
 
+use std::borrow::Borrow;
+
 use log::info;
 
 use crate::{
     asset_managment::AssetStore,
     assets::{BindgroupState, Material, Mesh},
-    components::{self},
+    components,
     ecs::World,
-    DEVICE, FORMAT,
+    DEVICE, FORMAT, QUEUE,
 };
 pub struct AttachmentData {
     pub color: wgpu::Texture,
@@ -127,14 +129,29 @@ pub fn render(world: &World, asset_store: &AssetStore, attachments: AttachmentDa
     //Iterate through the meshes and render them
     for m in &meshes {
         let m = m.borrow();
-        m.set_bindgroup(&mut render_pass);
-        let mesh = m.get_mesh_id();
-        let mesh = asset_store.get_by_id::<Mesh>(mesh.unwrap()).unwrap();
-        let mesh = mesh.borrow();
-        render_pass.set_vertex_buffer(0, mesh.get_vertex_buffer().slice(..));
-        let mat = m.get_material_id();
-    }
 
+        m.set_bindgroup(&mut render_pass);
+
+        let mat = asset_store
+            .get_by_id::<Material>(m.get_material_id().unwrap())
+            .unwrap();
+        let mat = mat.borrow();
+
+        mat.render(&mut render_pass);
+
+        let mesh = asset_store
+            .get_by_id::<Mesh>(m.get_mesh_id().unwrap())
+            .unwrap();
+        let mesh = mesh.borrow();
+
+        mesh.render(&mut render_pass);
+    }
     drop(render_pass);
-    todo!();
+
+    let cmd_buffer = encoder.finish();
+
+    let queue = QUEUE.get().unwrap();
+
+    queue.submit(Some(cmd_buffer));
+    //Done?
 }

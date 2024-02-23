@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
 
 use super::{BindgroupState, MaterialTrait, Texture};
 
 pub struct TextureUnlit {
-    pipeline: Option<wgpu::RenderPipeline>,
-    bind_groups: Vec<wgpu::BindGroup>,
+    pipeline: Option<Arc<wgpu::RenderPipeline>>,
+    bind_groups: Vec<Arc<wgpu::BindGroup>>,
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
     texture_id: UUID,
     bindgroup_sate: BindgroupState,
@@ -23,12 +25,18 @@ impl TextureUnlit {
 }
 
 impl MaterialTrait for TextureUnlit {
-    fn render<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
-    where
-        'a: 'b,
-    {
-        render_pass.set_pipeline(self.pipeline.as_ref().unwrap());
+    fn render(&self, render_pass: &mut wgpu::RenderPass) {
+        //SHOULD BE FINE
+        //TODO: FIND A BETTER SOLUTION
+        let pipeline = unsafe {
+            Arc::as_ptr(self.pipeline.as_ref().unwrap())
+                .as_ref()
+                .unwrap()
+        };
+
+        render_pass.set_pipeline(pipeline);
         for (index, b) in self.bind_groups.iter().enumerate() {
+            let b = unsafe { Arc::as_ptr(b).as_ref().unwrap() };
             render_pass.set_bind_group(index as u32 + 2, b, &[]);
         }
     }
@@ -136,7 +144,7 @@ impl MaterialTrait for TextureUnlit {
             multiview: None,
         });
 
-        self.pipeline = Some(pipeline);
+        self.pipeline = Some(Arc::new(pipeline));
     }
 
     fn dispose(&mut self) {
@@ -179,7 +187,7 @@ impl MaterialTrait for TextureUnlit {
             ],
         });
 
-        self.bind_groups.push(bind_group_f);
+        self.bind_groups.push(Arc::new(bind_group_f));
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 

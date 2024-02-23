@@ -62,7 +62,7 @@ impl Camera {
 
         let camera_matrix = Mat4x4::look_at_matrix(transform.position, up, forward);
 
-        let resolution = RESOLUTION.get().unwrap().read().unwrap();
+        let resolution = RESOLUTION.read().unwrap();
         let aspect = resolution.width as f32 / resolution.height as f32;
 
         let projection_matrix =
