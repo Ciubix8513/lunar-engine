@@ -1,21 +1,16 @@
-use event_loop::State;
-use winit::event_loop::EventLoop;
+use log::info;
+use lunar_lib::StateItems;
 
-mod event_loop;
-mod grimoire;
-mod helpers;
+// mod event_loop;
+
+fn init(items: &StateItems) {
+    info!("Initialized!")
+}
+fn run(items: &StateItems) {
+    // info!("Frame!");
+}
 
 fn main() {
-    env_logger::Builder::new()
-        .filter_module("wgpu", log::LevelFilter::Info)
-        .filter_module("renderer", log::LevelFilter::Info)
-        .init();
-    let event_loop = EventLoop::new().expect("Failed to create event loop");
-    let mut state = State::new(&event_loop);
-    event_loop
-        .run(move |event, target| {
-            target.set_control_flow(winit::event_loop::ControlFlow::Poll);
-            state.app_loop(&event, target);
-        })
-        .expect("Failed to run event loop");
+    let state = lunar_lib::State::new();
+    state.run(init, run);
 }
