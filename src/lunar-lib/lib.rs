@@ -1,9 +1,10 @@
 use std::{
-    cell::OnceCell,
+    cell::{OnceCell, RefCell},
+    rc::Rc,
     sync::{OnceLock, RwLock},
 };
 
-use wgpu::{SurfaceConfiguration, Texture, TextureDescriptor};
+use wgpu::{SurfaceConfiguration, Texture};
 use winit::{dpi::PhysicalSize, event::Event, event_loop::EventLoopWindowTarget};
 
 pub mod abstractions;
@@ -30,34 +31,46 @@ pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
     height: 0,
 });
 
-pub struct StateItems {}
-
-pub struct State {
+pub struct State<T> {
     window: OnceCell<winit::window::Window>,
     surface: OnceCell<wgpu::Surface>,
     surface_config: OnceCell<SurfaceConfiguration>,
     depth: OnceCell<Texture>,
-    items: StateItems,
+    contents: T,
     closed: bool, //Various state related stuff
 }
 
-impl State {
-    pub fn new() -> Self {
+impl<T: Default> Default for State<T> {
+    fn default() -> Self {
+        Self {
+            window: Default::default(),
+            surface: Default::default(),
+            surface_config: Default::default(),
+            depth: Default::default(),
+            contents: Default::default(),
+            closed: Default::default(),
+        }
+    }
+}
+
+impl<T> State<T> {
+    pub fn new(contents: T) -> Self {
         Self {
             window: OnceCell::new(),
             surface_config: OnceCell::new(),
             surface: OnceCell::new(),
             depth: OnceCell::new(),
-            items: StateItems {},
+            contents,
             closed: false,
         }
     }
 
     //TODO Potentially ask for a window
-    pub fn run<F, F1>(mut self, init: F, run: F1)
+    pub fn run<F, F1, F2>(mut self, init: F, run: F1, end: F2)
     where
-        F: FnOnce(&StateItems),
-        F1: Fn(&StateItems) + Copy,
+        F: FnOnce(&mut T),
+        F1: Fn(&mut T) + Copy,
+        F2: FnOnce(&mut T) + Copy,
     {
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         let window = winit::window::Window::new(&event_loop).expect("Failed to create the window");
@@ -68,23 +81,25 @@ impl State {
         self.surface.set(surface).unwrap();
         self.surface_config.set(config).unwrap();
         self.depth.set(depth_stencil).unwrap();
-        init(&self.items);
+        init(&mut self.contents);
 
         event_loop
             .run(move |e, w| {
                 w.set_control_flow(winit::event_loop::ControlFlow::Poll);
-                self.event_handler(e, w, run);
+                self.event_handler(e, w, run, end);
             })
             .expect("Failed to start event loop");
     }
 
-    fn event_handler<T, F>(
+    fn event_handler<T1, F, F1>(
         &mut self,
-        event: Event<T>,
-        window: &EventLoopWindowTarget<T>,
+        event: Event<T1>,
+        window: &EventLoopWindowTarget<T1>,
         run_func: F,
+        end: F1,
     ) where
-        F: Fn(&StateItems),
+        F: Fn(&mut T),
+        F1: FnOnce(&mut T),
     {
         match event {
             Event::WindowEvent {
@@ -103,7 +118,7 @@ impl State {
                     let desc = windowing::get_depth_descriptor(size.width, size.height);
                     *self.depth.get_mut().unwrap() = device.create_texture(&desc);
 
-                        // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
+                    // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
                     // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     //     label: Some("Screenshot buffer"),
                     //     size: bpr * size.height as u64,
@@ -117,9 +132,12 @@ impl State {
                 }
                 winit::event::WindowEvent::RedrawRequested => {
                     if self.closed {
+                        //This should be fine but needs further testing
+                        end(&mut self.contents);
+
                         return;
                     }
-                    run_func(&self.items);
+                    run_func(&mut self.contents);
                     self.window.get().unwrap().request_redraw();
                 }
                 winit::event::WindowEvent::KeyboardInput {
@@ -145,8 +163,6 @@ impl State {
         }
     }
 }
-
-
 
 //Rendering remains
 // let frame = self.surface.get_current_texture().unwrap_or_else(|_| {

@@ -1,16 +1,24 @@
 use log::info;
-use lunar_lib::StateItems;
 
+#[derive(Default)]
+struct State {
+    frame: u32,
+}
 // mod event_loop;
 
-fn init(items: &StateItems) {
+fn init(state: &mut State) {
+    state.frame = 0;
     info!("Initialized!")
 }
-fn run(items: &StateItems) {
-    // info!("Frame!");
+fn run(state: &mut State) {
+    state.frame += 1;
+}
+
+fn close(state: &mut State) {
+    info!("Ran for {} frames", state.frame);
 }
 
 fn main() {
-    let state = lunar_lib::State::new();
-    state.run(init, run);
+    let state = lunar_lib::State::<State>::default();
+    state.run(init, run, close);
 }
