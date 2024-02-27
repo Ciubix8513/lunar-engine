@@ -13,7 +13,6 @@ use super::transform::Transform;
 
 #[derive(Debug, Default)]
 pub struct Mesh {
-    entity_id: crate::ecs::UUID,
     mesh_id: Option<UUID>,
     material_id: Option<UUID>,
     transform_uniform: Option<wgpu::Buffer>,
@@ -48,6 +47,15 @@ impl Component for Mesh {
 }
 
 impl Mesh {
+    pub fn new(mesh: UUID, material: UUID) -> Self {
+        Self {
+            mesh_id: Some(mesh),
+            material_id: Some(material),
+            transform_uniform: None,
+            transform_bind_group: None,
+            transform_reference: None,
+        }
+    }
     ///Changes the asset used by the component
     ///Does not chedk if the provided id is valid
     pub fn set_mesh(&mut self, id: UUID) {
@@ -77,7 +85,11 @@ impl Mesh {
     ///Creates the buffers and loads data into them
     fn gen_gpu(&mut self) {
         let device = crate::DEVICE.get().unwrap();
-        let label = format!("Mesh {}", self.entity_id);
+        let label = format!(
+            "Mesh m:{},mat: {}",
+            self.mesh_id.unwrap(),
+            self.material_id.unwrap()
+        );
         let uniform = crate::helpers::create_uniform_matrix(Some(&label));
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some(&label),
