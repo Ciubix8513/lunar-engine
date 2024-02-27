@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use log::info;
-use lunar_lib::{
+use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::TextureUnlit, Material},
     components::transform::Transform,

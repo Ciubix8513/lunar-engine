@@ -4,12 +4,8 @@ version = "0.0.1"
 edition = "2021"
 
 [lib]
-name="lunar_lib"
-path="./src/lunar-lib/lib.rs"
-
-[[bin]]
 name="lunar_engine"
-path="./src/main.rs"
+path="./src/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
