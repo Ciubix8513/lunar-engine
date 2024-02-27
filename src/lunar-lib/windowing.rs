@@ -1,11 +1,11 @@
-use wgpu::{Surface, SurfaceConfiguration, Texture, TextureDescriptor};
+use wgpu::{Surface, SurfaceConfiguration, Texture};
 
-use crate::{helpers, DEVICE, FORMAT, QUEUE, RESOLUTION};
+use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION};
 
 pub fn initialize_logging() {
     env_logger::Builder::new()
-        .filter_module("wgpu", log::LevelFilter::Info)
-        .filter_module("lunar_engine", log::LevelFilter::Info)
+        // .filter_module("wgpu", log::LevelFilter::Info) .filter_module("lunar_engine", log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Info)
         .init();
 }
 

@@ -13,14 +13,14 @@ pub struct TextureUnlit {
 }
 
 impl TextureUnlit {
-    pub fn new(texture_id: UUID) -> Self {
-        Self {
+    pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
+        Box::new(Self {
             pipeline: None,
             bind_groups: Vec::new(),
             bind_group_layout_f: None,
             texture_id,
             bindgroup_sate: BindgroupState::Uninitialized,
-        }
+        }) as Box<dyn MaterialTrait + 'static + Send + Sync>
     }
 }
 

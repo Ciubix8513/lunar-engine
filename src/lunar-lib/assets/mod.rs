@@ -490,3 +490,13 @@ impl Material {
         self.material.render(render_pass);
     }
 }
+
+impl From<Box<dyn MaterialTrait + 'static + Send + Sync>> for Material {
+    fn from(value: Box<dyn MaterialTrait + 'static + Send + Sync>) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            material: value,
+        }
+    }
+}
