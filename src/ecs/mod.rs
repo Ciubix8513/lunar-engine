@@ -290,7 +290,12 @@ impl EntityBuilder {
 
     ///Adds the component to the entity
     #[must_use]
-    pub fn add_existing_component(self, component: Box<dyn Component>) -> Self {
+    pub fn add_existing_component<T>(self, component: T) -> Self
+    where
+        T: Component + 'static,
+    {
+        let component = Box::new(component) as Box<dyn Component>;
+
         for i in &self.components {
             if i.as_any().type_id() == component.as_any().type_id() {
                 return self;
@@ -304,11 +309,12 @@ impl EntityBuilder {
 
     ///Creates a new component, using the provided closure and adds it to the entity
     #[must_use]
-    pub fn create_component<F>(self, f: F) -> Self
+    pub fn create_component<F, T>(self, f: F) -> Self
     where
-        F: FnOnce() -> Box<dyn Component>,
+        F: FnOnce() -> T,
+        T: Component + 'static,
     {
-        let c = f();
+        let c = Box::new(f()) as Box<dyn Component>;
 
         for i in &self.components {
             if i.as_any().type_id() == c.as_any().type_id() {
