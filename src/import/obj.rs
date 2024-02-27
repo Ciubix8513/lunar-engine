@@ -1,7 +1,7 @@
 #![allow(clippy::cast_possible_truncation)]
 use crate::{
     math::{vec2::Vec2, vec3::Vec3},
-    structrures::model::{Mesh, Vertex},
+    structures::{Mesh, Vertex},
 };
 
 fn read_vec3(input: &str) -> Option<Vec3> {
@@ -58,7 +58,7 @@ fn test_get_indecies() {
 }
 #[test]
 fn test_loading_single() {
-    parse(include_str!("../../../assets/cube_triangulated.obj")).unwrap();
+    parse(include_str!("../../assets/cube_triangulated.obj")).unwrap();
 }
 
 ///Parses the given string as a wavefront obj file

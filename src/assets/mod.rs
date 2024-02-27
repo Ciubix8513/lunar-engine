@@ -8,7 +8,7 @@ use wgpu::util::DeviceExt;
 use crate::{
     asset_managment::Asset,
     asset_managment::{AssetStore, UUID},
-    structrures::image::Image,
+    structures::Image,
     DEVICE,
 };
 

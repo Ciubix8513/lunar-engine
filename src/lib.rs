@@ -10,11 +10,11 @@ pub mod asset_managment;
 pub mod assets;
 pub mod components;
 pub mod ecs;
-pub mod grimoire;
-pub mod helpers;
+mod grimoire;
+mod helpers;
 pub mod import;
 pub mod math;
-pub mod structrures;
+pub mod structures;
 pub mod system;
 #[cfg(test)]
 mod test_utils;

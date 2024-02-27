@@ -1,5 +1,5 @@
 #![allow(clippy::cast_possible_truncation)]
-use crate::structrures::image::{Image, Pixel};
+use crate::structures::{Image, Pixel};
 
 //Packed may cause issues with incorrect signature
 #[repr(C, packed)]
@@ -104,5 +104,5 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error + Send>> {
 
 #[test]
 fn test_image_loading() {
-    parse(include_bytes!("../../../assets/blahaj1.bmp")).unwrap();
+    parse(include_bytes!("../../assets/blahaj1.bmp")).unwrap();
 }
