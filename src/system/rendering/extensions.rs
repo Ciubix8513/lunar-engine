@@ -5,7 +5,6 @@ use crate::{
     assets::{BindgroupState, Material, Mesh},
     components,
     ecs::World,
-    FORMAT,
 };
 
 pub struct AttachmentData {

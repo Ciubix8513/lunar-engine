@@ -1,3 +1,5 @@
+use proc_macros::alias;
+
 use super::*;
 
 #[derive(Debug)]
@@ -297,4 +299,18 @@ fn self_refernce_test() {
 
     let c = e.borrow();
     _ = c.get_component::<TestComponent1>().unwrap();
+}
+
+use crate::ecs;
+#[derive(Debug)]
+#[alias(TestComponent1)]
+struct Alias;
+
+#[test]
+fn alias_test() {
+    let mut world = World::new();
+
+    world.add_entity(EntityBuilder::new().add_component::<Alias>().create());
+
+    let binding = world.get_all_entities_with_component::<Alias>().unwrap();
 }
