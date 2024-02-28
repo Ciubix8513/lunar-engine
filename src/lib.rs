@@ -3,7 +3,7 @@ use std::{
     sync::{OnceLock, RwLock},
 };
 
-use wgpu::{SurfaceConfiguration, Texture};
+use wgpu::SurfaceConfiguration;
 use winit::{dpi::PhysicalSize, event::Event, event_loop::EventLoopWindowTarget};
 
 pub mod asset_managment;
@@ -28,12 +28,13 @@ pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
     width: 0,
     height: 0,
 });
+//TODO find a better way than just staticing it
+static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
+static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 pub struct State<T> {
     window: OnceCell<winit::window::Window>,
-    surface: OnceCell<wgpu::Surface>,
     surface_config: OnceCell<SurfaceConfiguration>,
-    depth: OnceCell<Texture>,
     contents: T,
     closed: bool, //Various state related stuff
 }
@@ -42,9 +43,7 @@ impl<T: Default> Default for State<T> {
     fn default() -> Self {
         Self {
             window: Default::default(),
-            surface: Default::default(),
             surface_config: Default::default(),
-            depth: Default::default(),
             contents: Default::default(),
             closed: Default::default(),
         }
@@ -56,8 +55,6 @@ impl<T> State<T> {
         Self {
             window: OnceCell::new(),
             surface_config: OnceCell::new(),
-            surface: OnceCell::new(),
-            depth: OnceCell::new(),
             contents,
             closed: false,
         }
@@ -76,9 +73,9 @@ impl<T> State<T> {
         windowing::initialize_logging();
         let (surface, config, depth_stencil) =
             windowing::initialize_gpu(&self.window.get().unwrap());
-        self.surface.set(surface).unwrap();
+        SURFACE.set(RwLock::new(surface)).unwrap();
         self.surface_config.set(config).unwrap();
-        self.depth.set(depth_stencil).unwrap();
+        DEPTH.set(RwLock::new(depth_stencil)).unwrap();
         init(&mut self.contents);
 
         event_loop
@@ -109,12 +106,14 @@ impl<T> State<T> {
                     self.surface_config.get_mut().unwrap().height = size.height;
                     let device = DEVICE.get().unwrap();
 
-                    self.surface
-                        .get_mut()
+                    SURFACE
+                        .get()
+                        .unwrap()
+                        .write()
                         .unwrap()
                         .configure(device, self.surface_config.get().unwrap());
                     let desc = windowing::get_depth_descriptor(size.width, size.height);
-                    *self.depth.get_mut().unwrap() = device.create_texture(&desc);
+                    *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
 
                     // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
                     // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {

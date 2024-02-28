@@ -9,8 +9,8 @@ use crate::{
 };
 
 pub struct AttachmentData {
-    pub color: wgpu::Texture,
-    pub depth_stencil: wgpu::Texture,
+    pub color: wgpu::TextureView,
+    pub depth_stencil: wgpu::TextureView,
 }
 
 ///Trait that all rendering extensions must implement
@@ -107,35 +107,10 @@ impl RenderingExtension for Base {
             m.initialize_bindgroups(assets);
         }
 
-        let color_view = attachments.color.create_view(&wgpu::TextureViewDescriptor {
-            label: Some("Color attachment view"),
-            format: Some(*FORMAT.get().unwrap()),
-            dimension: Some(wgpu::TextureViewDimension::D2),
-            aspect: wgpu::TextureAspect::All,
-            base_mip_level: 0,
-            mip_level_count: None,
-            base_array_layer: 0,
-            array_layer_count: None,
-        });
-
-        let depth_setencil_veiw =
-            attachments
-                .depth_stencil
-                .create_view(&wgpu::TextureViewDescriptor {
-                    label: Some("Depth stencil attachment"),
-                    format: Some(wgpu::TextureFormat::Depth32Float),
-                    dimension: Some(wgpu::TextureViewDimension::D2),
-                    aspect: wgpu::TextureAspect::DepthOnly,
-                    base_mip_level: 0,
-                    mip_level_count: None,
-                    base_array_layer: 0,
-                    array_layer_count: None,
-                });
-
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("First pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &color_view,
+                view: &attachments.color,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -148,7 +123,7 @@ impl RenderingExtension for Base {
                 },
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &depth_setencil_veiw,
+                view: &attachments.depth_stencil,
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Clear(0.0),
                     store: wgpu::StoreOp::Store,

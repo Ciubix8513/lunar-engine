@@ -10,6 +10,20 @@ pub struct Transform {
     pub scale: Vec3,
 }
 
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            position: Default::default(),
+            rotation: Default::default(),
+            scale: Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            },
+        }
+    }
+}
+
 impl Component for Transform {
     fn mew() -> Self
     where

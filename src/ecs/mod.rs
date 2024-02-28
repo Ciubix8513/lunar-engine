@@ -558,4 +558,11 @@ impl World {
             Some(vec.clone())
         }
     }
+
+    ///Calls update on all containing entities
+    pub fn update(&self) {
+        for e in &self.entities {
+            e.borrow_mut().update();
+        }
+    }
 }
