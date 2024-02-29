@@ -330,7 +330,7 @@ impl EntityBuilder {
     ///Creates the entity
     #[must_use]
     pub fn create(self) -> Entity {
-        Entity {
+        let e = Entity {
             id: rand::thread_rng().gen(),
             components: self
                 .components
@@ -338,7 +338,13 @@ impl EntityBuilder {
                 .map(|c| Rc::new(RefCell::new(c)))
                 .collect(),
             ..Default::default()
+        };
+
+        for c in &e.components {
+            c.borrow_mut().awawa();
         }
+
+        e
     }
 }
 
@@ -408,6 +414,12 @@ impl World {
         //Add a self reference
 
         rc.borrow_mut().self_reference = Some(Rc::downgrade(&rc));
+
+        for c in &rc.borrow().components {
+            c.borrow_mut().set_self_reference(SelfReferenceGuard {
+                weak: Rc::downgrade(&rc),
+            })
+        }
         self.entities.push(rc);
 
         (*self.modified).borrow_mut().entity_changed();
@@ -522,10 +534,10 @@ impl World {
 
         let vec = entry.downcast_ref::<Vec<ComponentReference<T>>>().unwrap();
 
-        if vec.len() > 1 {
-            Some((*vec).clone())
-        } else {
+        if vec.is_empty() {
             None
+        } else {
+            Some((*vec).clone())
         }
     }
 

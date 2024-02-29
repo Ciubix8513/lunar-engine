@@ -164,6 +164,15 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
                 __inner: {base}::mew(),
             }}
         }}
+        fn update(&mut self) {{
+            self.__inner.update();
+        }}
+        fn awawa(&mut self) {{
+            self.__inner.awawa();
+        }}
+        fn decatification(&mut self) {{
+            self.__inner.decatification();
+        }}
         fn set_self_reference(&mut self, reference: ecs::SelfReferenceGuard) {{
             self.__inner.set_self_reference(reference);
         }}

@@ -22,10 +22,10 @@ fn init(state: &mut MyState) {
     state.frame = 0;
     let mesh = state
         .assset_store
-        .register(assets::Mesh::new_from_obj(Path::new("assets/cube_triangulated.obj")).unwrap());
+        .register(assets::Mesh::new_from_obj(Path::new("assets/blahaj.obj")).unwrap());
     let texture = state
         .assset_store
-        .register(assets::Texture::new_bmp(Path::new("../assets/blahaj1.bmp")));
+        .register(assets::Texture::new_bmp(Path::new("assets/blahaj1.bmp")));
     let material = state
         .assset_store
         .register::<Material>(TextureUnlit::new(texture).into());
@@ -38,20 +38,29 @@ fn init(state: &mut MyState) {
     state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: Vec3::new(0.0, 8.0, -8.0),
-                rotation: Vec3::new(-45.0, 0.0, 0.0),
+                position: Vec3::new(0.0, 0.0, 4.0),
+                rotation: Vec3::new(0.0, 0.0, 0.0),
                 ..Default::default()
             })
-            .add_component::<MainCamera>()
+            .create_component(|| {
+                let mut c = MainCamera::default();
+                c.fov = 60.0;
+                c.near = 0.1;
+                c.far = 100.0;
+                c
+            })
             .create(),
     );
+    info!("Initialized!");
     info!("World contains {} entities", state.world.get_entity_count());
-    info!("Initialized!")
+
+    if state.world.get_all_components::<MainCamera>().is_some() {
+        info!("World contains a main camera");
+    }
 }
+
 fn run(state: &mut MyState) {
-    info!("World contains {} entities", state.world.get_entity_count());
     state.world.update();
-    //How to get attachments? hmmm
     rendering::render(&state.world, &state.assset_store, &[&Base::new(0)]);
     state.frame += 1;
 }

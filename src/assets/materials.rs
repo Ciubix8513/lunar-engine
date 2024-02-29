@@ -6,7 +6,7 @@ use super::{BindgroupState, MaterialTrait, Texture};
 
 pub struct TextureUnlit {
     pipeline: Option<Arc<wgpu::RenderPipeline>>,
-    bind_groups: Vec<Arc<wgpu::BindGroup>>,
+    bind_group: Option<Arc<wgpu::BindGroup>>,
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
     texture_id: UUID,
     bindgroup_sate: BindgroupState,
@@ -16,7 +16,7 @@ impl TextureUnlit {
     pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
         Box::new(Self {
             pipeline: None,
-            bind_groups: Vec::new(),
+            bind_group: None,
             bind_group_layout_f: None,
             texture_id,
             bindgroup_sate: BindgroupState::Uninitialized,
@@ -35,10 +35,12 @@ impl MaterialTrait for TextureUnlit {
         };
 
         render_pass.set_pipeline(pipeline);
-        for (index, b) in self.bind_groups.iter().enumerate() {
-            let b = unsafe { Arc::as_ptr(b).as_ref().unwrap() };
-            render_pass.set_bind_group(index as u32 + 2, b, &[]);
-        }
+        let b = unsafe {
+            Arc::as_ptr(&self.bind_group.clone().unwrap())
+                .as_ref()
+                .unwrap()
+        };
+        render_pass.set_bind_group(2, b, &[]);
     }
 
     fn intialize(&mut self) {
@@ -85,6 +87,8 @@ impl MaterialTrait for TextureUnlit {
             ],
             push_constant_ranges: &[],
         });
+
+        self.bind_group_layout_f = Some(bind_group_layout_f);
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -147,7 +151,7 @@ impl MaterialTrait for TextureUnlit {
     }
 
     fn dispose(&mut self) {
-        self.bind_groups.clear();
+        self.bind_group = None;
         self.pipeline = None;
         self.bindgroup_sate = BindgroupState::Uninitialized;
     }
@@ -186,7 +190,7 @@ impl MaterialTrait for TextureUnlit {
             ],
         });
 
-        self.bind_groups.push(Arc::new(bind_group_f));
+        self.bind_group = Some(Arc::new(bind_group_f));
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 

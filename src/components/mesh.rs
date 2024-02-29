@@ -4,7 +4,7 @@ use std::{num::NonZeroU64, rc::Rc};
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    grimoire::TRANS_BIND_GROUP_INDEX,
+    grimoire::{TRANSFORM_BIND_GROUP_LAYOUT_DESCRIPTOR, TRANS_BIND_GROUP_INDEX},
     math::mat4x4::Mat4x4,
     DEVICE, STAGING_BELT,
 };
@@ -87,25 +87,12 @@ impl Mesh {
         let device = crate::DEVICE.get().unwrap();
         let label = format!(
             "Mesh m:{},mat: {}",
-            self.mesh_id.unwrap(),
-            self.material_id.unwrap()
+            self.mesh_id.unwrap_or_default(),
+            self.material_id.unwrap_or_default()
         );
         let uniform = crate::helpers::create_uniform_matrix(Some(&label));
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some(&label),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: Some(
-                        NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
-                    ),
-                },
-                count: None,
-            }],
-        });
+        let bind_group_layout =
+            device.create_bind_group_layout(&TRANSFORM_BIND_GROUP_LAYOUT_DESCRIPTOR);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some(&label),
             layout: &bind_group_layout,
@@ -125,7 +112,7 @@ impl Mesh {
 
     pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
         let transform = self.transform_reference.as_ref().unwrap().borrow();
-        let mat = transform.matrix();
+        let mat = transform.matrix().transpose();
         drop(transform);
 
         let uniform = self.transform_uniform.as_ref().unwrap();

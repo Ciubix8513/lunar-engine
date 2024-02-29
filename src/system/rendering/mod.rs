@@ -75,4 +75,6 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingEx
     queue.submit(Some(cmd_buffer));
 
     belt.recall();
+
+    color.present();
 }

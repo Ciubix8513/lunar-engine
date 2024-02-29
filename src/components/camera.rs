@@ -1,5 +1,6 @@
 use std::num::NonZeroU64;
 
+use log::debug;
 use proc_macros::alias;
 
 use crate::{
@@ -29,7 +30,12 @@ impl Component for Camera {
         Self::default()
     }
 
+    fn awawa(&mut self) {
+        self.initialize_gpu();
+    }
+
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
+        debug!("set self reference called");
         self.transorm_reference = Some(reference.get_component().unwrap())
     }
 
@@ -75,14 +81,14 @@ impl Camera {
         let device = DEVICE.get().unwrap();
         let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
 
-        let bind_layout_group_descriptor =
+        let bind_group_layout =
             device.create_bind_group_layout(&CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Camera"),
-            layout: &bind_layout_group_descriptor,
+            layout: &bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
-                binding: CAMERA_BIND_GROUP_INDEX,
+                binding: 0,
                 resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                     buffer: &buf,
                     offset: 0,
@@ -122,5 +128,5 @@ impl Camera {
 }
 
 #[alias(Camera)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MainCamera;

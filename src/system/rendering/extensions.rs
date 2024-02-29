@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug, info};
 
 use crate::{
     asset_managment::AssetStore,
@@ -65,6 +65,7 @@ impl RenderingExtension for Base {
         assets: &AssetStore,
         attachments: &AttachmentData,
     ) {
+        debug!("Started frame");
         let binding = world
             .get_all_components::<components::camera::MainCamera>()
             .expect("Could not find the main camera");

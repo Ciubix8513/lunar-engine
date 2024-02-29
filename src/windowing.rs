@@ -1,6 +1,8 @@
-use wgpu::{Surface, SurfaceConfiguration, Texture};
+use std::sync::RwLock;
 
-use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION};
+use wgpu::{util::StagingBelt, BufferAddress, Surface, SurfaceConfiguration, Texture};
+
+use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
 pub fn initialize_logging() {
     env_logger::Builder::new()
@@ -78,6 +80,10 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 
     let desc = get_depth_descriptor(size.width, size.height);
     let depth_stencil = device.create_texture(&desc);
+
+    let belt = StagingBelt::new(2048);
+
+    STAGING_BELT.set(RwLock::new(belt)).unwrap();
 
     // let bpr = helpers::calculate_bpr(size.width, format);
     // let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {

@@ -303,14 +303,20 @@ fn self_refernce_test() {
 
 use crate::ecs;
 #[derive(Debug)]
-#[alias(TestComponent1)]
+#[alias(TestComponent2)]
 struct Alias;
 
 #[test]
 fn alias_test() {
     let mut world = World::new();
 
-    world.add_entity(EntityBuilder::new().add_component::<Alias>().create());
+    world.add_entity(
+        EntityBuilder::new()
+            .create_component(|| TestComponent1 { value: 0 })
+            .add_component::<Alias>()
+            .create(),
+    );
 
-    let binding = world.get_all_entities_with_component::<Alias>().unwrap();
+    let binding = world.get_all_components::<Alias>().unwrap();
+    assert_eq!(binding.len(), 1);
 }
