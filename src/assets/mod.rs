@@ -254,6 +254,7 @@ pub struct Mesh {
     index_buffer: Option<Arc<wgpu::Buffer>>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
+    index_count: Option<u32>,
 }
 
 ///Ways the mesh can be loaded from file
@@ -279,6 +280,7 @@ impl Mesh {
             index_buffer: None,
             tris_count: None,
             vert_count: None,
+            index_count: None,
         })
     }
 
@@ -330,7 +332,7 @@ impl Mesh {
         pass.set_vertex_buffer(0, v_buffer.slice(..));
         pass.set_index_buffer(i_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
-        pass.draw_indexed(0..self.vert_count.unwrap(), 0, 0..1);
+        pass.draw_indexed(0..self.index_count.unwrap(), 0, 0..1);
     }
 }
 
@@ -385,6 +387,7 @@ impl Asset for Mesh {
         self.index_buffer = Some(Arc::new(ib));
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
+        self.index_count = Some(mesh.indecies.len() as u32);
 
         self.initialized = true;
         Ok(())
