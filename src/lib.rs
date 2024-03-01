@@ -102,6 +102,8 @@ impl<T> State<T> {
                 event,
             } => match event {
                 winit::event::WindowEvent::Resized(size) => {
+                    RESOLUTION.write().unwrap().width = size.width;
+                    RESOLUTION.write().unwrap().height = size.height;
                     self.surface_config.get_mut().unwrap().width = size.width;
                     self.surface_config.get_mut().unwrap().height = size.height;
                     let device = DEVICE.get().unwrap();

@@ -74,9 +74,6 @@ impl RenderingExtension for Base {
         //This is cached, so should be reasonably fast
         let meshes = world.get_all_components::<crate::components::mesh::Mesh>();
         // let main_camera = world.get_all_components::crate
-        //
-        //No rendering needs to be done
-        //NO there IS work to be done here, like the skybox and shit
         if meshes.is_none() {
             info!("Rendered 0 meshes");
             return;
@@ -125,7 +122,7 @@ impl RenderingExtension for Base {
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                 view: &attachments.depth_stencil,
                 depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(0.0),
+                    load: wgpu::LoadOp::Clear(1.0),
                     store: wgpu::StoreOp::Store,
                 }),
                 stencil_ops: None,

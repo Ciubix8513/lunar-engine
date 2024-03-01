@@ -31,20 +31,20 @@ fn init(state: &mut MyState) {
         .register::<Material>(TextureUnlit::new(texture).into());
     state.world.add_entity(
         EntityBuilder::new()
-            .add_component::<Transform>()
+            .create_component(|| Transform {
+                position: Vec3::new(0.0, 0.0, -3.5),
+                ..Default::default()
+            })
             .create_component(|| Mesh::new(mesh, material))
             .create(),
     );
     state.world.add_entity(
         EntityBuilder::new()
-            .create_component(|| Transform {
-                position: Vec3::new(0.0, 0.0, 4.0),
-                rotation: Vec3::new(0.0, 0.0, 0.0),
-                ..Default::default()
-            })
+            .add_component::<Transform>()
             .create_component(|| {
                 let mut c = MainCamera::default();
-                c.fov = 60.0;
+                //60 degree FOV
+                c.fov = std::f32::consts::FRAC_PI_3;
                 c.near = 0.1;
                 c.far = 100.0;
                 c
