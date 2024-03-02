@@ -13,6 +13,7 @@ pub mod ecs;
 mod grimoire;
 mod helpers;
 pub mod import;
+pub mod input;
 pub mod math;
 pub mod structures;
 pub mod system;
@@ -138,23 +139,27 @@ impl<T> State<T> {
                     }
                     run_func(&mut self.contents);
                     self.window.get().unwrap().request_redraw();
+                    input::update();
                 }
                 winit::event::WindowEvent::KeyboardInput {
                     device_id: _,
                     event,
                     is_synthetic: _,
-                } if event.state == winit::event::ElementState::Pressed => {
-                    if let winit::keyboard::PhysicalKey::Code(key) = event.physical_key {
-                        match key {
-                            winit::keyboard::KeyCode::KeyP => {
-                                // if self.features.screenshot {
-                                //     self.screenshot = true;
-                                //     log::info!("Taking a screenshot");
-                                // }
-                            }
-                            _ => {}
-                        }
+                } => {
+                    let state = match event.state {
+                        winit::event::ElementState::Pressed => input::KeyState::Down,
+                        winit::event::ElementState::Released => input::KeyState::Up,
+                    };
+                    let keycode =
+                        if let winit::keyboard::PhysicalKey::Code(code) = event.physical_key {
+                            Some(code)
+                        } else {
+                            None
+                        };
+                    if keycode.is_none() {
+                        return;
                     }
+                    input::set_key(keycode.unwrap(), state);
                 }
                 _ => {}
             },

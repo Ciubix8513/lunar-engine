@@ -1,8 +1,9 @@
 use std::sync::RwLock;
 
+use vec_key_value_pair::VecMap;
 use wgpu::{util::StagingBelt, BufferAddress, Surface, SurfaceConfiguration, Texture};
 
-use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
+use crate::{input::InputState, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
 pub fn initialize_logging() {
     env_logger::Builder::new()
@@ -92,6 +93,12 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
     //     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
     //     mapped_at_creation: false,
     // });
+
+    super::input::INPUT
+        .set(InputState {
+            key_map: RwLock::new(VecMap::new()),
+        })
+        .unwrap();
 
     (surface, surface_config, depth_stencil)
 }
