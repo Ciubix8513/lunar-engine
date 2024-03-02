@@ -6,17 +6,25 @@ use lunar_engine::{
     assets::{self, materials::TextureUnlit, Material},
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
     ecs::{EntityBuilder, World},
+    input,
     math::vec3::Vec3,
     system::rendering::{self, extensions::Base},
     State,
 };
+use proc_macros::marker_component;
+use winit::keyboard::KeyCode;
 
 #[derive(Default)]
 struct MyState {
     frame: u32,
     world: World,
     assset_store: AssetStore,
+    blahaj_mesh: u128,
+    blahaj_mat: u128,
 }
+
+#[marker_component]
+struct Blahaj;
 
 fn init(state: &mut MyState) {
     state.frame = 0;
@@ -29,18 +37,16 @@ fn init(state: &mut MyState) {
     let material = state
         .assset_store
         .register::<Material>(TextureUnlit::new(texture).into());
+
+    state.blahaj_mat = material;
+    state.blahaj_mesh = mesh;
     state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: Vec3::new(0.0, 0.0, -3.5),
+                position: Vec3::new(0.0, 2.0, 10.0),
+                rotation: Vec3::new(-15.0, 0.0, 0.0),
                 ..Default::default()
             })
-            .create_component(|| Mesh::new(mesh, material))
-            .create(),
-    );
-    state.world.add_entity(
-        EntityBuilder::new()
-            .add_component::<Transform>()
             .create_component(|| {
                 let mut c = MainCamera::default();
                 //60 degree FOV
@@ -60,6 +66,32 @@ fn init(state: &mut MyState) {
 }
 
 fn run(state: &mut MyState) {
+    if input::KeyState::Down == input::key(KeyCode::KeyS) {
+        state.world.add_entity(
+            EntityBuilder::new()
+                .create_component(|| Transform {
+                    // scale: Vec3::random(0.3, 3.0),
+                    rotation: Vec3::random(0.0, 360.0),
+                    position: Vec3::random(-5.0, 5.0),
+                    ..Default::default()
+                })
+                .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+                .add_component::<Blahaj>()
+                .create(),
+        )
+    }
+
+    if input::KeyState::Down == input::key(KeyCode::KeyC) {
+        let e = state
+            .world
+            .get_all_entities_with_component::<Blahaj>()
+            .unwrap_or_default();
+        for b in e {
+            let id = b.borrow().get_id();
+            state.world.remove_entity_by_id(id).unwrap();
+        }
+    }
+
     state.world.update();
     rendering::render(&state.world, &state.assset_store, &[&Base::new(0)]);
     state.frame += 1;
