@@ -155,7 +155,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let component_impl = format!(
         "
-    impl ecs::Component for {name} {{
+    impl lunar_engine::ecs::Component for {name} {{
         fn mew() -> Self
         where
             Self: Sized,
@@ -204,4 +204,68 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
     o.extend([deref, deref_mut, component_impl]);
 
     o
+}
+
+#[proc_macro_attribute]
+pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
+    //Check if attributes are valid
+    if !attr.into_iter().next().is_none() {
+        return comp_error("Too many attributes", item);
+    }
+
+    let struct_type = is_struct_declaration(&item);
+    if struct_type.is_none() {
+        return comp_error("No struct declaration found", item);
+    }
+
+    if matches!(
+        struct_type.unwrap(),
+        StructType::Tupple | StructType::Regular
+    ) {
+        return comp_error("A marker must me an empty struct", item);
+    };
+    //Actual implementation here
+
+    //Implement Componnent
+    let mut items = item.into_iter().collect::<Vec<_>>();
+    let name = items[items.len() - 2]
+        .span()
+        .source_text()
+        .unwrap_or_default();
+
+    // Define all the needed blocks
+    let component_impl = format!(
+        "
+    impl lunar_engine::ecs::Component for {name} {{
+        fn mew() -> Self
+        where
+            Self: Sized,
+        {{
+            Self  
+        }}
+        fn as_any(&self) -> &dyn std::any::Any {{
+            self as &dyn std::any::Any
+        }}
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
+            self as &mut dyn std::any::Any
+        }}
+    }}
+    "
+    )
+    .parse::<TokenStream>()
+    .unwrap()
+    .into_iter()
+    .collect::<Vec<_>>();
+
+    let derive = r"#[derive(Debug)]"
+        .parse::<TokenStream>()
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    let old = items.splice(0.., derive).collect::<Vec<_>>();
+    items.extend_from_slice(&old);
+    items.extend_from_slice(&component_impl);
+
+    items.into_iter().collect()
 }

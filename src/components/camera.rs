@@ -3,6 +3,8 @@ use std::num::NonZeroU64;
 use log::debug;
 use proc_macros::alias;
 
+use crate as lunar_engine;
+
 use crate::{
     ecs::{self, Component, ComponentReference},
     grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
