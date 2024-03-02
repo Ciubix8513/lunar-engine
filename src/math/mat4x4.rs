@@ -398,14 +398,14 @@ impl Mat4x4 {
     #[must_use]
     ///Creates a rotation matrix for the given euler angles
     pub fn rotation_matrix_euler(rotation: &Vec3) -> Self {
-        let sin_x = rotation.x.sin();
-        let cos_x = rotation.x.cos();
+        let sin_x = rotation.x.to_radians().sin();
+        let cos_x = rotation.x.to_radians().cos();
 
-        let sin_y = rotation.y.sin();
-        let cos_y = rotation.y.cos();
+        let sin_y = rotation.y.to_radians().sin();
+        let cos_y = rotation.y.to_radians().cos();
 
-        let sin_z = rotation.z.sin();
-        let cos_z = rotation.z.cos();
+        let sin_z = rotation.z.to_radians().sin();
+        let cos_z = rotation.z.to_radians().cos();
 
         Self {
             m00: cos_y * cos_z,
