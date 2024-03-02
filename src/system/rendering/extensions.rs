@@ -72,13 +72,9 @@ impl RenderingExtension for Base {
         let camera = binding.first().unwrap();
 
         //This is cached, so should be reasonably fast
-        let meshes = world.get_all_components::<crate::components::mesh::Mesh>();
-        // let main_camera = world.get_all_components::crate
-        if meshes.is_none() {
-            info!("Rendered 0 meshes");
-            return;
-        }
-        let meshes = meshes.unwrap();
+        let meshes = world
+            .get_all_components::<crate::components::mesh::Mesh>()
+            .unwrap_or_default();
 
         let mut camera = camera.borrow_mut();
 
@@ -100,7 +96,6 @@ impl RenderingExtension for Base {
             if let BindgroupState::Initialized = m.get_bindgroup_state() {
                 continue;
             }
-
             m.initialize_bindgroups(assets);
         }
 
@@ -134,18 +129,22 @@ impl RenderingExtension for Base {
         //Set the camera
         camera.set_bindgroup(&mut render_pass);
 
+        let mut previous_mat = 0;
+
         //Iterate through the meshes and render them
         for m in &meshes {
             let m = m.borrow();
 
             m.set_bindgroup(&mut render_pass);
+            let mat = m.get_material_id().unwrap();
 
-            let mat = assets
-                .get_by_id::<Material>(m.get_material_id().unwrap())
-                .unwrap();
-            let mat = mat.borrow();
+            if mat != previous_mat {
+                let mat = assets.get_by_id::<Material>(mat).unwrap();
+                let mat = mat.borrow();
 
-            mat.render(&mut render_pass);
+                mat.render(&mut render_pass);
+            }
+            previous_mat = mat;
 
             let mesh = assets.get_by_id::<Mesh>(m.get_mesh_id().unwrap()).unwrap();
             let mesh = mesh.borrow();
