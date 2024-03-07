@@ -4,7 +4,11 @@ use std::{
 };
 
 use wgpu::SurfaceConfiguration;
-use winit::{dpi::PhysicalSize, event::Event, event_loop::EventLoopWindowTarget};
+use winit::{
+    dpi::PhysicalSize,
+    event::{self, Event},
+    event_loop::EventLoopWindowTarget,
+};
 
 pub mod asset_managment;
 pub mod assets;
@@ -32,6 +36,12 @@ pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
 //TODO find a better way than just staticing it
 static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
+
+static QUIT: OnceLock<bool> = OnceLock::new();
+
+pub fn quit() {
+    QUIT.set(true).unwrap();
+}
 
 pub struct State<T> {
     window: OnceCell<winit::window::Window>,
@@ -102,7 +112,7 @@ impl<T> State<T> {
                 window_id: _,
                 event,
             } => match event {
-                winit::event::WindowEvent::Resized(size) => {
+                event::WindowEvent::Resized(size) => {
                     RESOLUTION.write().unwrap().width = size.width;
                     RESOLUTION.write().unwrap().height = size.height;
                     self.surface_config.get_mut().unwrap().width = size.width;
@@ -126,11 +136,15 @@ impl<T> State<T> {
                     //     mapped_at_creation: false,
                     // });
                 }
-                winit::event::WindowEvent::CloseRequested => {
+                event::WindowEvent::CloseRequested => {
                     window.exit();
                     self.closed = true;
                 }
-                winit::event::WindowEvent::RedrawRequested => {
+                event::WindowEvent::RedrawRequested => {
+                    if QUIT.get().is_some() {
+                        window.exit();
+                        self.closed = true;
+                    }
                     if self.closed {
                         //This should be fine but needs further testing
                         end(&mut self.contents);
@@ -141,14 +155,14 @@ impl<T> State<T> {
                     self.window.get().unwrap().request_redraw();
                     input::update();
                 }
-                winit::event::WindowEvent::KeyboardInput {
+                event::WindowEvent::KeyboardInput {
                     device_id: _,
                     event,
                     is_synthetic: _,
                 } => {
                     let state = match event.state {
-                        winit::event::ElementState::Pressed => input::KeyState::Down,
-                        winit::event::ElementState::Released => input::KeyState::Up,
+                        event::ElementState::Pressed => input::KeyState::Down,
+                        event::ElementState::Released => input::KeyState::Up,
                     };
                     let keycode =
                         if let winit::keyboard::PhysicalKey::Code(code) = event.physical_key {
@@ -160,6 +174,28 @@ impl<T> State<T> {
                         return;
                     }
                     input::set_key(keycode.unwrap(), state);
+                }
+                event::WindowEvent::MouseInput {
+                    device_id,
+                    state,
+                    button,
+                } => match state {
+                    event::ElementState::Pressed => {
+                        input::set_mouse_button(button, input::KeyState::Down)
+                    }
+                    event::ElementState::Released => {
+                        input::set_mouse_button(button, input::KeyState::Up)
+                    }
+                },
+
+                event::WindowEvent::CursorMoved {
+                    device_id,
+                    position,
+                } => {
+                    input::set_cursor_position(math::vec2::Vec2 {
+                        x: position.x as f32,
+                        y: position.y as f32,
+                    });
                 }
                 _ => {}
             },
