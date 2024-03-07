@@ -56,6 +56,11 @@ use std::cell::{Ref, RefMut};
 ///Id type [Entity] uses
 pub type UUID = u64;
 
+///A reference to an [Entity] in a world intended for uses with short lifetimes
+pub type EntityRefence = Rc<RefCell<Entity>>;
+///A weak reference to an [Entity] in a world intended for use with longer lifetimes
+pub type WeakEntityRefence = Weak<RefCell<Entity>>;
+
 ///A container for components
 #[derive(Default, Debug)]
 pub struct Entity {
@@ -380,7 +385,7 @@ impl ComponentsModified {
 
 ///Manages all the entities
 pub struct World {
-    entities: Vec<Rc<RefCell<Entity>>>,
+    entities: Vec<EntityRefence>,
     modified: Rc<RefCell<ComponentsModified>>,
     //Gotta box it, this is so stupid
     component_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
@@ -406,7 +411,7 @@ impl World {
     }
 
     ///Adds entity to the world, consuming it in the process
-    pub fn add_entity(&mut self, entity: Entity) {
+    pub fn add_entity(&mut self, entity: Entity) -> WeakEntityRefence {
         let mut e = entity;
         e.world_modified = Some(self.modified.clone());
 
@@ -420,9 +425,12 @@ impl World {
                 weak: Rc::downgrade(&rc),
             })
         }
+        let weak = Rc::downgrade(&rc);
         self.entities.push(rc);
 
         (*self.modified).borrow_mut().entity_changed();
+
+        weak
     }
 
     ///Finds and removes the entity by its reference
@@ -482,7 +490,7 @@ impl World {
 
     ///Returns the entity with the requested id
     #[must_use]
-    pub fn get_entity_by_id(&self, id: UUID) -> Option<Rc<RefCell<Entity>>> {
+    pub fn get_entity_by_id(&self, id: UUID) -> Option<EntityRefence> {
         self.entities
             .iter()
             .find(|e| e.borrow().get_id() == id)
