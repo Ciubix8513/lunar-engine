@@ -288,16 +288,16 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
-    pub fn get_vertex_buffer(&self) -> &wgpu::Buffer {
-        self.vertex_buffer.as_ref().unwrap()
+    pub fn get_vertex_buffer(&self) -> Arc<wgpu::Buffer> {
+        self.vertex_buffer.clone().unwrap()
     }
 
     ///Returns the index buffer of the mesh
     ///
     ///# Panics
     ///Panics if the asset was not initialized
-    pub fn get_index_buffer(&self) -> &wgpu::Buffer {
-        self.index_buffer.as_ref().unwrap()
+    pub fn get_index_buffer(&self) -> Arc<wgpu::Buffer> {
+        self.index_buffer.clone().unwrap()
     }
 
     ///Returns the vertex count of the mesh
@@ -308,31 +308,20 @@ impl Mesh {
         self.tris_count.unwrap()
     }
 
+    ///Returns the index count of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    pub fn get_index_count(&self) -> u32 {
+        self.index_count.unwrap()
+    }
+
     ///Returns the vertex count of the mesh
     ///
     ///# Panics
     ///Panics if the asset was not initialized
     pub fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
-    }
-
-    pub fn render(&self, pass: &mut wgpu::RenderPass) {
-        let v_buffer = unsafe {
-            Arc::as_ptr(self.vertex_buffer.as_ref().unwrap())
-                .as_ref()
-                .unwrap()
-        };
-
-        let i_buffer = unsafe {
-            Arc::as_ptr(self.index_buffer.as_ref().unwrap())
-                .as_ref()
-                .unwrap()
-        };
-
-        pass.set_vertex_buffer(0, v_buffer.slice(..));
-        pass.set_index_buffer(i_buffer.slice(..), wgpu::IndexFormat::Uint32);
-
-        pass.draw_indexed(0..self.index_count.unwrap(), 0, 0..1);
     }
 }
 

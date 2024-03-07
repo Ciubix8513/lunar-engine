@@ -1,12 +1,14 @@
+use crate::ecs;
 use std::num::NonZeroU64;
 
 use log::debug;
 use proc_macros::alias;
 
 use crate as lunar_engine;
+// use lunar_engine::ecs;
 
 use crate::{
-    ecs::{self, Component, ComponentReference},
+    ecs::{Component, ComponentReference},
     grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
     math::{mat4x4::Mat4x4, vec4::Vec4},
     DEVICE, RESOLUTION, STAGING_BELT,

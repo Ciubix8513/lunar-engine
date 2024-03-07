@@ -1,12 +1,9 @@
 #![allow(dead_code)]
-use std::{num::NonZeroU64, rc::Rc};
 
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    grimoire::{TRANSFORM_BIND_GROUP_LAYOUT_DESCRIPTOR, TRANS_BIND_GROUP_INDEX},
     math::mat4x4::Mat4x4,
-    DEVICE, STAGING_BELT,
 };
 
 use super::transform::Transform;
@@ -15,8 +12,6 @@ use super::transform::Transform;
 pub struct Mesh {
     mesh_id: Option<UUID>,
     material_id: Option<UUID>,
-    transform_uniform: Option<wgpu::Buffer>,
-    transform_bind_group: Option<std::rc::Rc<wgpu::BindGroup>>,
     transform_reference: Option<ComponentReference<Transform>>,
 }
 
@@ -36,10 +31,6 @@ impl Component for Mesh {
         self as &mut dyn std::any::Any
     }
 
-    fn awawa(&mut self) {
-        self.gen_gpu();
-    }
-
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
         self.transform_reference = Some(reference.get_component().unwrap())
@@ -51,8 +42,6 @@ impl Mesh {
         Self {
             mesh_id: Some(mesh),
             material_id: Some(material),
-            transform_uniform: None,
-            transform_bind_group: None,
             transform_reference: None,
         }
     }
@@ -82,62 +71,12 @@ impl Mesh {
         self.material_id
     }
 
-    ///Creates the buffers and loads data into them
-    fn gen_gpu(&mut self) {
-        let device = crate::DEVICE.get().unwrap();
-        let label = format!(
-            "Mesh m:{},mat: {}",
-            self.mesh_id.unwrap_or_default(),
-            self.material_id.unwrap_or_default()
-        );
-        let uniform = crate::helpers::create_uniform_matrix(Some(&label));
-        let bind_group_layout =
-            device.create_bind_group_layout(&TRANSFORM_BIND_GROUP_LAYOUT_DESCRIPTOR);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(&label),
-            layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: &uniform,
-                    offset: 0,
-                    size: None,
-                }),
-            }],
-        });
-
-        self.transform_bind_group = Some(Rc::new(bind_group));
-        self.transform_uniform = Some(uniform);
-    }
-
-    pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
-        let transform = self.transform_reference.as_ref().unwrap().borrow();
-        let mat = transform.matrix().transpose();
-        drop(transform);
-
-        let uniform = self.transform_uniform.as_ref().unwrap();
-        let device = DEVICE.get().unwrap();
-        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
-
-        staging_belt
-            .write_buffer(
-                encoder,
-                uniform,
-                0,
-                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
-                device,
-            )
-            .copy_from_slice(bytemuck::bytes_of(&mat));
-    }
-
-    pub(crate) fn set_bindgroup(&self, pass: &mut wgpu::RenderPass) {
-        let rc = self.transform_bind_group.as_ref().unwrap().clone();
-
-        //I don't like this
-        //but i don't see any other sollutions
-        //TODO look into other sollutions
-        let rc = unsafe { Rc::as_ptr(&rc).as_ref().unwrap() };
-
-        pass.set_bind_group(TRANS_BIND_GROUP_INDEX, rc, &[]);
+    pub fn get_matrix(&self) -> Mat4x4 {
+        self.transform_reference
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .matrix()
+            .transpose()
     }
 }

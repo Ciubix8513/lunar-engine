@@ -1,10 +1,14 @@
+use std::sync::Arc;
+
 use log::{debug, info};
+use wgpu::util::DeviceExt;
 
 use crate::{
     asset_managment::AssetStore,
     assets::{BindgroupState, Material, Mesh},
     components,
     ecs::World,
+    DEVICE,
 };
 
 pub struct AttachmentData {
@@ -81,12 +85,103 @@ impl RenderingExtension for Base {
         camera.update_gpu(encoder);
         let mut materials = Vec::new();
 
-        //Update the gpu data for every Mesh
+        let mut matrices = Vec::new();
+        //Collect all the matrices
         for m in &meshes {
             let m = m.borrow();
-            m.update_gpu(encoder);
             materials.push(m.get_material_id().unwrap());
+            matrices.push((
+                m.get_mesh_id().unwrap(),
+                (m.get_matrix(), m.get_material_id().unwrap()),
+            ));
         }
+
+        //Sort meshes for easier buffer creation
+        matrices.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+        //This is so jank omg
+
+        //Find points where they differ
+        let mut split_points = Vec::new();
+        let mut old = 0;
+        for (i, m) in matrices.iter().enumerate() {
+            if m.0 != old {
+                split_points.push(i);
+                old = m.0;
+            }
+        }
+        //Guarantee that there's at least 1 window
+        split_points.push(matrices.len());
+
+        //assemble vertex buffers
+        let mut v_buffers = Vec::new();
+
+        let device = DEVICE.get().unwrap();
+
+        let mut m_m = Vec::new();
+        let mut num_instances = Vec::new();
+
+        for m in split_points.windows(2) {
+            let points = (*m.first().unwrap(), *m.last().unwrap());
+            let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
+
+            //(Mesh, (Matrix, Material))
+            let mut stuff = matrices[points.0..points.1].iter().collect::<Vec<_>>();
+
+            //Split into vectors and sorted by material
+            stuff.sort_unstable_by(|s, o| s.1 .1.cmp(&o.1 .1));
+
+            let mut split_points = Vec::new();
+            let mut old = 0;
+            for (i, m) in stuff.iter().enumerate() {
+                if m.1 .1 != old {
+                    split_points.push(i);
+                    old = m.1 .1;
+                }
+            }
+            split_points.push(stuff.len());
+
+            let mut last = (0, 0);
+            //Need to iterate over it twice...
+            for i in &split_points[..split_points.len() - 1] {
+                let curent = stuff[*i];
+                if last != (curent.0, curent.1 .1) {
+                    last = (curent.0, curent.1 .1);
+                    m_m.push(last);
+                }
+            }
+
+            //AGAIN!?!?
+            for m in split_points.windows(2) {
+                //Now this is sored per mesh per material
+                let points = (*m.first().unwrap(), *m.last().unwrap());
+                num_instances.push(points.1 - points.0);
+                let matrices = stuff
+                    .iter()
+                    .map(|i| bytemuck::bytes_of(&i.1 .0))
+                    .flatten()
+                    .copied()
+                    .collect::<Vec<u8>>();
+                v_buffers.push(
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(&label),
+                        contents: &matrices,
+                        usage: wgpu::BufferUsages::VERTEX,
+                    }),
+                );
+            }
+        }
+        //Check if they're the same length
+        assert_eq!(
+            v_buffers.len(),
+            m_m.len(),
+            "You are a moron, they're not the same"
+        );
+        assert_eq!(
+            num_instances.len(),
+            m_m.len(),
+            "You are an idiot, they're not the same"
+        );
 
         //Initialize bindgroups for all needed materials
         for m in materials {
@@ -132,11 +227,8 @@ impl RenderingExtension for Base {
         let mut previous_mat = 0;
 
         //Iterate through the meshes and render them
-        for m in &meshes {
-            let m = m.borrow();
-
-            m.set_bindgroup(&mut render_pass);
-            let mat = m.get_material_id().unwrap();
+        for (i, m) in m_m.iter().enumerate() {
+            let mat = m.1;
 
             if mat != previous_mat {
                 let mat = assets.get_by_id::<Material>(mat).unwrap();
@@ -146,10 +238,17 @@ impl RenderingExtension for Base {
             }
             previous_mat = mat;
 
-            let mesh = assets.get_by_id::<Mesh>(m.get_mesh_id().unwrap()).unwrap();
+            let mesh = assets.get_by_id::<Mesh>(m.0).unwrap();
             let mesh = mesh.borrow();
 
-            mesh.render(&mut render_pass);
+            let vert = unsafe { Arc::as_ptr(&mesh.get_vertex_buffer()).as_ref().unwrap() };
+            let ind = unsafe { Arc::as_ptr(&mesh.get_index_buffer()).as_ref().unwrap() };
+
+            render_pass.set_vertex_buffer(0, vert.slice(..));
+            render_pass.set_vertex_buffer(1, v_buffers[i].slice(..));
+
+            render_pass.set_index_buffer(ind.slice(..), wgpu::IndexFormat::Uint32);
+            render_pass.draw_indexed(0..mesh.get_index_count(), 0, 0..(num_instances[i] as u32))
         }
         drop(render_pass);
     }

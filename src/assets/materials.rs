@@ -40,7 +40,7 @@ impl MaterialTrait for TextureUnlit {
                 .as_ref()
                 .unwrap()
         };
-        render_pass.set_bind_group(2, b, &[]);
+        render_pass.set_bind_group(1, b, &[]);
     }
 
     fn intialize(&mut self) {
@@ -73,18 +73,12 @@ impl MaterialTrait for TextureUnlit {
                 ],
             });
 
-        let trans_bind_group_layout =
-            device.create_bind_group_layout(&grimoire::TRANSFORM_BIND_GROUP_LAYOUT_DESCRIPTOR);
         let cam_bind_group_layout =
             device.create_bind_group_layout(&grimoire::CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[
-                &trans_bind_group_layout,
-                &cam_bind_group_layout,
-                &bind_group_layout_f,
-            ],
+            bind_group_layouts: &[&cam_bind_group_layout, &bind_group_layout_f],
             push_constant_ranges: &[],
         });
 
@@ -96,27 +90,57 @@ impl MaterialTrait for TextureUnlit {
             vertex: wgpu::VertexState {
                 module: &v_shader,
                 entry_point: "main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: 36,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x4,
-                            offset: 0,
-                            shader_location: 0,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 16,
-                            shader_location: 1,
-                        },
-                        wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x3,
-                            offset: 24,
-                            shader_location: 2,
-                        },
-                    ],
-                }],
+                buffers: &[
+                    //Vertex data
+                    wgpu::VertexBufferLayout {
+                        array_stride: 36,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &[
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x4,
+                                offset: 0,
+                                shader_location: 0,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x2,
+                                offset: 16,
+                                shader_location: 1,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x3,
+                                offset: 24,
+                                shader_location: 2,
+                            },
+                        ],
+                    },
+                    //Transform data
+                    wgpu::VertexBufferLayout {
+                        array_stride: 64,
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: &[
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x4,
+                                offset: 0,
+                                shader_location: 3,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x4,
+                                offset: 16,
+                                shader_location: 4,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x4,
+                                offset: 32,
+                                shader_location: 5,
+                            },
+                            wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x4,
+                                offset: 48,
+                                shader_location: 6,
+                            },
+                        ],
+                    },
+                ],
             },
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
