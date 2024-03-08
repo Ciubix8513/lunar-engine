@@ -14,6 +14,8 @@ use lunar_engine::{
 use proc_macros::marker_component;
 use winit::keyboard::KeyCode;
 
+use crate::camera_movement::FreeCam;
+
 #[derive(Default)]
 struct MyState {
     frame: u32,
@@ -22,6 +24,8 @@ struct MyState {
     blahaj_mesh: u128,
     blahaj_mat: u128,
 }
+
+mod camera_movement;
 
 #[marker_component]
 struct Blahaj;
@@ -40,7 +44,7 @@ fn init(state: &mut MyState) {
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
-    state.world.add_entity(
+    let e = state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
                 position: Vec3::new(0.0, 2.0, 10.0),
@@ -54,6 +58,10 @@ fn init(state: &mut MyState) {
                 c.near = 0.1;
                 c.far = 100.0;
                 c
+            })
+            .create_component(|| FreeCam {
+                speed: 10.0,
+                sensetivity: 1.0,
             })
             .create(),
     );
@@ -78,7 +86,7 @@ fn run(state: &mut MyState) {
                 .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
                 .add_component::<Blahaj>()
                 .create(),
-        )
+        );
     }
 
     if input::KeyState::Down == input::key(KeyCode::KeyC) {

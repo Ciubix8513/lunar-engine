@@ -141,6 +141,8 @@ impl<T> State<T> {
                     self.closed = true;
                 }
                 event::WindowEvent::RedrawRequested => {
+                    let start = chrono::Local::now();
+
                     if QUIT.get().is_some() {
                         window.exit();
                         self.closed = true;
@@ -154,6 +156,9 @@ impl<T> State<T> {
                     run_func(&mut self.contents);
                     self.window.get().unwrap().request_redraw();
                     input::update();
+                    let finish = chrono::Local::now();
+
+                    let delta = finish - start;
                 }
                 event::WindowEvent::KeyboardInput {
                     device_id: _,
@@ -176,7 +181,7 @@ impl<T> State<T> {
                     input::set_key(keycode.unwrap(), state);
                 }
                 event::WindowEvent::MouseInput {
-                    device_id,
+                    device_id: _,
                     state,
                     button,
                 } => match state {
@@ -189,7 +194,7 @@ impl<T> State<T> {
                 },
 
                 event::WindowEvent::CursorMoved {
-                    device_id,
+                    device_id: _,
                     position,
                 } => {
                     input::set_cursor_position(math::vec2::Vec2 {
