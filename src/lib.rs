@@ -38,9 +38,15 @@ static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 static QUIT: OnceLock<bool> = OnceLock::new();
+static DELTA_TIME: RwLock<f32> = RwLock::new(0.0);
 
 pub fn quit() {
     QUIT.set(true).unwrap();
+}
+
+///Returns time between frames in seconds
+pub fn delta_time() -> f32 {
+    *DELTA_TIME.read().unwrap()
 }
 
 pub struct State<T> {
@@ -158,7 +164,10 @@ impl<T> State<T> {
                     input::update();
                     let finish = chrono::Local::now();
 
-                    let delta = finish - start;
+                    let delta =
+                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1000000.0;
+
+                    *DELTA_TIME.write().unwrap() = delta;
                 }
                 event::WindowEvent::KeyboardInput {
                     device_id: _,
@@ -208,23 +217,3 @@ impl<T> State<T> {
         }
     }
 }
-
-//Rendering remains
-// let frame = self.surface.get_current_texture().unwrap_or_else(|_| {
-//     self.surface.configure(device, &self.surface_config);
-//     self.surface
-//         .get_current_texture()
-//         .expect("Failed to get the next surface")
-// });
-// let frame_view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
-//     format: Some(self.surface_config.format),
-//     ..Default::default()
-// });
-
-// let depth_view = self
-//     .depth_stencil
-//     .texture
-//     .create_view(&wgpu::TextureViewDescriptor::default());
-
-// self.frame += 1;
-// frame.present();
