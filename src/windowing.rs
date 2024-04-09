@@ -8,6 +8,7 @@ use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTI
 pub fn initialize_logging() {
     env_logger::Builder::new()
         // .filter_module("wgpu", log::LevelFilter::Info) .filter_module("lunar_engine", log::LevelFilter::Info)
+        .filter_module("wgpu_hal", log::LevelFilter::Warn)
         .filter_level(log::LevelFilter::Info)
         .init();
 }

@@ -8,6 +8,7 @@ use winit::{
     dpi::PhysicalSize,
     event::{self, Event},
     event_loop::EventLoopWindowTarget,
+    window::CursorGrabMode,
 };
 
 pub mod asset_managment;
@@ -40,6 +41,17 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.0);
 
+struct CursorState {
+    grab_mode: CursorGrabMode,
+    visible: bool,
+    modified: bool,
+}
+static CURSOR_STATE: RwLock<CursorState> = RwLock::new(CursorState {
+    grab_mode: CursorGrabMode::None,
+    visible: true,
+    modified: false,
+});
+
 pub fn quit() {
     QUIT.set(true).unwrap();
 }
@@ -47,6 +59,20 @@ pub fn quit() {
 ///Returns time between frames in seconds
 pub fn delta_time() -> f32 {
     *DELTA_TIME.read().unwrap()
+}
+
+///Sets the cursort grab mode
+pub fn set_cursor_grab_mode(mode: CursorGrabMode) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.grab_mode = mode;
+    state.modified = true;
+}
+
+///Sets the cursort grab mode
+pub fn set_cursor_visible(mode: bool) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.visible = mode;
+    state.modified = true;
 }
 
 pub struct State<T> {
@@ -68,6 +94,20 @@ impl<T: Default> Default for State<T> {
 }
 
 impl<T> State<T> {
+    fn process_cursor(&self) {
+        let mut state = CURSOR_STATE.write().unwrap();
+
+        if !state.modified {
+            return;
+        }
+        state.modified = false;
+
+        self.window.get().unwrap().set_cursor_visible(state.visible);
+        if let Err(e) = self.window.get().unwrap().set_cursor_grab(state.grab_mode) {
+            log::error!("{e}");
+        }
+    }
+
     pub fn new(contents: T) -> Self {
         Self {
             window: OnceCell::new(),
@@ -147,6 +187,8 @@ impl<T> State<T> {
                     self.closed = true;
                 }
                 event::WindowEvent::RedrawRequested => {
+                    self.process_cursor();
+
                     let start = chrono::Local::now();
 
                     if QUIT.get().is_some() {
@@ -206,6 +248,7 @@ impl<T> State<T> {
                     device_id: _,
                     position,
                 } => {
+                    window.
                     input::set_cursor_position(math::vec2::Vec2 {
                         x: position.x as f32,
                         y: position.y as f32,

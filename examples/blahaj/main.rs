@@ -59,12 +59,18 @@ fn init(state: &mut MyState) {
                 c.far = 100.0;
                 c
             })
-            .create_component(|| FreeCam {
-                speed: 10.0,
-                sensetivity: 1.0,
-            })
+            .create_component(|| FreeCam::new(10.0, 25.0, false))
             .create(),
     );
+
+    state.world.add_entity(
+        EntityBuilder::new()
+            .create_component(|| Transform::default())
+            .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+            .add_component::<Blahaj>()
+            .create(),
+    );
+
     info!("Initialized!");
     info!("World contains {} entities", state.world.get_entity_count());
 
@@ -74,7 +80,7 @@ fn init(state: &mut MyState) {
 }
 
 fn run(state: &mut MyState) {
-    if input::KeyState::Down == input::key(KeyCode::KeyS) {
+    if input::KeyState::Down == input::key(KeyCode::KeyB) {
         state.world.add_entity(
             EntityBuilder::new()
                 .create_component(|| Transform {

@@ -532,6 +532,7 @@ impl World {
         let entry = binding
             .entry(std::any::TypeId::of::<T>())
             .or_insert_with(|| {
+                log::warn!("Cache miss");
                 Box::new(
                     self.entities
                         .iter()
@@ -562,6 +563,7 @@ impl World {
 
         let mut entry = self.entity_cache.borrow_mut();
         let entry = entry.entry(std::any::TypeId::of::<T>()).or_insert_with(|| {
+            log::warn!("Cache miss");
             Box::new(
                 self.entities
                     .iter()

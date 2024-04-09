@@ -26,6 +26,9 @@ pub trait Vector: Div<f32> + Sized + Copy {
         Self: From<<Self as Div<f32>>::Output>,
     {
         let len = self.length();
+        if len == 0.0 {
+            return self;
+        }
         (self / len).into()
     }
 }

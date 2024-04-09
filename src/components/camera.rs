@@ -68,7 +68,7 @@ impl Camera {
         let rotation_matrix = Mat4x4::rotation_matrix_euler(&transform.rotation);
 
         let up = (rotation_matrix * Vec4::new(0.0, 1.0, 0.0, 1.0)).xyz();
-        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, -1.0, 1.0)).xyz();
+        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, -1.0, 1.0)).xyz() + transform.position;
 
         let camera_matrix = Mat4x4::look_at_matrix(transform.position, up, forward);
 
