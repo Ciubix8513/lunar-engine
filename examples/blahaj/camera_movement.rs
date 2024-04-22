@@ -96,16 +96,16 @@ impl Component for FreeCam {
                 input::KeyState::Down
             ) {
                 self.locked = false;
-                lunar_engine::set_cursor_grab_mode(winit::window::CursorGrabMode::None);
-                lunar_engine::set_cursor_visible(true);
+                lunar_engine::set_cursor_grab_mode(lunar_engine::CursorState::Free);
+                // lunar_engine::set_cursor_visible(true);
             }
         } else {
             if matches!(
                 input::mouse_btn(winit::event::MouseButton::Left),
                 input::KeyState::Down
             ) {
-                lunar_engine::set_cursor_grab_mode(winit::window::CursorGrabMode::Confined);
-                lunar_engine::set_cursor_visible(false);
+                lunar_engine::set_cursor_grab_mode(lunar_engine::CursorState::Locked);
+                // lunar_engine::set_cursor_visible(false);
                 self.locked = true;
             }
         }

@@ -5,7 +5,7 @@ use std::{
 
 use wgpu::SurfaceConfiguration;
 use winit::{
-    dpi::PhysicalSize,
+    dpi::{PhysicalPosition, PhysicalSize},
     event::{self, Event},
     event_loop::EventLoopWindowTarget,
     window::CursorGrabMode,
@@ -41,17 +41,28 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.0);
 
-struct CursorState {
-    grab_mode: CursorGrabMode,
+///Defines behaviour of the cursor inside the window
+pub enum CursorState {
+    //Cursor is locked to the window
+    Locked,
+    //Cursor is free
+    Free,
+}
+
+struct CursorStateInternal {
+    grab_mode: CursorState,
+    lock_failed: bool,
     visible: bool,
     modified: bool,
 }
-static CURSOR_STATE: RwLock<CursorState> = RwLock::new(CursorState {
-    grab_mode: CursorGrabMode::None,
+static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateInternal {
+    grab_mode: CursorState::Free,
+    lock_failed: false,
     visible: true,
     modified: false,
 });
 
+//Exits the application and closes the window
 pub fn quit() {
     QUIT.set(true).unwrap();
 }
@@ -61,14 +72,14 @@ pub fn delta_time() -> f32 {
     *DELTA_TIME.read().unwrap()
 }
 
-///Sets the cursort grab mode
-pub fn set_cursor_grab_mode(mode: CursorGrabMode) {
+///Sets the cursor grab mode
+pub fn set_cursor_grab_mode(mode: CursorState) {
     let mut state = CURSOR_STATE.write().unwrap();
     state.grab_mode = mode;
     state.modified = true;
 }
 
-///Sets the cursort grab mode
+///Sets the cursor grab mode
 pub fn set_cursor_visible(mode: bool) {
     let mut state = CURSOR_STATE.write().unwrap();
     state.visible = mode;
@@ -94,17 +105,57 @@ impl<T: Default> Default for State<T> {
 }
 
 impl<T> State<T> {
+    fn reset_cursor(&self) {
+        let window = self.window.get().unwrap();
+
+        let pos = window.inner_size();
+        if let Err(e) = window.set_cursor_position(PhysicalPosition {
+            x: pos.width / 2,
+            y: pos.height / 2,
+        }) {
+            log::error!("Failed to move cursor {e}");
+        }
+    }
+
     fn process_cursor(&self) {
         let mut state = CURSOR_STATE.write().unwrap();
+
+        if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
+            self.reset_cursor();
+        }
 
         if !state.modified {
             return;
         }
         state.modified = false;
+        let window = self.window.get().unwrap();
 
         self.window.get().unwrap().set_cursor_visible(state.visible);
-        if let Err(e) = self.window.get().unwrap().set_cursor_grab(state.grab_mode) {
-            log::error!("{e}");
+
+        if let Err(e) = window.set_cursor_grab(match state.grab_mode {
+            CursorState::Locked => CursorGrabMode::Locked,
+            CursorState::Free => CursorGrabMode::None,
+        }) {
+            match e {
+                winit::error::ExternalError::NotSupported(_) => {
+                    //Once a lock has failed, it can never unfail, so no need to reset this
+                    //afterwards :3
+                    //
+                    //This can only unfail if the user changes platform, buuuut, i literally don't
+                    //think there's a way that could happen
+                    state.lock_failed = true;
+                    log::warn!("Failed to lock cursor, doing manually");
+                    if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
+                        log::error!("Cursor is fucked :3 {e}");
+                    }
+                    self.reset_cursor();
+                }
+
+                winit::error::ExternalError::Ignored => {
+                    log::warn!("Cursor state change ignored")
+                }
+                winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
+            }
         }
     }
 
@@ -248,7 +299,6 @@ impl<T> State<T> {
                     device_id: _,
                     position,
                 } => {
-                    window.
                     input::set_cursor_position(math::vec2::Vec2 {
                         x: position.x as f32,
                         y: position.y as f32,
