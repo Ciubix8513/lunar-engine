@@ -196,23 +196,35 @@ impl AssetStore {
             chunk_size = 1;
         }
 
-        let handles = binding
-            .chunks(chunk_size)
-            .map(|c| c.iter().map(|i| (*i).clone()).collect::<Vec<_>>())
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|c| {
-                thread::spawn(move || {
-                    c.clone()
-                        .iter()
-                        .map(move |i| i.0.write().initialize())
-                        .collect::<Vec<_>>()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let handles = binding
+                .chunks(chunk_size)
+                .map(|c| c.iter().map(|i| (*i).clone()).collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+                .into_iter()
+                .map(|c| {
+                    thread::spawn(move || {
+                        c.clone()
+                            .iter()
+                            .map(move |i| i.0.write().initialize())
+                            .collect::<Vec<_>>()
+                    })
                 })
-            })
-            .collect::<Vec<_>>();
+                .collect::<Vec<_>>();
 
-        for h in handles {
-            for r in unsafe { h.join().unwrap_unchecked() } {
+            for h in handles {
+                for r in unsafe { h.join().unwrap_unchecked() } {
+                    if let Err(r) = r {
+                        return Err(Error::InitializationError(r));
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            for r in binding.iter().map(|c| c.0.write().initialize()) {
                 if let Err(r) = r {
                     return Err(Error::InitializationError(r));
                 }

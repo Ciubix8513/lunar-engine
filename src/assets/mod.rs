@@ -6,8 +6,7 @@ use std::{
 use wgpu::util::DeviceExt;
 
 use crate::{
-    asset_managment::Asset,
-    asset_managment::{AssetStore, UUID},
+    asset_managment::{Asset, AssetStore, UUID},
     structures::Image,
     DEVICE,
 };
@@ -33,7 +32,13 @@ pub struct Texture {
     sample_count: u8,
     adress_mode: wgpu::AddressMode,
     filter: wgpu::FilterMode,
+    #[cfg(target_arch = "wasm32")]
+    sampler: Option<crate::wrappers::WgpuWrapper<wgpu::Sampler>>,
+    #[cfg(not(target_arch = "wasm32"))]
     sampler: Option<wgpu::Sampler>,
+    #[cfg(target_arch = "wasm32")]
+    texture: Option<crate::wrappers::WgpuWrapper<wgpu::Texture>>,
+    #[cfg(not(target_arch = "wasm32"))]
     texture: Option<wgpu::Texture>,
 }
 
@@ -55,6 +60,9 @@ enum ImageFormat {
 #[allow(unused_variables)]
 impl Texture {
     ///Initializes a texture to load a bmp file in runtime
+    ///
+    ///Currently unsupported on the web target
+    ///
     #[must_use]
     pub fn new_bmp(path: &Path) -> Self {
         Self {
@@ -137,8 +145,16 @@ impl Texture {
             border_color: None,
         });
 
-        self.texture = Some(texture);
-        self.sampler = Some(sampler);
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.texture = Some(crate::wrappers::WgpuWrapper::new(texture));
+            self.sampler = Some(crate::wrappers::WgpuWrapper::new(sampler));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.texture = Some(texture);
+            self.sampler = Some(sampler);
+        }
     }
 
     pub fn set_mip_count(&mut self, count: u8) {
@@ -248,9 +264,14 @@ impl Asset for Texture {
 pub struct Mesh {
     id: Option<UUID>,
     initialized: bool,
-    path: PathBuf,
     mode: MeshMode,
+    #[cfg(target_arch = "wasm32")]
+    vertex_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    #[cfg(target_arch = "wasm32")]
+    index_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    #[cfg(not(target_arch = "wasm32"))]
     vertex_buffer: Option<Arc<wgpu::Buffer>>,
+    #[cfg(not(target_arch = "wasm32"))]
     index_buffer: Option<Arc<wgpu::Buffer>>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
@@ -260,11 +281,29 @@ pub struct Mesh {
 ///Ways the mesh can be loaded from file
 enum MeshMode {
     ///An obj file that contains a single mesh
-    SingleObjectOBJ,
+    SingleObjectOBJ(PathBuf),
+    StaticSingleObjectOBJ(&'static str),
 }
 
 impl Mesh {
+    ///Creates anew asset that will load the first object in a waveform obj file that is statically
+    ///loaded
+    pub fn new_from_static_obj(mesh: &'static str) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::StaticSingleObjectOBJ(mesh),
+            vertex_buffer: None,
+            index_buffer: None,
+            vert_count: None,
+            tris_count: None,
+            index_count: None,
+        }
+    }
+
     ///Creates a new asset that will load the first object in a waveform obj file
+    ///
+    ///Currently unsupported on the web target
     ///
     ///# Errors
     ///Returns an error if the file does not exist
@@ -274,8 +313,7 @@ impl Mesh {
         Ok(Self {
             id: None,
             initialized: false,
-            path: path.to_owned(),
-            mode: MeshMode::SingleObjectOBJ,
+            mode: MeshMode::SingleObjectOBJ(path.to_owned()),
             vertex_buffer: None,
             index_buffer: None,
             tris_count: None,
@@ -288,6 +326,17 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_vertex_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
+        //THIS IS SO TRASH
+        self.vertex_buffer.clone().unwrap()
+    }
+
+    ///Returns the vertex buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_vertex_buffer(&self) -> Arc<wgpu::Buffer> {
         self.vertex_buffer.clone().unwrap()
     }
@@ -296,6 +345,16 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_index_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
+        self.index_buffer.clone().unwrap()
+    }
+
+    ///Returns the index buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_index_buffer(&self) -> Arc<wgpu::Buffer> {
         self.index_buffer.clone().unwrap()
     }
@@ -333,12 +392,12 @@ impl Asset for Mesh {
     #[allow(clippy::cast_possible_truncation)]
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         //This is horrific, but i LOVE this :3
-        let mesh = match self.mode {
-            MeshMode::SingleObjectOBJ => {
+        let mesh = match &self.mode {
+            MeshMode::SingleObjectOBJ(path) => {
                 //Prase file
                 match crate::import::obj::parse(
                     //Load file
-                    &(match std::fs::read_to_string(&self.path) {
+                    &(match std::fs::read_to_string(path) {
                         Ok(it) => it,
                         Err(err) => return Err(Box::new(err)),
                     }),
@@ -351,6 +410,17 @@ impl Asset for Mesh {
                         return Err(Box::new(std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
                             "Invalid file",
+                        )));
+                    }
+                }
+            }
+            MeshMode::StaticSingleObjectOBJ(mesh) => {
+                match crate::import::obj::parse(mesh).and_then(|i| i.into_iter().nth(0)) {
+                    Some(it) => it,
+                    None => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Invalid data",
                         )));
                     }
                 }
@@ -372,8 +442,16 @@ impl Asset for Mesh {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        self.vertex_buffer = Some(Arc::new(vb));
-        self.index_buffer = Some(Arc::new(ib));
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.vertex_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(vb)));
+            self.index_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(ib)));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.vertex_buffer = Some(Arc::new(vb));
+            self.index_buffer = Some(Arc::new(ib));
+        }
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
         self.index_count = Some(mesh.indecies.len() as u32);
@@ -443,11 +521,13 @@ impl Asset for Material {
 
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         self.material.intialize();
+        self.initialized = true;
         Ok(())
     }
 
     fn dispose(&mut self) {
         self.material.dispose();
+        self.initialized = false;
     }
 
     fn set_id(&mut self, id: UUID) -> Result<(), crate::asset_managment::Error> {

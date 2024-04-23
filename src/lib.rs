@@ -11,6 +11,9 @@ use winit::{
     window::CursorGrabMode,
 };
 
+#[cfg(target_arch = "wasm32")]
+use wrappers::WgpuWrapper;
+
 pub mod asset_managment;
 pub mod assets;
 pub mod components;
@@ -25,17 +28,37 @@ pub mod system;
 #[cfg(test)]
 mod test_utils;
 pub mod windowing;
+mod wrappers;
+#[cfg(target_arch = "wasm32")]
+pub static DEVICE: OnceLock<wrappers::WgpuWrapper<wgpu::Device>> = OnceLock::new();
+#[cfg(target_arch = "wasm32")]
+pub static QUEUE: OnceLock<wrappers::WgpuWrapper<wgpu::Queue>> = OnceLock::new();
 
+#[cfg(not(target_arch = "wasm32"))]
 pub static DEVICE: OnceLock<wgpu::Device> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
 pub static QUEUE: OnceLock<wgpu::Queue> = OnceLock::new();
 pub static FORMAT: OnceLock<wgpu::TextureFormat> = OnceLock::new();
+
+#[cfg(target_arch = "wasm32")]
+pub static STAGING_BELT: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::util::StagingBelt>>> =
+    OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
 pub static STAGING_BELT: OnceLock<RwLock<wgpu::util::StagingBelt>> = OnceLock::new();
 pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
     width: 0,
     height: 0,
 });
 //TODO find a better way than just staticing it
+
+#[cfg(target_arch = "wasm32")]
+static SURFACE: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::Surface>>> = OnceLock::new();
+#[cfg(target_arch = "wasm32")]
+static DEPTH: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::Texture>>> = OnceLock::new();
+
+#[cfg(not(target_arch = "wasm32"))]
 static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 static QUIT: OnceLock<bool> = OnceLock::new();
@@ -175,15 +198,80 @@ impl<T> State<T> {
         F1: Fn(&mut T) + Copy,
         F2: FnOnce(&mut T) + Copy,
     {
-        let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
-        let window = winit::window::Window::new(&event_loop).expect("Failed to create the window");
-        self.window.set(window).unwrap();
+        #[cfg(target_arch = "wasm32")]
+        {
+            std::panic::set_hook(Box::new(|e| {
+                log::error!("{e}");
+            }));
+        }
+
+        //Initialize logging first
         windowing::initialize_logging();
+
+        let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
+        log::debug!("Created event loop");
+        let mut builder = winit::window::WindowBuilder::new();
+        let window;
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::JsCast;
+            use winit::platform::web::WindowBuilderExtWebSys;
+
+            let canvas = web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap()
+                .get_element_by_id("canvas")
+                .expect("Failed to find canvas with id \"canvas\"")
+                .dyn_into::<web_sys::HtmlCanvasElement>()
+                .unwrap();
+
+            let width = canvas.width();
+            let height = canvas.height();
+
+            log::info!("Canvas size = {width} x {height}");
+
+            log::debug!("Found canvas");
+            builder = builder.with_canvas(Some(canvas));
+
+            window = builder
+                .build(&event_loop)
+                .expect("Failed to create the window");
+
+            //Resize window to the canvas size
+            //TODO Find a better solution to this hack
+            _ = window.request_inner_size(PhysicalSize::new(width, height));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            window = builder
+                .build(&event_loop)
+                .expect("Failed to create the window");
+        }
+
+        log::debug!("Created window");
+
+        self.window.set(window).unwrap();
         let (surface, config, depth_stencil) =
             windowing::initialize_gpu(&self.window.get().unwrap());
-        SURFACE.set(RwLock::new(surface)).unwrap();
+
+        log::debug!("Inititalized GPU");
+
         self.surface_config.set(config).unwrap();
-        DEPTH.set(RwLock::new(depth_stencil)).unwrap();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            SURFACE.set(RwLock::new(surface)).unwrap();
+            DEPTH.set(RwLock::new(depth_stencil)).unwrap();
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            SURFACE.set(RwLock::new(WgpuWrapper::new(surface))).unwrap();
+            DEPTH
+                .set(RwLock::new(WgpuWrapper::new(depth_stencil)))
+                .unwrap();
+        }
         init(&mut self.contents);
 
         event_loop
@@ -223,7 +311,16 @@ impl<T> State<T> {
                         .unwrap()
                         .configure(device, self.surface_config.get().unwrap());
                     let desc = windowing::get_depth_descriptor(size.width, size.height);
-                    *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+                    }
 
                     // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
                     // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {

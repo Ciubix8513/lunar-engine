@@ -31,6 +31,8 @@ mod camera_movement;
 struct Blahaj;
 
 fn init(state: &mut MyState) {
+    log::info!("Initializing scene");
+
     state.frame = 0;
     let mesh = state
         .assset_store

@@ -5,6 +5,7 @@ use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn initialize_logging() {
     env_logger::Builder::new()
         // .filter_module("wgpu", log::LevelFilter::Info) .filter_module("lunar_engine", log::LevelFilter::Info)
@@ -13,8 +14,16 @@ pub fn initialize_logging() {
         .init();
 }
 
+#[cfg(target_arch = "wasm32")]
+pub fn initialize_logging() {
+    wasm_logger::init(wasm_logger::Config::default());
+}
+
 pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfiguration, Texture) {
-    let size = window.inner_size();
+    let mut size = window.inner_size();
+    size.width = size.width.max(1);
+    size.height = size.width.max(1);
+    log::debug!("Window size is {size:?}");
     *RESOLUTION.write().unwrap() = size;
 
     let instance = wgpu::Instance::default();
@@ -25,6 +34,8 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
             .expect("Failed to createate surface")
     };
 
+    log::debug!("Created surface");
+
     let adapter: wgpu::Adapter = futures::executor::block_on(req_adapter(
         instance,
         &wgpu::RequestAdapterOptions {
@@ -34,17 +45,51 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
     ))
     .expect("Failed to get an adapter");
 
-    let (device, queue): (wgpu::Device, wgpu::Queue) = futures::executor::block_on(req_device(
-        &adapter,
-        &wgpu::DeviceDescriptor {
-            features: wgpu::Features::DEPTH_CLIP_CONTROL,
-            ..Default::default()
-        },
-    ))
-    .expect("Failed to create a device and a queue");
+    log::debug!("Acquired an adapter");
 
-    DEVICE.set(device).unwrap();
-    QUEUE.set(queue).unwrap();
+    let (device, queue): (wgpu::Device, wgpu::Queue) = {
+        let r = futures::executor::block_on(req_device(
+            &adapter,
+            // features: wgpu::Features::DEPTH_CLIP_CONTROL,
+            &wgpu::DeviceDescriptor {
+                #[cfg(target_arch = "wasm32")]
+                limits: wgpu::Limits {
+                    max_storage_buffers_per_shader_stage: 0,
+                    max_storage_textures_per_shader_stage: 0,
+                    max_dynamic_storage_buffers_per_pipeline_layout: 0,
+                    max_storage_buffer_binding_size: 0,
+                    max_compute_workgroup_storage_size: 0,
+                    max_compute_invocations_per_workgroup: 0,
+                    max_compute_workgroup_size_x: 0,
+                    max_compute_workgroup_size_y: 0,
+                    max_compute_workgroup_size_z: 0,
+                    max_compute_workgroups_per_dimension: 0,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ));
+        if let Err(e) = r {
+            log::error!("Error while getting device {e}");
+            panic!();
+        }
+        r.unwrap()
+    };
+    log::debug!("Created device and queue");
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        DEVICE
+            .set(crate::wrappers::WgpuWrapper::new(device))
+            .unwrap();
+        QUEUE.set(crate::wrappers::WgpuWrapper::new(queue)).unwrap();
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        DEVICE.set(device).unwrap();
+        QUEUE.set(queue).unwrap();
+    }
 
     let device = DEVICE.get().unwrap();
 
@@ -54,6 +99,9 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
         .last()
         .copied()
         .expect("Did not have last format");
+
+    log::debug!("Picked a format");
+
     FORMAT.set(format).unwrap();
     assert!(
         capabilities.usages & wgpu::TextureUsages::RENDER_ATTACHMENT
@@ -80,12 +128,27 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
     };
     surface.configure(device, &surface_config);
 
+    log::debug!("Configured the surface");
+
     let desc = get_depth_descriptor(size.width, size.height);
     let depth_stencil = device.create_texture(&desc);
 
+    log::debug!("Created depth texture");
+
     let belt = StagingBelt::new(2048);
 
-    STAGING_BELT.set(RwLock::new(belt)).unwrap();
+    log::debug!("Created staging belt");
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        STAGING_BELT
+            .set(RwLock::new(crate::wrappers::WgpuWrapper::new(belt)))
+            .unwrap();
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        STAGING_BELT.set(RwLock::new(belt)).unwrap();
+    }
 
     // let bpr = helpers::calculate_bpr(size.width, format);
     // let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
