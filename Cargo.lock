@@ -1076,6 +1076,9 @@ dependencies = [
  "rand",
  "send_wrapper",
  "vec_key_value_pair",
+ "wasm-bindgen",
+ "wasm-logger",
+ "web-sys",
  "wgpu",
  "winit",
 ]
@@ -1974,6 +1977,17 @@ name = "wasm-bindgen-shared"
 version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
+
+[[package]]
+name = "wasm-logger"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "074649a66bb306c8f2068c9016395fa65d8e08d2affcbf95acf3c24c3ab19718"
+dependencies = [
+ "log",
+ "wasm-bindgen",
+ "web-sys",
+]
 
 [[package]]
 name = "wayland-backend"

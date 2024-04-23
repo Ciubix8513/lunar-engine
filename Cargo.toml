@@ -29,6 +29,9 @@ winit = { version = "0.29.0", features = ["rwh_05"] }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 send_wrapper = "0.6.0"
+wasm-logger = "0.2.0"
+web-sys = "0.3.64"
+wasm-bindgen = "0.2.92"
 
 [workspace]
 

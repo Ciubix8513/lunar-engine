@@ -5,12 +5,18 @@ use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn initialize_logging() {
     env_logger::Builder::new()
         // .filter_module("wgpu", log::LevelFilter::Info) .filter_module("lunar_engine", log::LevelFilter::Info)
         .filter_module("wgpu_hal", log::LevelFilter::Warn)
         .filter_level(log::LevelFilter::Info)
         .init();
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn initialize_logging() {
+    wasm_logger::init(wasm_logger::Config::default());
 }
 
 pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfiguration, Texture) {

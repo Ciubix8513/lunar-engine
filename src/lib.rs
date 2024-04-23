@@ -197,7 +197,26 @@ impl<T> State<T> {
         F2: FnOnce(&mut T) + Copy,
     {
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
-        let window = winit::window::Window::new(&event_loop).expect("Failed to create the window");
+        let mut builder = winit::window::WindowBuilder::new();
+        #[cfg(target_arch = "wasm32")]
+        {
+            use wasm_bindgen::JsCast;
+            use winit::platform::web::WindowBuilderExtWebSys;
+
+            let canvas = web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap()
+                .get_element_by_id("canvas")
+                .expect("Failed to find canvas with id \"canvas\"")
+                .dyn_into::<web_sys::HtmlCanvasElement>()
+                .unwrap();
+            builder = builder.with_canvas(Some(canvas));
+        }
+
+        let window = builder
+            .build(&event_loop)
+            .expect("Failed to create the window");
         self.window.set(window).unwrap();
         windowing::initialize_logging();
         let (surface, config, depth_stencil) =
