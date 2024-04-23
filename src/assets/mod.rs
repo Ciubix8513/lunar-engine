@@ -8,7 +8,6 @@ use wgpu::util::DeviceExt;
 use crate::{
     asset_managment::{Asset, AssetStore, UUID},
     structures::Image,
-    wrappers::{self, WgpuWrapper},
     DEVICE,
 };
 
@@ -34,11 +33,11 @@ pub struct Texture {
     adress_mode: wgpu::AddressMode,
     filter: wgpu::FilterMode,
     #[cfg(target_arch = "wasm32")]
-    sampler: Option<wrappers::WgpuWrapper<wgpu::Sampler>>,
+    sampler: Option<crate::wrappers::WgpuWrapper<wgpu::Sampler>>,
     #[cfg(not(target_arch = "wasm32"))]
     sampler: Option<wgpu::Sampler>,
     #[cfg(target_arch = "wasm32")]
-    texture: Option<wrappers::WgpuWrapper<wgpu::Texture>>,
+    texture: Option<crate::wrappers::WgpuWrapper<wgpu::Texture>>,
     #[cfg(not(target_arch = "wasm32"))]
     texture: Option<wgpu::Texture>,
 }
@@ -265,9 +264,9 @@ pub struct Mesh {
     path: PathBuf,
     mode: MeshMode,
     #[cfg(target_arch = "wasm32")]
-    vertex_buffer: Option<Arc<wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    vertex_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
     #[cfg(target_arch = "wasm32")]
-    index_buffer: Option<Arc<wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    index_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
     #[cfg(not(target_arch = "wasm32"))]
     vertex_buffer: Option<Arc<wgpu::Buffer>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -309,7 +308,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(target_arch = "wasm32")]
-    pub fn get_vertex_buffer(&self) -> Arc<WgpuWrapper<wgpu::Buffer>> {
+    pub fn get_vertex_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
         //THIS IS SO TRASH
         self.vertex_buffer.clone().unwrap()
     }
@@ -328,7 +327,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(target_arch = "wasm32")]
-    pub fn get_index_buffer(&self) -> Arc<WgpuWrapper<wgpu::Buffer>> {
+    pub fn get_index_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
         self.index_buffer.clone().unwrap()
     }
 
@@ -415,8 +414,8 @@ impl Asset for Mesh {
 
         #[cfg(target_arch = "wasm32")]
         {
-            self.vertex_buffer = Some(Arc::new(WgpuWrapper::new(vb)));
-            self.index_buffer = Some(Arc::new(WgpuWrapper::new(ib)));
+            self.vertex_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(vb)));
+            self.index_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(ib)));
         }
         #[cfg(not(target_arch = "wasm32"))]
         {

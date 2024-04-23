@@ -10,6 +10,8 @@ use winit::{
     event_loop::EventLoopWindowTarget,
     window::CursorGrabMode,
 };
+
+#[cfg(target_arch = "wasm32")]
 use wrappers::WgpuWrapper;
 
 pub mod asset_managment;

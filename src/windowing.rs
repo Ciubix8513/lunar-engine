@@ -20,7 +20,10 @@ pub fn initialize_logging() {
 }
 
 pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfiguration, Texture) {
-    let size = window.inner_size();
+    let mut size = window.inner_size();
+    size.width = size.width.max(1);
+    size.height = size.width.max(1);
+    log::debug!("Window size is {size:?}");
     *RESOLUTION.write().unwrap() = size;
 
     let instance = wgpu::Instance::default();
@@ -136,9 +139,16 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 
     log::debug!("Created staging belt");
 
-    STAGING_BELT
-        .set(RwLock::new(crate::wrappers::WgpuWrapper::new(belt)))
-        .unwrap();
+    #[cfg(target_arch = "wasm32")]
+    {
+        STAGING_BELT
+            .set(RwLock::new(crate::wrappers::WgpuWrapper::new(belt)))
+            .unwrap();
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        STAGING_BELT.set(RwLock::new(belt)).unwrap();
+    }
 
     // let bpr = helpers::calculate_bpr(size.width, format);
     // let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
