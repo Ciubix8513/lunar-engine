@@ -196,7 +196,18 @@ impl<T> State<T> {
         F1: Fn(&mut T) + Copy,
         F2: FnOnce(&mut T) + Copy,
     {
+        #[cfg(target_arch = "wasm32")]
+        {
+            std::panic::set_hook(Box::new(|e| {
+                log::error!("{e}");
+            }));
+        }
+
+        //Initialize logging first
+        windowing::initialize_logging();
+
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
+        log::debug!("Created event loop");
         let mut builder = winit::window::WindowBuilder::new();
         #[cfg(target_arch = "wasm32")]
         {
@@ -211,16 +222,22 @@ impl<T> State<T> {
                 .expect("Failed to find canvas with id \"canvas\"")
                 .dyn_into::<web_sys::HtmlCanvasElement>()
                 .unwrap();
+            log::debug!("Found canvas");
             builder = builder.with_canvas(Some(canvas));
         }
 
         let window = builder
             .build(&event_loop)
             .expect("Failed to create the window");
+
+        log::debug!("Created window");
+
         self.window.set(window).unwrap();
-        windowing::initialize_logging();
         let (surface, config, depth_stencil) =
             windowing::initialize_gpu(&self.window.get().unwrap());
+
+        log::debug!("Inititalized GPU");
+
         self.surface_config.set(config).unwrap();
 
         #[cfg(not(target_arch = "wasm32"))]
