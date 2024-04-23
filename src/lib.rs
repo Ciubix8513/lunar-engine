@@ -211,6 +211,7 @@ impl<T> State<T> {
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
         let mut builder = winit::window::WindowBuilder::new();
+        let window;
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen::JsCast;
@@ -224,13 +225,30 @@ impl<T> State<T> {
                 .expect("Failed to find canvas with id \"canvas\"")
                 .dyn_into::<web_sys::HtmlCanvasElement>()
                 .unwrap();
+
+            let width = canvas.width();
+            let height = canvas.height();
+
+            log::info!("Canvas size = {width} x {height}");
+
             log::debug!("Found canvas");
             builder = builder.with_canvas(Some(canvas));
+
+            window = builder
+                .build(&event_loop)
+                .expect("Failed to create the window");
+
+            //Resize window to the canvas size
+            //TODO Find a better solution to this hack
+            _ = window.request_inner_size(PhysicalSize::new(width, height));
         }
 
-        let window = builder
-            .build(&event_loop)
-            .expect("Failed to create the window");
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            window = builder
+                .build(&event_loop)
+                .expect("Failed to create the window");
+        }
 
         log::debug!("Created window");
 
