@@ -6,9 +6,9 @@ use std::{
 use wgpu::util::DeviceExt;
 
 use crate::{
-    asset_managment::Asset,
-    asset_managment::{AssetStore, UUID},
+    asset_managment::{Asset, AssetStore, UUID},
     structures::Image,
+    wrappers::{self, WgpuWrapper},
     DEVICE,
 };
 
@@ -33,7 +33,13 @@ pub struct Texture {
     sample_count: u8,
     adress_mode: wgpu::AddressMode,
     filter: wgpu::FilterMode,
+    #[cfg(target_arch = "wasm32")]
+    sampler: Option<wrappers::WgpuWrapper<wgpu::Sampler>>,
+    #[cfg(not(target_arch = "wasm32"))]
     sampler: Option<wgpu::Sampler>,
+    #[cfg(target_arch = "wasm32")]
+    texture: Option<wrappers::WgpuWrapper<wgpu::Texture>>,
+    #[cfg(not(target_arch = "wasm32"))]
     texture: Option<wgpu::Texture>,
 }
 
@@ -137,8 +143,16 @@ impl Texture {
             border_color: None,
         });
 
-        self.texture = Some(texture);
-        self.sampler = Some(sampler);
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.texture = Some(crate::wrappers::WgpuWrapper::new(texture));
+            self.sampler = Some(crate::wrappers::WgpuWrapper::new(sampler));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.texture = Some(texture);
+            self.sampler = Some(sampler);
+        }
     }
 
     pub fn set_mip_count(&mut self, count: u8) {
@@ -250,7 +264,13 @@ pub struct Mesh {
     initialized: bool,
     path: PathBuf,
     mode: MeshMode,
+    #[cfg(target_arch = "wasm32")]
+    vertex_buffer: Option<Arc<wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    #[cfg(target_arch = "wasm32")]
+    index_buffer: Option<Arc<wrappers::WgpuWrapper<wgpu::Buffer>>>,
+    #[cfg(not(target_arch = "wasm32"))]
     vertex_buffer: Option<Arc<wgpu::Buffer>>,
+    #[cfg(not(target_arch = "wasm32"))]
     index_buffer: Option<Arc<wgpu::Buffer>>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
@@ -288,6 +308,17 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_vertex_buffer(&self) -> Arc<WgpuWrapper<wgpu::Buffer>> {
+        //THIS IS SO TRASH
+        self.vertex_buffer.clone().unwrap()
+    }
+
+    ///Returns the vertex buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_vertex_buffer(&self) -> Arc<wgpu::Buffer> {
         self.vertex_buffer.clone().unwrap()
     }
@@ -296,6 +327,16 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_index_buffer(&self) -> Arc<WgpuWrapper<wgpu::Buffer>> {
+        self.index_buffer.clone().unwrap()
+    }
+
+    ///Returns the index buffer of the mesh
+    ///
+    ///# Panics
+    ///Panics if the asset was not initialized
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_index_buffer(&self) -> Arc<wgpu::Buffer> {
         self.index_buffer.clone().unwrap()
     }
@@ -372,8 +413,16 @@ impl Asset for Mesh {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        self.vertex_buffer = Some(Arc::new(vb));
-        self.index_buffer = Some(Arc::new(ib));
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.vertex_buffer = Some(Arc::new(WgpuWrapper::new(vb)));
+            self.index_buffer = Some(Arc::new(WgpuWrapper::new(ib)));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.vertex_buffer = Some(Arc::new(vb));
+            self.index_buffer = Some(Arc::new(ib));
+        }
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
         self.index_count = Some(mesh.indecies.len() as u32);

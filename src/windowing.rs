@@ -43,8 +43,19 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
     ))
     .expect("Failed to create a device and a queue");
 
-    DEVICE.set(device).unwrap();
-    QUEUE.set(queue).unwrap();
+    #[cfg(target_arch = "wasm32")]
+    {
+        DEVICE
+            .set(crate::wrappers::WgpuWrapper::new(device))
+            .unwrap();
+        QUEUE.set(crate::wrappers::WgpuWrapper::new(queue)).unwrap();
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        DEVICE.set(device).unwrap();
+        QUEUE.set(queue).unwrap();
+    }
 
     let device = DEVICE.get().unwrap();
 
@@ -85,7 +96,9 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 
     let belt = StagingBelt::new(2048);
 
-    STAGING_BELT.set(RwLock::new(belt)).unwrap();
+    STAGING_BELT
+        .set(RwLock::new(crate::wrappers::WgpuWrapper::new(belt)))
+        .unwrap();
 
     // let bpr = helpers::calculate_bpr(size.width, format);
     // let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {

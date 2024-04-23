@@ -1,12 +1,21 @@
 use std::sync::Arc;
 
-use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
+use crate::{asset_managment::UUID, grimoire, wrappers::WgpuWrapper, DEVICE, FORMAT};
 
 use super::{BindgroupState, MaterialTrait, Texture};
 
 pub struct TextureUnlit {
+    #[cfg(target_arch = "wasm32")]
+    pipeline: Option<Arc<WgpuWrapper<wgpu::RenderPipeline>>>,
+    #[cfg(not(target_arch = "wasm32"))]
     pipeline: Option<Arc<wgpu::RenderPipeline>>,
+    #[cfg(target_arch = "wasm32")]
+    bind_group: Option<Arc<WgpuWrapper<wgpu::BindGroup>>>,
+    #[cfg(not(target_arch = "wasm32"))]
     bind_group: Option<Arc<wgpu::BindGroup>>,
+    #[cfg(target_arch = "wasm32")]
+    bind_group_layout_f: Option<WgpuWrapper<wgpu::BindGroupLayout>>,
+    #[cfg(not(target_arch = "wasm32"))]
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
     texture_id: UUID,
     bindgroup_sate: BindgroupState,
@@ -82,7 +91,15 @@ impl MaterialTrait for TextureUnlit {
             push_constant_ranges: &[],
         });
 
-        self.bind_group_layout_f = Some(bind_group_layout_f);
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.bind_group_layout_f = Some(crate::WgpuWrapper::new(bind_group_layout_f));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.bind_group_layout_f = Some(bind_group_layout_f);
+        }
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -171,7 +188,14 @@ impl MaterialTrait for TextureUnlit {
             multiview: None,
         });
 
-        self.pipeline = Some(Arc::new(pipeline));
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.pipeline = Some(Arc::new(WgpuWrapper::new(pipeline)));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.pipeline = Some(Arc::new(pipeline));
+        }
     }
 
     fn dispose(&mut self) {
@@ -214,7 +238,14 @@ impl MaterialTrait for TextureUnlit {
             ],
         });
 
-        self.bind_group = Some(Arc::new(bind_group_f));
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.bind_group = Some(Arc::new(crate::WgpuWrapper::new(bind_group_f)));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.bind_group = Some(Arc::new(bind_group_f));
+        }
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 
