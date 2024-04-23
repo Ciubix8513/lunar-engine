@@ -1,3 +1,37 @@
+//!
+//! # Lunar engine
+//! A small silly engine for fun :3
+//!
+//!
+//! # Project setup
+//! Setting up a project is really simple. The application is split into 3 states:
+//! 1. Initialization
+//! 2. Main loop
+//! 3. Disposal
+//!
+//! First define the state of the app
+//!
+//! ```
+//! struct MyState;
+//! ```
+//! The state can contain any data that needs to be persistent between frames, for example an
+//! `AssetStore` or `World`
+//!
+//! Define the application functions, all of them have identical signature:
+//! ```
+//! fn initialize(state: &mut MyState) {}
+//! fn run(state: &mut MyState) {}
+//! fn close(state: &mut MyState) {}
+//! ```
+//! Then create an instance of that state and start the loop of the program
+//! ```
+//! fn main() {
+//!     let state = lunar_engine::State::<MyState>::default()
+//!     state.run(initialize, run, close);
+//! }
+//! ```
+//!
+
 use std::{
     cell::OnceCell,
     sync::{OnceLock, RwLock},
@@ -109,6 +143,7 @@ pub fn set_cursor_visible(mode: bool) {
     state.modified = true;
 }
 
+///Contains main state of the app
 pub struct State<T> {
     window: OnceCell<winit::window::Window>,
     surface_config: OnceCell<SurfaceConfiguration>,
@@ -182,6 +217,7 @@ impl<T> State<T> {
         }
     }
 
+    ///Creates a new state with the given custom state
     pub fn new(contents: T) -> Self {
         Self {
             window: OnceCell::new(),
@@ -191,6 +227,10 @@ impl<T> State<T> {
         }
     }
 
+    /// Starts the application with the 3 provided functions:
+    /// 1. Initialization function for setting up assets, scene(s), etc.
+    /// 2. Game loop
+    /// 3. Disposal function
     //TODO Potentially ask for a window
     pub fn run<F, F1, F2>(mut self, init: F, run: F1, end: F2)
     where
