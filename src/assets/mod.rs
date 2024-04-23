@@ -60,6 +60,9 @@ enum ImageFormat {
 #[allow(unused_variables)]
 impl Texture {
     ///Initializes a texture to load a bmp file in runtime
+    ///
+    ///Currently unsupported on the web target
+    ///
     #[must_use]
     pub fn new_bmp(path: &Path) -> Self {
         Self {
@@ -261,7 +264,6 @@ impl Asset for Texture {
 pub struct Mesh {
     id: Option<UUID>,
     initialized: bool,
-    path: PathBuf,
     mode: MeshMode,
     #[cfg(target_arch = "wasm32")]
     vertex_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
@@ -279,11 +281,29 @@ pub struct Mesh {
 ///Ways the mesh can be loaded from file
 enum MeshMode {
     ///An obj file that contains a single mesh
-    SingleObjectOBJ,
+    SingleObjectOBJ(PathBuf),
+    StaticSingleObjectOBJ(&'static str),
 }
 
 impl Mesh {
+    ///Creates anew asset that will load the first object in a waveform obj file that is statically
+    ///loaded
+    pub fn new_from_static_obj(mesh: &'static str) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::StaticSingleObjectOBJ(mesh),
+            vertex_buffer: None,
+            index_buffer: None,
+            vert_count: None,
+            tris_count: None,
+            index_count: None,
+        }
+    }
+
     ///Creates a new asset that will load the first object in a waveform obj file
+    ///
+    ///Currently unsupported on the web target
     ///
     ///# Errors
     ///Returns an error if the file does not exist
@@ -293,8 +313,7 @@ impl Mesh {
         Ok(Self {
             id: None,
             initialized: false,
-            path: path.to_owned(),
-            mode: MeshMode::SingleObjectOBJ,
+            mode: MeshMode::SingleObjectOBJ(path.to_owned()),
             vertex_buffer: None,
             index_buffer: None,
             tris_count: None,
@@ -373,12 +392,12 @@ impl Asset for Mesh {
     #[allow(clippy::cast_possible_truncation)]
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         //This is horrific, but i LOVE this :3
-        let mesh = match self.mode {
-            MeshMode::SingleObjectOBJ => {
+        let mesh = match &self.mode {
+            MeshMode::SingleObjectOBJ(path) => {
                 //Prase file
                 match crate::import::obj::parse(
                     //Load file
-                    &(match std::fs::read_to_string(&self.path) {
+                    &(match std::fs::read_to_string(path) {
                         Ok(it) => it,
                         Err(err) => return Err(Box::new(err)),
                     }),
@@ -391,6 +410,17 @@ impl Asset for Mesh {
                         return Err(Box::new(std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
                             "Invalid file",
+                        )));
+                    }
+                }
+            }
+            MeshMode::StaticSingleObjectOBJ(mesh) => {
+                match crate::import::obj::parse(mesh).and_then(|i| i.into_iter().nth(0)) {
+                    Some(it) => it,
+                    None => {
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Invalid data",
                         )));
                     }
                 }
