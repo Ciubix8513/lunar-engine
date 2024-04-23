@@ -89,6 +89,16 @@ impl From<(f32, f32, f32)> for Vec3 {
     }
 }
 
+impl From<f32> for Vec3 {
+    fn from(value: f32) -> Self {
+        Self {
+            x: value,
+            y: value,
+            z: value,
+        }
+    }
+}
+
 #[test]
 fn test_vec3_dot_product() {
     let a = Vec3::new(1.0, 0.0, 0.0);

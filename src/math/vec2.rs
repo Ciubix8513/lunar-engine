@@ -63,6 +63,12 @@ impl Add<Self> for Vec2 {
     }
 }
 
+impl From<f32> for Vec2 {
+    fn from(value: f32) -> Self {
+        Self { x: value, y: value }
+    }
+}
+
 #[test]
 fn test_vec2_dot_product() {
     let a = Vec2::new(1.0, 0.0);
