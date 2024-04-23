@@ -24,6 +24,17 @@ impl Default for Transform {
     }
 }
 
+impl Transform {
+    ///Create a new transform instance
+    pub fn new(position: Vec3, rotation: Vec3, scale: Vec3) -> Self {
+        Self {
+            position,
+            rotation,
+            scale,
+        }
+    }
+}
+
 impl Component for Transform {
     fn mew() -> Self
     where
