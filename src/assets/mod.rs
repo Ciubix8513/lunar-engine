@@ -521,11 +521,13 @@ impl Asset for Material {
 
     fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error + Send>> {
         self.material.intialize();
+        self.initialized = true;
         Ok(())
     }
 
     fn dispose(&mut self) {
         self.material.dispose();
+        self.initialized = false;
     }
 
     fn set_id(&mut self, id: UUID) -> Result<(), crate::asset_managment::Error> {
