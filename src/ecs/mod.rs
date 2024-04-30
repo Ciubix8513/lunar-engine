@@ -49,11 +49,11 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 
-    fn get_dependecies() -> Option<Vec<TypeId>>
+    fn check_dependencies(entity: Entity) -> bool
     where
         Self: Sized,
     {
-        None
+        true
     }
 }
 

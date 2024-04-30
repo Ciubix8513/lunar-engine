@@ -2,7 +2,7 @@ use crate::ecs;
 use std::num::NonZeroU64;
 
 use log::debug;
-use lunar_engine_derive::alias;
+use lunar_engine_derive::{alias, dependencies};
 
 use crate as lunar_engine;
 // use lunar_engine::ecs;
@@ -27,6 +27,7 @@ pub struct Camera {
 }
 
 impl Component for Camera {
+    #[dependencies(Transform)]
     fn mew() -> Self
     where
         Self: Sized,

@@ -207,6 +207,8 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+///Creates a marker component, that has no function other then to mark an entity for
+///`lunar_engine::ecs::World::get_all_entities_with_component<T>`
 pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Check if attributes are valid
     if !attr.into_iter().next().is_none() {
@@ -271,9 +273,12 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+///Defines dependencies of a component must be placed inside the `impl Component` block
 pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Useless verification that it is a comma separated list.... bc ofc
 
+    //Checking syntax
+    //It's my proc macro, i can enforce all the arbitrary rules i want :3
     let mut last_char_type = TokenTree::Punct(Punct::new(',', proc_macro::Spacing::Alone));
     let mut types = Vec::new();
 
@@ -296,8 +301,19 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
             TokenTree::Group(t) => return comp_error(&format!("Invalid token {t}"), item),
         }
     }
+    let top: String = "fn check_dependencies(entity: lunar_engine::ecs::Entity) -> bool {".to_string();
+    let mut body = Vec::new();
 
-    println!("Items: {types:?}");
+    //This is such a hack i love it :3
+    for t in types {
+        body.push(format!("entity.has_component::<{t}>() && "));
+    }
+    let end = "true }\n";
 
-    item
+     (top + &body.concat() + end)
+        .parse::<TokenStream>()
+        .unwrap()
+        .into_iter()
+        .chain(item.clone().into_iter())
+        .collect::<TokenStream>()
 }
