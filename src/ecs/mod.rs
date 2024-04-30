@@ -48,9 +48,17 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     /// }
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+
+    fn get_dependecies() -> Option<Vec<TypeId>>
+    where
+        Self: Sized,
+    {
+        None
+    }
 }
 
 use rand::Rng;
+use std::any::TypeId;
 use std::cell::{Ref, RefMut};
 
 ///Id type [Entity] uses
@@ -171,9 +179,7 @@ impl Entity {
     #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in &self.components {
-            let c = c.borrow();
-            let any = c.as_any().downcast_ref::<T>();
-            if any.is_some() {
+            if c.borrow().as_any().is::<T>() {
                 return true;
             }
         }
@@ -212,9 +218,7 @@ impl Entity {
     pub fn remove_component<T: 'static + Component>(&mut self) -> Result<(), Error> {
         let mut ind = None;
         for (index, c) in self.components.iter().enumerate() {
-            let binding = c.borrow();
-            let any = binding.as_any().downcast_ref::<T>();
-            if any.is_some() {
+            if c.borrow().as_any().is::<T>() {
                 ind = Some(index);
                 break;
             }
@@ -237,7 +241,7 @@ impl Entity {
     pub fn get_component<T: 'static>(&self) -> Option<ComponentReference<T>> {
         for c in &self.components {
             let binding = c.borrow();
-            if binding.as_any().downcast_ref::<T>().is_some() {
+            if binding.as_any().is::<T>() {
                 return Some(ComponentReference {
                     cell: Rc::downgrade(c),
                     phantom: std::marker::PhantomData,

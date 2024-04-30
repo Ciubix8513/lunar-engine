@@ -2,7 +2,7 @@ use crate::ecs;
 use std::num::NonZeroU64;
 
 use log::debug;
-use proc_macros::alias;
+use lunar_engine_derive::alias;
 
 use crate as lunar_engine;
 // use lunar_engine::ecs;

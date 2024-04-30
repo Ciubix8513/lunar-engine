@@ -11,7 +11,7 @@ use lunar_engine::{
     system::rendering::{self, extensions::Base},
     State,
 };
-use proc_macros::marker_component;
+use lunar_engine_derive::marker_component;
 use winit::keyboard::KeyCode;
 
 use crate::camera_movement::FreeCam;

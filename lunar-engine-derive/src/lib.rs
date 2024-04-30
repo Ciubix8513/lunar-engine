@@ -1,5 +1,5 @@
 #![allow(clippy::missing_panics_doc, clippy::collapsible_if)]
-use proc_macro::{Group, TokenStream, TokenTree};
+use proc_macro::{Group, Punct, TokenStream, TokenTree};
 
 ///Adds a `compile_error` with the defined message, before the provided token stream
 fn comp_error(error: &str, item: TokenStream) -> TokenStream {
@@ -268,4 +268,36 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
     items.extend_from_slice(&component_impl);
 
     items.into_iter().collect()
+}
+
+#[proc_macro_attribute]
+pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
+    //Useless verification that it is a comma separated list.... bc ofc
+
+    let mut last_char_type = TokenTree::Punct(Punct::new(',', proc_macro::Spacing::Alone));
+    let mut types = Vec::new();
+
+    for t in attr.into_iter() {
+        match &t {
+            TokenTree::Ident(i) => {
+                if matches!(last_char_type, TokenTree::Ident(_)) {
+                    return comp_error("Type must be followed by a comma", item);
+                }
+                types.push(i.clone());
+                last_char_type = t.clone();
+            }
+            TokenTree::Punct(p) => {
+                if p.as_char() != ',' || matches!(last_char_type, TokenTree::Punct(_)) {
+                    return comp_error(&format!("Invalid token {p}"), item);
+                }
+                last_char_type = t.clone();
+            }
+            TokenTree::Literal(t) => return comp_error(&format!("Invalid token {t}"), item),
+            TokenTree::Group(t) => return comp_error(&format!("Invalid token {t}"), item),
+        }
+    }
+
+    println!("Items: {types:?}");
+
+    item
 }

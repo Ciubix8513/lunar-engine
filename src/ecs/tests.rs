@@ -1,4 +1,6 @@
-use proc_macros::alias;
+use lunar_engine_derive::alias;
+
+use crate as lunar_engine;
 
 use super::*;
 

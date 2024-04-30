@@ -1071,8 +1071,8 @@ dependencies = [
  "image",
  "lock_api",
  "log",
+ "lunar-engine-derive",
  "parking_lot",
- "proc_macros",
  "rand",
  "send_wrapper",
  "vec_key_value_pair",
@@ -1082,6 +1082,10 @@ dependencies = [
  "wgpu",
  "winit",
 ]
+
+[[package]]
+name = "lunar-engine-derive"
+version = "0.1.0"
 
 [[package]]
 name = "malloc_buf"
@@ -1406,10 +1410,6 @@ checksum = "3d1597b0c024618f09a9c3b8655b7e430397a36d23fdafec26d6965e9eec3eba"
 dependencies = [
  "unicode-ident",
 ]
-
-[[package]]
-name = "proc_macros"
-version = "0.1.0"
 
 [[package]]
 name = "profiling"
