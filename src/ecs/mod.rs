@@ -282,6 +282,9 @@ impl Entity {
 }
 
 ///Builder struct for easier [Entity] creation
+///
+///Note: Component addition order matters when using an `EntityBuilder` to create an entity,
+///dependencies must be added first
 #[derive(Default)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EntityBuilder {
