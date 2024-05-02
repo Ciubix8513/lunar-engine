@@ -62,7 +62,8 @@ fn init(state: &mut MyState) {
                 c
             })
             .create_component(|| FreeCam::new(10.0, 25.0, false))
-            .create(),
+            .create()
+            .unwrap(),
     );
 
     state.world.add_entity(
@@ -70,7 +71,8 @@ fn init(state: &mut MyState) {
             .create_component(|| Transform::default())
             .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
             .add_component::<Blahaj>()
-            .create(),
+            .create()
+            .unwrap(),
     );
 
     info!("Initialized!");
@@ -93,7 +95,8 @@ fn run(state: &mut MyState) {
                 })
                 .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
                 .add_component::<Blahaj>()
-                .create(),
+                .create()
+                .unwrap(),
         );
     }
 

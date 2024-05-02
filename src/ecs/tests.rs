@@ -1,4 +1,4 @@
-use lunar_engine_derive::alias;
+use lunar_engine_derive::{alias, dependencies};
 
 use crate as lunar_engine;
 
@@ -82,6 +82,56 @@ impl Component for TestComponent2 {
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
         self.weak = Some(reference);
     }
+}
+
+#[derive(Debug)]
+struct TestComponent3;
+
+impl Component for TestComponent3 {
+    #[dependencies(TestComponent)]
+    fn mew() -> Self
+    where
+        Self: Sized,
+    {
+        Self
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+}
+
+#[test]
+fn component_dependency_test() {
+    let mut e = Entity::new();
+
+    let res = e.add_component::<TestComponent3>();
+    assert_eq!(res, Err(Error::MissingDependency("TestComponent")));
+
+    let res = e.add_component::<TestComponent>();
+    assert_eq!(res, Ok(()));
+
+    let res = e.add_component::<TestComponent3>();
+    assert_eq!(res, Ok(()));
+
+    let res = EntityBuilder::new()
+        .add_component::<TestComponent3>()
+        .create();
+    if let Err(res) = res {
+        assert_eq!(res, Error::MissingDependency("TestComponent"));
+    } else {
+        assert!(false, "Failed to fail");
+    }
+    let res = EntityBuilder::new()
+        .add_component::<TestComponent>()
+        .add_component::<TestComponent3>()
+        .create();
+
+    assert!(res.is_ok());
 }
 
 #[test]
@@ -212,7 +262,8 @@ fn entity_builder_test() {
             c
         })
         .add_existing_component(c)
-        .create();
+        .create()
+        .unwrap();
 
     assert!(entitiy.has_component::<TestComponent>());
     assert!(entitiy.has_component::<TestComponent1>());
@@ -240,7 +291,8 @@ fn entity_builder_test() {
         .add_component::<TestComponent>()
         .add_existing_component(t)
         .create_component(|| TestComponent::mew())
-        .create();
+        .create()
+        .unwrap();
 
     assert_eq!(1, e.components.len());
 }
@@ -290,7 +342,8 @@ fn self_refernce_test() {
         EntityBuilder::new()
             .add_component::<TestComponent1>()
             .add_component::<TestComponent2>()
-            .create(),
+            .create()
+            .unwrap(),
     );
 
     let binding = world
@@ -316,7 +369,8 @@ fn alias_test() {
         EntityBuilder::new()
             .create_component(|| TestComponent1 { value: 0 })
             .add_component::<Alias>()
-            .create(),
+            .create()
+            .unwrap(),
     );
 
     let binding = world.get_all_components::<Alias>().unwrap();

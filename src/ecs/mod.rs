@@ -28,7 +28,7 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {}
 
-    //Will not be needed after Rust 1.75.0
+    //Will not be needed after stabilization of
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
     ///Converts trait object to a `std::any::Any` reference
     ///
@@ -49,16 +49,26 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 
-    fn check_dependencies(entity: Entity) -> bool
+    ///Checks if the specified entity contains all the dependencies of this `Component`
+    ///
+    ///Returns:
+    ///
+    ///`Ok` if all dependencies are satisfied
+    ///Name of the missing component as `&'static str`
+    fn check_dependencies(entity: &Entity) -> Result<(), &'static str>
     where
         Self: Sized,
     {
-        true
+        Ok(())
+    }
+
+    ///See `check_dependencies`
+    fn check_dependencies_instanced(&self, entity: &Entity) -> Result<(), &'static str> {
+        Ok(())
     }
 }
 
 use rand::Rng;
-use std::any::TypeId;
 use std::cell::{Ref, RefMut};
 
 ///Id type [Entity] uses
@@ -112,6 +122,8 @@ pub enum Error {
     ComponentAlreadyExists,
     ///Entity is not part of the world
     EntityDoesNotExist,
+    ///Entity does not contain a dependency of a component
+    MissingDependency(&'static str),
 }
 
 ///A wrapper around the component structure of easier access
@@ -194,6 +206,9 @@ impl Entity {
         //Check if already have that component
         if self.has_component::<T>() {
             return Err(Error::ComponentAlreadyExists);
+        }
+        if let Err(e) = T::check_dependencies(self) {
+            return Err(Error::MissingDependency(e));
         }
         let mut c = T::mew();
         c.awawa();
@@ -338,22 +353,24 @@ impl EntityBuilder {
 
     ///Creates the entity
     #[must_use]
-    pub fn create(self) -> Entity {
-        let e = Entity {
+    pub fn create(self) -> Result<Entity, Error> {
+        let mut e = Entity {
             id: rand::thread_rng().gen(),
-            components: self
-                .components
-                .into_iter()
-                .map(|c| Rc::new(RefCell::new(c)))
-                .collect(),
             ..Default::default()
         };
+
+        for c in self.components {
+            if let Err(e) = c.check_dependencies_instanced(&e) {
+                return Err(Error::MissingDependency(e));
+            }
+            e.components.push(Rc::new(RefCell::new(c)));
+        }
 
         for c in &e.components {
             c.borrow_mut().awawa();
         }
 
-        e
+        Ok(e)
     }
 }
 

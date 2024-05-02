@@ -301,16 +301,24 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
             TokenTree::Group(t) => return comp_error(&format!("Invalid token {t}"), item),
         }
     }
-    let top: String = "fn check_dependencies(entity: lunar_engine::ecs::Entity) -> bool {".to_string();
+    let top: String =
+        "fn check_dependencies(entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str >{"
+            .to_string();
+    let top_instanced =
+        "fn check_dependencies_instanced(&self,entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str >{";
     let mut body = Vec::new();
 
     //This is such a hack i love it :3
     for t in types {
-        body.push(format!("entity.has_component::<{t}>() && "));
+        body.push(format!(
+            "if !entity.has_component::<{t}>(){{return Err(\"{t}\");}}"
+        ));
     }
-    let end = "true }\n";
+    let end = "Ok(())}\n";
 
-     (top + &body.concat() + end)
+    let body = body.concat();
+
+    (top + &body + end + top_instanced + &body + end)
         .parse::<TokenStream>()
         .unwrap()
         .into_iter()
