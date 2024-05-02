@@ -173,7 +173,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         fn decatification(&mut self) {{
             self.__inner.decatification();
         }}
-        fn set_self_reference(&mut self, reference: ecs::SelfReferenceGuard) {{
+        fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {{
             self.__inner.set_self_reference(reference);
         }}
         fn as_any(&self) -> &dyn std::any::Any {{
@@ -181,6 +181,12 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         }}
         fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
             self as &mut dyn std::any::Any
+        }}
+        fn check_dependencies(entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str> {{
+            {base}::check_dependencies(entity)
+        }}
+        fn check_dependencies_instanced(&self, entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str> {{
+            {base}::check_dependencies(entity)
         }}
     }}
     "
