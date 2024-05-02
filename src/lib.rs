@@ -96,7 +96,7 @@ static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 static QUIT: OnceLock<bool> = OnceLock::new();
-static DELTA_TIME: RwLock<f32> = RwLock::new(0.0);
+static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 
 ///Defines behaviour of the cursor inside the window
 pub enum CursorState {
