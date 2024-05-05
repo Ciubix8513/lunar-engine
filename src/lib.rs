@@ -56,6 +56,7 @@ mod grimoire;
 mod helpers;
 pub mod import;
 pub mod input;
+mod logging;
 pub mod math;
 pub mod structures;
 pub mod system;
@@ -63,6 +64,7 @@ pub mod system;
 mod test_utils;
 pub mod windowing;
 mod wrappers;
+
 #[cfg(target_arch = "wasm32")]
 pub static DEVICE: OnceLock<wrappers::WgpuWrapper<wgpu::Device>> = OnceLock::new();
 #[cfg(target_arch = "wasm32")]
@@ -246,7 +248,7 @@ impl<T> State<T> {
         }
 
         //Initialize logging first
-        windowing::initialize_logging();
+        logging::initialize_logging();
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
