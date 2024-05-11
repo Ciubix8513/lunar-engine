@@ -1,18 +1,26 @@
 #[cfg(test)]
 mod tests;
 
-use std::sync::{Arc, OnceLock};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+    sync::{Arc, OnceLock, RwLock},
+};
 
 #[derive(Debug)]
 pub enum LoggerError {
     LoggerAlreadySet,
+    FileError(std::io::Error),
+    InvalidFiname,
 }
 
 pub struct Logger {
     filters: Vec<(String, FilterType, log::LevelFilter)>,
     log_to_file: bool,
+    log_filename: PathBuf,
     default_level: log::LevelFilter,
     time_format: String,
+    log_file: Option<RwLock<std::fs::File>>,
 }
 
 #[derive(Clone, Copy)]
@@ -26,13 +34,30 @@ impl Logger {
         Self {
             filters: Vec::new(),
             log_to_file: false,
+            log_filename: generate_log_name(),
             default_level: log::LevelFilter::Info,
             time_format: "%Y-%m-%d %H:%M:%S".into(),
+            log_file: None,
         }
     }
 
     pub fn enable_logger(self) -> Result<(), LoggerError> {
-        if INTERNAL_LOGGER.set(Arc::new(self)).is_err() {
+        let mut logger = self;
+
+        if logger.log_to_file {
+            create_file(&logger.log_filename);
+
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(&logger.log_filename)
+            {
+                Ok(f) => logger.log_file = Some(RwLock::new(f)),
+                Err(e) => return Err(LoggerError::FileError(e)),
+            }
+        }
+
+        if INTERNAL_LOGGER.set(Arc::new(logger)).is_err() {
             return Err(LoggerError::LoggerAlreadySet);
         }
         let logger = INTERNAL_LOGGER.get().unwrap();
@@ -47,6 +72,37 @@ impl Logger {
         self.filters
             .push((module_name.to_owned(), filter_type, level.into()));
     }
+
+    fn set_log_file_name(&mut self, filename: &Path) -> Result<(), LoggerError> {
+        if filename.is_dir() {
+            return Err(LoggerError::InvalidFiname);
+        }
+        self.log_filename = filename.to_owned();
+        Ok(())
+    }
+
+    fn set_log_to_file(&mut self) {
+        self.log_to_file = true;
+    }
+
+    fn set_timestamp_format(&mut self, format: &str) {
+        self.time_format = format.to_owned();
+    }
+}
+
+fn create_file(path: &Path) {
+    let parent = path.parent().unwrap();
+    std::fs::create_dir_all(parent).unwrap();
+    std::fs::File::create(path).unwrap();
+}
+
+fn generate_log_name() -> PathBuf {
+    //ISO-8601 time
+    let time = get_time("%Y-%m-%dT%H:%M:%S");
+    //TODO Think about windows
+    let user = std::env::vars().find(|i| i.0 == "USER").unwrap().1;
+
+    format!("/home/{user}/.local/share/lunar-logging/log-{time}.log").into()
 }
 
 fn filter(filter: &str, filter_type: FilterType, data: &str) -> bool {
@@ -130,10 +186,14 @@ impl log::Log for Logger {
         let msg_level = format_level(msg_level);
 
         let output = format!(
-            "\x1b[90m[\x1b[0m{time} {color}{msg_level} \x1b[0m{target}\x1b[90m]\x1b[0m {msg}"
+            "\x1b[90m[\x1b[0m{time} {color}{msg_level} \x1b[0m{target}\x1b[90m]\x1b[0m {msg}\n"
         );
 
-        println!("{output}");
+        if let Some(f) = &self.log_file {
+            f.write().unwrap().write(output.as_bytes()).unwrap();
+        }
+
+        print!("{output}");
     }
 
     fn flush(&self) {}

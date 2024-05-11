@@ -6,6 +6,7 @@ use super::*;
 fn test_logger() {
     let mut logger = Logger::new();
     logger.default_level = LevelFilter::Trace;
+    logger.log_to_file = true;
     logger.enable_logger().unwrap();
     log::set_max_level(log::LevelFilter::Trace);
 
