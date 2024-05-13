@@ -32,12 +32,15 @@ pub fn initialize_logging() {
         }
     }
 
-    env_logger::Builder::new()
-        .filter_module("wgpu", wgpu_log_level)
-        .filter_module("wgpu_hal", wgpu_log_level)
-        .filter_module("lunar_engine", engine_log_level)
-        .filter_level(log_level)
-        .init();
+    let mut b = lunar_logger::Builder::new()
+        .add_crate_filter("wgpu", wgpu_log_level)
+        .add_crate_filter("wgpu_hal", wgpu_log_level)
+        .add_crate_filter("lunar_engine", engine_log_level)
+        .default_filter(log_level);
+    if log_to_file {
+        b = b.log_to_file()
+    }
+    b.init().unwrap();
 }
 
 #[cfg(target_arch = "wasm32")]
