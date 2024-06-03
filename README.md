@@ -11,7 +11,8 @@ My current streaming project, all code is writen live on my [twitch streams](htt
 - [x] textured rendering
 #### Stage 2: Game engine? idk why not 
 - [x] Rendering abstraction
-- [ ] Ecs, or at least ecs like
+- [x] Ecs, or at least ecs like
+- [ ] OPTIMIZATION
 - [ ] PBR rendering 
 - [ ] png format loading
 - [ ] post proccessing stuff
