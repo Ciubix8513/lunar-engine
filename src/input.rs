@@ -64,13 +64,13 @@ pub fn mouse_btn(btn: MouseButton) -> KeyState {
     *i.entry(btn).or_insert(KeyState::Neutral)
 }
 
-pub fn cursor_position() -> Vec2 {
-    *INPUT.get().unwrap().cursor_position.read().unwrap()
-}
+// pub fn cursor_position() -> Vec2 {
+//     *INPUT.get().unwrap().cursor_position.read().unwrap()
+// }
 
-pub fn cursor_delta() -> Vec2 {
-    *INPUT.get().unwrap().cursor_delta.read().unwrap()
-}
+// pub fn cursor_delta() -> Vec2 {
+//     *INPUT.get().unwrap().cursor_delta.read().unwrap()
+// }
 
 ///Updates the states, downgrading Down and Up into Pressed and Neutral respectively
 pub(crate) fn update() {
