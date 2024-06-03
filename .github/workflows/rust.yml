@@ -1,0 +1,32 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build
+    - name: Linting
+      run: cargo clippy -- -D warnings -D clippy::pedantic -D clippy::nursery
+    - name: Run tests
+      run: cargo test
+  build-wasm:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --target=wasm32-unknown-unknown --features webgl
+    - name: Linting
+      run: cargo clippy --target=wasm32-unknown-unknown --features webgl -- -D warnings -D clippy::pedantic -D clippy::nursery
+    - name: Run tests
+      run: cargo test --target=wasm32-unknown-unknown --features webgl
