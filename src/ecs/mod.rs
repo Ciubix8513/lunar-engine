@@ -6,7 +6,7 @@
 mod tests;
 
 ///The trait all components that are used within the ECS must implement
-pub trait Component: std::any::Any + std::fmt::Debug {
+pub trait Component: std::any::Any {
     ///Creates a new instance of the component
     fn mew() -> Self
     where
@@ -34,27 +34,50 @@ pub trait Component: std::any::Any + std::fmt::Debug {
     ///
     ///This function should be implemented as follows
     ///```
+    /// # use lunar_engine::ecs::Component;
+    /// # struct A;
+    /// # impl Component for A {
+    /// # fn mew() -> Self { Self }
     /// fn as_any(&self) -> &dyn std::any::Any {
     ///     self as &dyn std::any::Any
     /// }
+    /// # fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+    /// #   self as &mut dyn std::any::Any
+    /// # }
+    /// # }
     ///```
     fn as_any(&self) -> &dyn std::any::Any;
     ///Converts trait object to a mutable `std::any::Any` reference
     ///
     ///This function should be implemented as follows
     ///```
-    /// fn as_any(&self) -> &dyn std::any::Any {
+    /// # use lunar_engine::ecs::Component;
+    /// # struct A;
+    /// # impl Component for A {
+    /// # fn mew() -> Self { Self }
+    /// # fn as_any(&self) -> &dyn std::any::Any {
+    /// #    self as &dyn std::any::Any
+    /// # }
+    /// fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
     ///     self as &mut dyn std::any::Any
     /// }
+    /// # }
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 
+    #[allow(clippy::missing_errors_doc)]
     ///Checks if the specified entity contains all the dependencies of this `Component`
     ///
-    ///Returns:
+    ///# Returns:
     ///
     ///`Ok` if all dependencies are satisfied
     ///Name of the missing component as `&'static str`
+    ///
+    ///# Note
+    ///
+    ///This function is not meant to be defined manually, use [`lunar_engine_derive::dependencies`]
+    ///macro instead.
+    #[allow(unused_variables)]
     fn check_dependencies(entity: &Entity) -> Result<(), &'static str>
     where
         Self: Sized,
@@ -62,6 +85,7 @@ pub trait Component: std::any::Any + std::fmt::Debug {
         Ok(())
     }
 
+    #[allow(clippy::missing_errors_doc, unused_variables)]
     ///See `check_dependencies`
     fn check_dependencies_instanced(&self, entity: &Entity) -> Result<(), &'static str> {
         Ok(())
@@ -80,7 +104,7 @@ pub type EntityRefence = Rc<RefCell<Entity>>;
 pub type WeakEntityRefence = Weak<RefCell<Entity>>;
 
 ///A container for components
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct Entity {
     id: UUID,
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
@@ -355,7 +379,11 @@ impl EntityBuilder {
     }
 
     ///Creates the entity
-    #[must_use]
+    ///
+    ///# Errors
+    ///May return an error if a dependency is not satisfied
+    ///
+    ///Note: component addition order matters in the builder, dependencies MUST be added first
     pub fn create(self) -> Result<Entity, Error> {
         let mut e = Entity {
             id: rand::thread_rng().gen(),
@@ -447,7 +475,7 @@ impl World {
         for c in &rc.borrow().components {
             c.borrow_mut().set_self_reference(SelfReferenceGuard {
                 weak: Rc::downgrade(&rc),
-            })
+            });
         }
         let weak = Rc::downgrade(&rc);
         self.entities.push(rc);

@@ -22,7 +22,8 @@ impl Vec4 {
         Self { x, y, z, w }
     }
 
-    pub fn xyz(self) -> Vec3 {
+    #[must_use]
+    pub const fn xyz(self) -> Vec3 {
         Vec3 {
             x: self.x,
             y: self.y,

@@ -46,7 +46,7 @@ fn init(state: &mut MyState) {
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
-    let e = state.world.add_entity(
+    let _e = state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
                 position: Vec3::new(0.0, 2.0, 10.0),
@@ -61,7 +61,7 @@ fn init(state: &mut MyState) {
                 c.far = 100.0;
                 c
             })
-            .create_component(|| FreeCam::new(10.0, 25.0, false))
+            .create_component(|| FreeCam::new(10.0))
             .create()
             .unwrap(),
     );

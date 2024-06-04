@@ -19,6 +19,15 @@ async fn gen_gpu_async(instance: &wgpu::Instance) -> (wgpu::Device, wgpu::Queue)
 pub(crate) fn generate_gpu() {
     let instance = wgpu::Instance::default();
     let (device, queue) = block_on(gen_gpu_async(&instance));
-    _ = crate::QUEUE.set(queue);
-    _ = crate::DEVICE.set(device);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        _ = crate::QUEUE.set(queue);
+        _ = crate::DEVICE.set(device);
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        use crate::wrappers::*;
+        _ = crate::QUEUE.set(WgpuWrapper::new(queue));
+        _ = crate::DEVICE.set(WgpuWrapper::new(device));
+    }
 }

@@ -1,5 +1,7 @@
+#![allow(clippy::module_name_repetitions, dead_code)]
 fn parse_log_level(v: &str) -> log::LevelFilter {
     let upper = v.to_uppercase();
+    #[allow(clippy::match_same_arms)]
     match (&upper) as &str {
         //Debug
         "TRACE" | "-1" => log::LevelFilter::Trace,
@@ -38,7 +40,7 @@ pub fn initialize_logging() {
         .add_crate_filter("lunar_engine", engine_log_level)
         .default_filter(log_level);
     if log_to_file {
-        b = b.log_to_file()
+        b = b.log_to_file();
     }
     b.init().unwrap();
 }

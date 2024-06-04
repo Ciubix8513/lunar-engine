@@ -288,7 +288,8 @@ enum MeshMode {
 impl Mesh {
     ///Creates anew asset that will load the first object in a waveform obj file that is statically
     ///loaded
-    pub fn new_from_static_obj(mesh: &'static str) -> Self {
+    #[must_use]
+    pub const fn new_from_static_obj(mesh: &'static str) -> Self {
         Self {
             id: None,
             initialized: false,
@@ -327,6 +328,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(target_arch = "wasm32")]
+    #[must_use]
     pub fn get_vertex_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
         //THIS IS SO TRASH
         self.vertex_buffer.clone().unwrap()
@@ -337,6 +339,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
     pub fn get_vertex_buffer(&self) -> Arc<wgpu::Buffer> {
         self.vertex_buffer.clone().unwrap()
     }
@@ -346,6 +349,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(target_arch = "wasm32")]
+    #[must_use]
     pub fn get_index_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
         self.index_buffer.clone().unwrap()
     }
@@ -355,6 +359,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[cfg(not(target_arch = "wasm32"))]
+    #[must_use]
     pub fn get_index_buffer(&self) -> Arc<wgpu::Buffer> {
         self.index_buffer.clone().unwrap()
     }
@@ -363,6 +368,7 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[must_use]
     pub fn get_tris_count(&self) -> u32 {
         self.tris_count.unwrap()
     }
@@ -371,6 +377,7 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[must_use]
     pub fn get_index_count(&self) -> u32 {
         self.index_count.unwrap()
     }
@@ -379,6 +386,7 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
+    #[must_use]
     pub fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
     }
@@ -432,13 +440,13 @@ impl Asset for Mesh {
 
         let vb = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&name),
-            contents: bytemuck::cast_slice(&mesh.vertices.as_slice()),
+            contents: bytemuck::cast_slice(mesh.vertices.as_slice()),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         let ib = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&name),
-            contents: bytemuck::cast_slice(&mesh.indecies.as_slice()),
+            contents: bytemuck::cast_slice(mesh.indecies.as_slice()),
             usage: wgpu::BufferUsages::INDEX,
         });
 
@@ -552,6 +560,7 @@ impl Asset for Material {
 }
 
 impl Material {
+    #[must_use]
     pub fn get_bindgroup_state(&self) -> BindgroupState {
         self.material.bindgroup_sate()
     }

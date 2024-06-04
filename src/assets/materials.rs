@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_lines)]
 use std::sync::Arc;
 
 use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
@@ -22,6 +23,8 @@ pub struct TextureUnlit {
 }
 
 impl TextureUnlit {
+    #[allow(clippy::new_ret_no_self)]
+    #[must_use]
     pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
         Box::new(Self {
             pipeline: None,
@@ -212,7 +215,7 @@ impl MaterialTrait for TextureUnlit {
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fragment bind group"),
-            layout: &self.bind_group_layout_f.as_ref().unwrap(),
+            layout: self.bind_group_layout_f.as_ref().unwrap(),
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -237,6 +240,7 @@ impl MaterialTrait for TextureUnlit {
                 },
             ],
         });
+        drop(texture);
 
         #[cfg(target_arch = "wasm32")]
         {

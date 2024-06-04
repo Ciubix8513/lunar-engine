@@ -1,6 +1,8 @@
+#![allow(clippy::too_many_lines)]
+
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::debug;
 use wgpu::util::DeviceExt;
 
 use crate::{
@@ -41,7 +43,7 @@ impl std::cmp::Eq for dyn RenderingExtension {}
 
 impl std::cmp::PartialOrd for dyn RenderingExtension {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.get_order().partial_cmp(&other.get_order())
+        Some(self.cmp(other))
     }
 }
 
@@ -56,7 +58,8 @@ pub struct Base {
     order: u32,
 }
 impl Base {
-    pub fn new(order: u32) -> Self {
+    #[must_use]
+    pub const fn new(order: u32) -> Self {
         Self { order }
     }
 }
@@ -158,8 +161,7 @@ impl RenderingExtension for Base {
                 num_instances.push(points.1 - points.0);
                 let matrices = stuff
                     .iter()
-                    .map(|i| bytemuck::bytes_of(&i.1 .0))
-                    .flatten()
+                    .flat_map(|i| bytemuck::bytes_of(&i.1 .0))
                     .copied()
                     .collect::<Vec<u8>>();
                 v_buffers.push(
@@ -188,7 +190,7 @@ impl RenderingExtension for Base {
             let m = assets.get_by_id::<Material>(m).unwrap();
             let mut m = m.borrow_mut();
 
-            if let BindgroupState::Initialized = m.get_bindgroup_state() {
+            if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
             }
             m.initialize_bindgroups(assets);
@@ -248,7 +250,7 @@ impl RenderingExtension for Base {
             render_pass.set_vertex_buffer(1, v_buffers[i].slice(..));
 
             render_pass.set_index_buffer(ind.slice(..), wgpu::IndexFormat::Uint32);
-            render_pass.draw_indexed(0..mesh.get_index_count(), 0, 0..(num_instances[i] as u32))
+            render_pass.draw_indexed(0..mesh.get_index_count(), 0, 0..(num_instances[i] as u32));
         }
         drop(render_pass);
     }

@@ -24,9 +24,12 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingEx
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-    let color = SURFACE.get().map(|i| i.read().ok()).flatten().unwrap();
-
-    let color = color.get_current_texture().unwrap();
+    let color = SURFACE
+        .get()
+        .and_then(|i| i.read().ok())
+        .unwrap()
+        .get_current_texture()
+        .unwrap();
 
     let color_view = color.texture.create_view(&wgpu::TextureViewDescriptor {
         label: Some("Color attachment view"),
@@ -75,6 +78,7 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingEx
     queue.submit(Some(cmd_buffer));
 
     belt.recall();
+    drop(belt);
 
     color.present();
 }

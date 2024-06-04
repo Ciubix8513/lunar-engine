@@ -356,7 +356,6 @@ fn self_refernce_test() {
     _ = c.get_component::<TestComponent1>().unwrap();
 }
 
-use crate::ecs;
 #[derive(Debug)]
 #[alias(TestComponent2)]
 struct Alias;

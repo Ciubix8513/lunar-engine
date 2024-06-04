@@ -1,10 +1,10 @@
+#![allow(clippy::too_many_lines)]
 use std::sync::RwLock;
 
 use vec_key_value_pair::VecMap;
 use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
-
 
 pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();
@@ -34,25 +34,17 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 
     log::debug!("Acquired an adapter");
 
+    #[cfg(feature = "webgl")]
+    let limits = wgpu::Limits::downlevel_webgl2_defaults();
+
+    #[cfg(not(feature = "webgl"))]
+    let limits = wgpu::Limits::default();
+
     let (device, queue): (wgpu::Device, wgpu::Queue) = {
         let r = futures::executor::block_on(req_device(
             &adapter,
-            // features: wgpu::Features::DEPTH_CLIP_CONTROL,
             &wgpu::DeviceDescriptor {
-                #[cfg(target_arch = "wasm32")]
-                limits: wgpu::Limits {
-                    max_storage_buffers_per_shader_stage: 0,
-                    max_storage_textures_per_shader_stage: 0,
-                    max_dynamic_storage_buffers_per_pipeline_layout: 0,
-                    max_storage_buffer_binding_size: 0,
-                    max_compute_workgroup_storage_size: 0,
-                    max_compute_invocations_per_workgroup: 0,
-                    max_compute_workgroup_size_x: 0,
-                    max_compute_workgroup_size_y: 0,
-                    max_compute_workgroup_size_z: 0,
-                    max_compute_workgroups_per_dimension: 0,
-                    ..Default::default()
-                },
+                limits,
                 ..Default::default()
             },
         ));
@@ -158,6 +150,7 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
     (surface, surface_config, depth_stencil)
 }
 
+#[allow(clippy::future_not_send)]
 async fn req_adapter<'a>(
     instance: wgpu::Instance,
     options: &wgpu::RequestAdapterOptions<'a>,
@@ -165,6 +158,7 @@ async fn req_adapter<'a>(
     instance.request_adapter(options).await
 }
 
+#[allow(clippy::future_not_send)]
 async fn req_device<'a>(
     adapter: &wgpu::Adapter,
     descriptor: &wgpu::DeviceDescriptor<'a>,

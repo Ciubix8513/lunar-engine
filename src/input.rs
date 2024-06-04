@@ -75,23 +75,29 @@ pub fn mouse_btn(btn: MouseButton) -> KeyState {
 ///Updates the states, downgrading Down and Up into Pressed and Neutral respectively
 pub(crate) fn update() {
     let input = INPUT.get().unwrap();
-    let mut i = input.key_map.write().unwrap();
 
-    for v in i.values_mut() {
+    let mut i = input.key_map.write().unwrap();
+    let values = i.values_mut();
+
+    for v in values {
         *v = match v {
             KeyState::Pressed | KeyState::Down => KeyState::Pressed,
             KeyState::Up | KeyState::Neutral => KeyState::Neutral,
         }
     }
+    drop(i);
 
     let mut i = input.mouse_button_map.write().unwrap();
+    let values = i.values_mut();
 
-    for v in i.values_mut() {
+    for v in values {
         *v = match v {
             KeyState::Pressed | KeyState::Down => KeyState::Pressed,
             KeyState::Up | KeyState::Neutral => KeyState::Neutral,
         }
     }
+    drop(i);
+
     let cur = input.cursor_position.read().unwrap();
     let mut last = input.previous_cursor_position.write().unwrap();
     *input.cursor_delta.write().unwrap() = *cur - *last;

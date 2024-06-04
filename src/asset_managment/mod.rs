@@ -15,11 +15,15 @@
 //! Assets are only initialized when first needed (or perhaps on "scene load"?)
 // Oh god, is this just the entity system but with assets!?!?
 
-use std::{sync::Arc, thread};
+use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::thread;
 
 use rand::Rng;
 use vec_key_value_pair::VecMap;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::grimoire;
 
 #[cfg(test)]
@@ -56,7 +60,20 @@ pub type UUID = u128;
 ///sequence. i.e.
 ///
 ///```
-/// let asset = TestAsset::new("filepath");
+///# use lunar_engine::asset_managment::Asset;
+///# use std::any::Any;
+///# struct TestAsset;
+///# impl Asset for TestAsset {
+///# fn get_id(&self) -> u128 { todo!() }
+///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { Ok(()) }
+///# fn dispose(&mut self) { }
+///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
+///# fn is_initialized(&self) -> bool { todo!() }
+///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
+///# fn as_any_mut(&mut self) -> &mut dyn std::any::Any { todo!() }
+///# }
+///# impl TestAsset { fn new(_ : &str) -> Self { Self }}
+/// let mut asset = TestAsset::new("filepath");
 /// //Read and parse the file
 /// asset.initialize();
 /// //dispose of all the read data
@@ -89,18 +106,44 @@ pub trait Asset: Send + Sync + std::any::Any {
     ///
     ///This function should be implemented as follows
     ///```
+    ///# use lunar_engine::asset_managment::Asset;
+    ///# use std::any::Any;
+    ///# struct A;
+    ///# impl Asset for A {
+    ///# fn get_id(&self) -> u128 { todo!() }
+    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
+    ///# fn dispose(&mut self) { todo!() }
+    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
+    ///# fn is_initialized(&self) -> bool { todo!() }
+    ///# fn as_any_mut(&mut self) -> &mut dyn Any  { todo!() }
+    ///
     /// fn as_any(&self) -> &dyn std::any::Any {
     ///     self as &dyn std::any::Any
     /// }
+    ///
+    ///# }
     ///```
     fn as_any(&self) -> &dyn std::any::Any;
     ///Converts trait object to a mutable `std::any::Any` reference
     ///
     ///This function should be implemented as follows
     ///```
+    ///# use lunar_engine::asset_managment::Asset;
+    ///# use std::any::Any;
+    ///# struct A;
+    ///# impl Asset for A {
+    ///# fn get_id(&self) -> u128 { todo!() }
+    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
+    ///# fn dispose(&mut self) { todo!() }
+    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
+    ///# fn is_initialized(&self) -> bool { todo!() }
+    ///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
+    ///
     ///fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
     ///    self as &mut dyn std::any::Any
     ///}
+    ///
+    ///# }
     ///```
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
@@ -187,11 +230,11 @@ impl AssetStore {
     ///# Errors
     ///Returns an error if one of the assets fails to initialize
     pub fn intialize_all(&mut self) -> Result<(), Error> {
-        let size = self.assets.len();
-        let threads = grimoire::NUM_THREADS;
         let binding = self.assets.values().collect::<Vec<_>>();
 
-        let mut chunk_size = size / threads;
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut chunk_size = self.assets.len() / grimoire::NUM_THREADS;
+        #[cfg(not(target_arch = "wasm32"))]
         if chunk_size == 0 {
             chunk_size = 1;
         }

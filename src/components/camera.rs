@@ -1,4 +1,3 @@
-use crate::ecs;
 use std::num::NonZeroU64;
 
 use log::debug;
@@ -41,7 +40,7 @@ impl Component for Camera {
 
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
         debug!("set self reference called");
-        self.transorm_reference = Some(reference.get_component().unwrap())
+        self.transorm_reference = Some(reference.get_component().unwrap());
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
@@ -54,6 +53,7 @@ impl Component for Camera {
 }
 
 impl Camera {
+    #[must_use]
     pub fn new(fov: f32, near: f32, far: f32) -> Self {
         Self {
             fov,
@@ -63,6 +63,7 @@ impl Camera {
         }
     }
 
+    #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
         let binding = self.transorm_reference.as_ref().unwrap();
         let transform = binding.borrow();
@@ -75,6 +76,8 @@ impl Camera {
 
         let resolution = RESOLUTION.read().unwrap();
         let aspect = resolution.width as f32 / resolution.height as f32;
+
+        drop(resolution);
 
         let projection_matrix =
             Mat4x4::perspercive_projection(self.fov, aspect, self.near, self.far);
@@ -128,7 +131,7 @@ impl Camera {
             CAMERA_BIND_GROUP_INDEX,
             self.bind_group.as_ref().unwrap(),
             &[],
-        )
+        );
     }
 }
 

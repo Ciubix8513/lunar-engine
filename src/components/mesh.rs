@@ -33,12 +33,13 @@ impl Component for Mesh {
 
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        self.transform_reference = Some(reference.get_component().unwrap())
+        self.transform_reference = Some(reference.get_component().unwrap());
     }
 }
 
 impl Mesh {
-    pub fn new(mesh: UUID, material: UUID) -> Self {
+    #[must_use]
+    pub const fn new(mesh: UUID, material: UUID) -> Self {
         Self {
             mesh_id: Some(mesh),
             material_id: Some(material),
@@ -54,6 +55,7 @@ impl Mesh {
     ///Returns asset id of the component
     ///
     ///Returns none if it is not set
+    #[must_use]
     pub const fn get_mesh_id(&self) -> Option<UUID> {
         self.mesh_id
     }
@@ -67,10 +69,12 @@ impl Mesh {
     ///Returns asset id of the component
     ///
     ///Returns none if it is not set
+    #[must_use]
     pub const fn get_material_id(&self) -> Option<UUID> {
         self.material_id
     }
 
+    #[must_use]
     pub fn get_matrix(&self) -> Mat4x4 {
         self.transform_reference
             .as_ref()

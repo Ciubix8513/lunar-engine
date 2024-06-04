@@ -13,8 +13,8 @@ pub struct Transform {
 impl Default for Transform {
     fn default() -> Self {
         Self {
-            position: Default::default(),
-            rotation: Default::default(),
+            position: Vec3::default(),
+            rotation: Vec3::default(),
             scale: Vec3 {
                 x: 1.0,
                 y: 1.0,
@@ -26,7 +26,8 @@ impl Default for Transform {
 
 impl Transform {
     ///Create a new transform instance
-    pub fn new(position: Vec3, rotation: Vec3, scale: Vec3) -> Self {
+    #[must_use]
+    pub const fn new(position: Vec3, rotation: Vec3, scale: Vec3) -> Self {
         Self {
             position,
             rotation,

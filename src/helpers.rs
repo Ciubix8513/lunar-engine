@@ -1,4 +1,4 @@
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, dead_code)]
 use std::io::Cursor;
 
 use image::{ImageBuffer, ImageError, Rgba};

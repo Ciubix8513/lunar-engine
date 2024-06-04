@@ -19,19 +19,31 @@
 //!
 //! Define the application functions, all of them have identical signature:
 //! ```
+//! # struct MyState;
 //! fn initialize(state: &mut MyState) {}
 //! fn run(state: &mut MyState) {}
 //! fn close(state: &mut MyState) {}
 //! ```
 //! Then create an instance of that state and start the loop of the program
-//! ```
+//! ```no_run
+//! # #[derive(Default)]
+//! # struct MyState;
+//! # fn initialize(state: &mut MyState) {}
+//! # fn run(state: &mut MyState) {}
+//! # fn close(state: &mut MyState) {}
 //! fn main() {
-//!     let state = lunar_engine::State::<MyState>::default()
+//!     let state = lunar_engine::State::<MyState>::default();
 //!     state.run(initialize, run, close);
 //! }
 //! ```
 //!
 
+#![allow(
+    clippy::needless_doctest_main,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::missing_panics_doc
+)]
 use std::{
     cell::OnceCell,
     sync::{OnceLock, RwLock},
@@ -63,6 +75,7 @@ pub mod system;
 #[cfg(test)]
 mod test_utils;
 pub mod windowing;
+#[cfg(target_arch = "wasm32")]
 mod wrappers;
 
 #[cfg(target_arch = "wasm32")]
@@ -101,6 +114,7 @@ static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 
 ///Defines behaviour of the cursor inside the window
+#[derive(Clone, Copy)]
 pub enum CursorState {
     //Cursor is locked to the window
     Locked,
@@ -131,14 +145,14 @@ pub fn delta_time() -> f32 {
     *DELTA_TIME.read().unwrap()
 }
 
-///Sets the cursor grab mode
+//Sets the cursor grab mode
 // pub fn set_cursor_grab_mode(mode: CursorState) {
 //     let mut state = CURSOR_STATE.write().unwrap();
 //     state.grab_mode = mode;
 //     state.modified = true;
 // }
 
-///Sets the cursor grab mode
+//Sets the cursor grab mode
 // pub fn set_cursor_visible(mode: bool) {
 //     let mut state = CURSOR_STATE.write().unwrap();
 //     state.visible = mode;
@@ -156,8 +170,8 @@ pub struct State<T> {
 impl<T: Default> Default for State<T> {
     fn default() -> Self {
         Self {
-            window: Default::default(),
-            surface_config: Default::default(),
+            window: OnceCell::default(),
+            surface_config: OnceCell::default(),
             contents: Default::default(),
             closed: Default::default(),
         }
@@ -192,10 +206,12 @@ impl<T> State<T> {
 
         self.window.get().unwrap().set_cursor_visible(state.visible);
 
-        if let Err(e) = window.set_cursor_grab(match state.grab_mode {
+        let g_mode = state.grab_mode;
+        let res = window.set_cursor_grab(match g_mode {
             CursorState::Locked => CursorGrabMode::Locked,
             CursorState::Free => CursorGrabMode::None,
-        }) {
+        });
+        if let Err(e) = res {
             match e {
                 winit::error::ExternalError::NotSupported(_) => {
                     //Once a lock has failed, it can never unfail, so no need to reset this
@@ -204,6 +220,8 @@ impl<T> State<T> {
                     //This can only unfail if the user changes platform, buuuut, i literally don't
                     //think there's a way that could happen
                     state.lock_failed = true;
+                    drop(state);
+
                     log::warn!("Failed to lock cursor, doing manually");
                     if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
                         log::error!("Cursor is fucked :3 {e}");
@@ -212,7 +230,7 @@ impl<T> State<T> {
                 }
 
                 winit::error::ExternalError::Ignored => {
-                    log::warn!("Cursor state change ignored")
+                    log::warn!("Cursor state change ignored");
                 }
                 winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
             }
@@ -220,7 +238,7 @@ impl<T> State<T> {
     }
 
     ///Creates a new state with the given custom state
-    pub fn new(contents: T) -> Self {
+    pub const fn new(contents: T) -> Self {
         Self {
             window: OnceCell::new(),
             surface_config: OnceCell::new(),
@@ -234,6 +252,7 @@ impl<T> State<T> {
     /// 2. Game loop
     /// 3. Disposal function
     //TODO Potentially ask for a window
+    #[allow(clippy::missing_panics_doc)]
     pub fn run<F, F1, F2>(mut self, init: F, run: F1, end: F2)
     where
         F: FnOnce(&mut T),
@@ -252,12 +271,15 @@ impl<T> State<T> {
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
-        let mut builder = winit::window::WindowBuilder::new();
+        #[cfg(not(target_arch = "wasm32"))]
+        let builder = winit::window::WindowBuilder::new();
         let window;
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen::JsCast;
             use winit::platform::web::WindowBuilderExtWebSys;
+
+            let mut builder = winit::window::WindowBuilder::new();
 
             let canvas = web_sys::window()
                 .unwrap()
@@ -296,7 +318,7 @@ impl<T> State<T> {
 
         self.window.set(window).unwrap();
         let (surface, config, depth_stencil) =
-            windowing::initialize_gpu(&self.window.get().unwrap());
+            windowing::initialize_gpu(self.window.get().unwrap());
 
         log::debug!("Inititalized GPU");
 
@@ -334,11 +356,12 @@ impl<T> State<T> {
         F: Fn(&mut T),
         F1: FnOnce(&mut T),
     {
-        match event {
-            Event::WindowEvent {
-                window_id: _,
-                event,
-            } => match event {
+        if let Event::WindowEvent {
+            window_id: _,
+            event,
+        } = event
+        {
+            match event {
                 event::WindowEvent::Resized(size) => {
                     RESOLUTION.write().unwrap().width = size.width;
                     RESOLUTION.write().unwrap().height = size.height;
@@ -397,7 +420,7 @@ impl<T> State<T> {
                     let finish = chrono::Local::now();
 
                     let delta =
-                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1000000.0;
+                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
 
                     *DELTA_TIME.write().unwrap() = delta;
                 }
@@ -427,10 +450,10 @@ impl<T> State<T> {
                     button,
                 } => match state {
                     event::ElementState::Pressed => {
-                        input::set_mouse_button(button, input::KeyState::Down)
+                        input::set_mouse_button(button, input::KeyState::Down);
                     }
                     event::ElementState::Released => {
-                        input::set_mouse_button(button, input::KeyState::Up)
+                        input::set_mouse_button(button, input::KeyState::Up);
                     }
                 },
 
@@ -444,8 +467,7 @@ impl<T> State<T> {
                     });
                 }
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
 }
