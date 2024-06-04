@@ -1,3 +1,5 @@
+//! Proc macros for easier use of the ECS
+
 #![allow(clippy::missing_panics_doc, clippy::collapsible_if)]
 use proc_macro::{Group, Punct, TokenStream, TokenTree};
 
@@ -90,7 +92,22 @@ fn is_struct_declaration(item: &TokenStream) -> Option<StructType> {
 
 #[proc_macro_attribute]
 ///Makes the struct an alias of another `Component`, implementing `Deref`, `DerefMut` and passing all the
-///component calls to the aliased component
+///component calls to the aliased component.
+///
+///# Examples
+///```
+///struct CopmonentA {
+/// ...
+///}
+///
+///impl Component for ComponentA {
+/// ...
+///}
+///
+///#[alias(CopmonentA)]
+///struct ComponentB;
+///
+///```
 pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Check if attributes are valid
     let attrs = attr.into_iter().collect::<Vec<_>>();
@@ -213,11 +230,21 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-///Creates a marker component, that has no function other then to mark an entity for
-///`lunar_engine::ecs::World::get_all_entities_with_component<T>`
+///Creates a marker component. A marker component has no function, but it can be used to
+///distinguish an entity.
+///
+///#[Examples]
+///```
+///#[marker_component]
+///struct Marker;
+///
+///
+///#[marker_component]
+///struct Marker1{ }
+///```
 pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Check if attributes are valid
-    if !attr.into_iter().next().is_none() {
+    if attr.into_iter().next().is_some() {
         return comp_error("Too many attributes", item);
     }
 
@@ -279,7 +306,17 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-///Defines dependencies of a component must be placed inside the `impl Component` block
+///Defines dependencies of a component. Must be placed inside the `impl Component` block
+///
+///# Examples
+///```
+///struct Test;
+///
+///impl Component for Test {
+/// #[dependencies(Transform, Mesh)]
+/// ...
+///}
+///```
 pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Useless verification that it is a comma separated list.... bc ofc
 
@@ -288,7 +325,7 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut last_char_type = TokenTree::Punct(Punct::new(',', proc_macro::Spacing::Alone));
     let mut types = Vec::new();
 
-    for t in attr.into_iter() {
+    for t in attr {
         match &t {
             TokenTree::Ident(i) => {
                 if matches!(last_char_type, TokenTree::Ident(_)) {
@@ -328,6 +365,6 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
         .parse::<TokenStream>()
         .unwrap()
         .into_iter()
-        .chain(item.clone().into_iter())
+        .chain(item)
         .collect::<TokenStream>()
 }
