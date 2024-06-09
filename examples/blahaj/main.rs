@@ -1,17 +1,17 @@
 use std::path::Path;
 
-use log::info;
+use log::{debug, info};
 use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::TextureUnlit, Material},
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
-    ecs::{EntityBuilder, World},
+    ecs::{Component, ComponentReference, EntityBuilder, World},
     input,
     math::vec3::Vec3,
     system::rendering::{self, extensions::Base},
     State,
 };
-use lunar_engine_derive::marker_component;
+use lunar_engine_derive::{dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
 use crate::camera_movement::FreeCam;
@@ -21,6 +21,7 @@ struct MyState {
     frame: u32,
     world: World,
     assset_store: AssetStore,
+    extension: Base,
     blahaj_mesh: u128,
     blahaj_mat: u128,
 }
@@ -29,6 +30,42 @@ mod camera_movement;
 
 #[marker_component]
 struct Blahaj;
+
+struct Spiny {
+    pub speed: f32,
+    transform: Option<ComponentReference<Transform>>,
+}
+
+impl Component for Spiny {
+    #[dependencies(Transform)]
+
+    fn mew() -> Self
+    where
+        Self: Sized,
+    {
+        Self {
+            speed: 100.0,
+            transform: None,
+        }
+    }
+
+    fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
+        self.transform = Some(reference.get_component().unwrap());
+    }
+
+    fn update(&mut self) {
+        self.transform.as_ref().unwrap().borrow_mut().rotation.y +=
+            self.speed * lunar_engine::delta_time();
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self as &dyn std::any::Any
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self as &mut dyn std::any::Any
+    }
+}
 
 fn init(state: &mut MyState) {
     log::info!("Initializing scene");
@@ -71,6 +108,7 @@ fn init(state: &mut MyState) {
             .create_component(|| Transform::default())
             .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
             .add_component::<Blahaj>()
+            .add_component::<Spiny>()
             .create()
             .unwrap(),
     );
@@ -112,7 +150,12 @@ fn run(state: &mut MyState) {
     }
 
     state.world.update();
-    rendering::render(&state.world, &state.assset_store, &[&Base::new(0)]);
+    debug!("Called render!");
+    rendering::render(
+        &state.world,
+        &state.assset_store,
+        &mut [&mut state.extension],
+    );
     state.frame += 1;
 }
 
