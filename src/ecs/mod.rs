@@ -107,6 +107,8 @@ pub type WeakEntityRefence = Weak<RefCell<Entity>>;
 #[derive(Default)]
 pub struct Entity {
     id: UUID,
+    //Store type ids separately to allow for working with components while a component is borrowed
+    comoponent_types: Vec<std::any::TypeId>,
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
     self_reference: Option<Weak<RefCell<Self>>>,
     pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
@@ -121,7 +123,7 @@ impl SelfReferenceGuard {
     ///Calls `get_component` on this entity
     ///
     ///# Errors
-    ///Returns an error if the entity has been delteted or if the requested component doesn't exist
+    ///Returns an error if the entity has been deleted or if the requested component doesn't exist
     pub fn get_component<T>(&self) -> Result<ComponentReference<T>, Error>
     where
         T: Component + 'static,
@@ -241,6 +243,8 @@ impl Entity {
             c.set_self_reference(SelfReferenceGuard { weak: w.clone() });
         }
 
+        //Add component type ID
+        self.comoponent_types.push(std::any::TypeId::of::<T>());
         self.components.push(Rc::new(RefCell::new(Box::new(c))));
 
         if let Some(w) = &self.world_modified {
@@ -263,6 +267,7 @@ impl Entity {
             }
         }
         if let Some(ind) = ind {
+            self.comoponent_types.remove(ind);
             self.components.remove(ind);
 
             if let Some(w) = &self.world_modified {
@@ -278,11 +283,10 @@ impl Entity {
     ///Acquires a reference to the component of type T
     #[must_use]
     pub fn get_component<T: 'static>(&self) -> Option<ComponentReference<T>> {
-        for c in &self.components {
-            let binding = c.borrow();
-            if binding.as_any().is::<T>() {
+        for (component, comp_type) in self.components.iter().zip(self.comoponent_types.iter()) {
+            if &std::any::TypeId::of::<T>() == comp_type {
                 return Some(ComponentReference {
-                    cell: Rc::downgrade(c),
+                    cell: Rc::downgrade(component),
                     phantom: std::marker::PhantomData,
                 });
             }
@@ -313,6 +317,7 @@ impl Entity {
 #[allow(clippy::module_name_repetitions)]
 pub struct EntityBuilder {
     components: Vec<Box<dyn Component>>,
+    component_types: Vec<std::any::TypeId>,
 }
 
 impl EntityBuilder {
@@ -323,7 +328,7 @@ impl EntityBuilder {
     }
     ///Creates a component of type `T` and adds is to the entity
     #[must_use]
-    pub fn add_component<T>(self) -> Self
+    pub fn add_component<T>(mut self) -> Self
     where
         T: 'static + Component,
     {
@@ -332,16 +337,16 @@ impl EntityBuilder {
                 return self;
             }
         }
-        let mut s = self;
-
         let c = Box::new(T::mew());
-        s.components.push(c);
-        s
+        self.components.push(c);
+        self.component_types.push(std::any::TypeId::of::<T>());
+
+        self
     }
 
     ///Adds the component to the entity
     #[must_use]
-    pub fn add_existing_component<T>(self, component: T) -> Self
+    pub fn add_existing_component<T>(mut self, component: T) -> Self
     where
         T: Component + 'static,
     {
@@ -353,14 +358,15 @@ impl EntityBuilder {
             }
         }
 
-        let mut s = self;
-        s.components.push(component);
-        s
+        self.components.push(component);
+        self.component_types.push(std::any::TypeId::of::<T>());
+
+        self
     }
 
     ///Creates a new component, using the provided closure and adds it to the entity
     #[must_use]
-    pub fn create_component<F, T>(self, f: F) -> Self
+    pub fn create_component<F, T>(mut self, f: F) -> Self
     where
         F: FnOnce() -> T,
         T: Component + 'static,
@@ -373,9 +379,10 @@ impl EntityBuilder {
             }
         }
 
-        let mut s = self;
-        s.components.push(c);
-        s
+        self.components.push(c);
+        self.component_types.push(std::any::TypeId::of::<T>());
+
+        self
     }
 
     ///Creates the entity
@@ -390,11 +397,12 @@ impl EntityBuilder {
             ..Default::default()
         };
 
-        for c in self.components {
-            if let Err(e) = c.check_dependencies_instanced(&e) {
+        for (component, comp_type) in self.components.into_iter().zip(self.component_types) {
+            if let Err(e) = component.check_dependencies_instanced(&e) {
                 return Err(Error::MissingDependency(e));
             }
-            e.components.push(Rc::new(RefCell::new(c)));
+            e.components.push(Rc::new(RefCell::new(component)));
+            e.comoponent_types.push(comp_type)
         }
 
         for c in &e.components {
