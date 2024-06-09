@@ -402,7 +402,7 @@ impl EntityBuilder {
                 return Err(Error::MissingDependency(e));
             }
             e.components.push(Rc::new(RefCell::new(component)));
-            e.comoponent_types.push(comp_type)
+            e.comoponent_types.push(comp_type);
         }
 
         for c in &e.components {

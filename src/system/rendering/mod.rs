@@ -10,6 +10,8 @@
 //!
 //! The rendering function gets the asset ids and queries them from the store
 
+use log::trace;
+
 use crate::{
     asset_managment::AssetStore, ecs::World, DEPTH, DEVICE, FORMAT, QUEUE, STAGING_BELT, SURFACE,
 };
@@ -19,7 +21,9 @@ use self::extensions::{AttachmentData, RenderingExtension};
 pub mod extensions;
 
 ///Renders all the entities in the world
-pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingExtension]) {
+pub fn render(world: &World, assets: &AssetStore, extensions: &mut [&mut dyn RenderingExtension]) {
+    trace!("Beginning of the render function");
+
     let device = DEVICE.get().unwrap();
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -30,6 +34,7 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingEx
         .unwrap()
         .get_current_texture()
         .unwrap();
+    trace!("Accquiered surface");
 
     let color_view = color.texture.create_view(&wgpu::TextureViewDescriptor {
         label: Some("Color attachment view"),
@@ -64,7 +69,10 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &[&dyn RenderingEx
         depth_stencil: depth_setencil_veiw,
     };
 
+    trace!("Created attachment data");
+
     for e in extensions {
+        trace!("Calling render on an extension");
         e.render(&mut encoder, world, assets, &attachments);
     }
 
