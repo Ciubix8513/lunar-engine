@@ -57,7 +57,7 @@ impl std::cmp::Ord for dyn RenderingExtension {
 #[derive(Default)]
 pub struct Base {
     order: u32,
-    ///Stores vector of (mesh_id, material_id) for caching
+    //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
     mesh_materials: Vec<MeshMaterial>,
@@ -92,7 +92,7 @@ impl PartialEq<(u128, u128)> for MeshMaterial {
 }
 
 impl MeshMaterial {
-    fn new(mesh_id: u128, material_id: u128) -> Self {
+    const fn new(mesh_id: u128, material_id: u128) -> Self {
         Self {
             mesh_id,
             material_id,
@@ -101,6 +101,7 @@ impl MeshMaterial {
 }
 
 impl RenderingExtension for Base {
+    #[allow(clippy::cognitive_complexity)]
     fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
@@ -142,7 +143,7 @@ impl RenderingExtension for Base {
 
         let mut matrices = matrices
             .iter()
-            .zip(meshes.into_iter())
+            .zip(meshes)
             .map(|i| (i.0 .0, (i.0 .1 .0, i.0 .1 .1, i.1)))
             .collect::<Vec<_>>();
 
@@ -153,15 +154,15 @@ impl RenderingExtension for Base {
             for (index, data) in self.identifier.iter().enumerate() {
                 if data.0 == matrices[index].0 && data.1 == matrices[index].1 .1 {
                     continue;
-                } else {
-                    identical = false;
-                    break;
                 }
+                identical = false;
+                break;
             }
         } else {
             identical = false;
         }
 
+        #[allow(clippy::if_not_else)]
         if !identical {
             debug!("Generating new cache data");
             self.identifier = matrices.iter().map(|i| (i.0, i.1 .1)).collect::<Vec<_>>();
@@ -301,7 +302,7 @@ impl RenderingExtension for Base {
 
                 let matrix_data = matrices
                     .iter()
-                    .flat_map(|m| bytemuck::bytes_of(m))
+                    .flat_map(bytemuck::bytes_of)
                     .copied()
                     .collect::<Vec<u8>>();
 
