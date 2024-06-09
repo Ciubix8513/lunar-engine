@@ -22,8 +22,8 @@ lock_api = "0.4.11"
 log = "0.4.20"
 parking_lot = "0.12.1"
 rand = "0.8.5"
-vec_key_value_pair = "0.1.0"
-wgpu = { version = "0.18.0", default-featues = false}
+vec_key_value_pair = "0.2.0"
+wgpu = { version = "0.18.0"}
 winit = { version = "0.29.0", features = ["rwh_05"] }
 lunar-logger= "0.1.2"
 

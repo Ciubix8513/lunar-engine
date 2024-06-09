@@ -408,7 +408,7 @@ impl EntityBuilder {
 use std::rc::Weak;
 use std::{cell::RefCell, rc::Rc};
 
-use vec_key_value_pair::VecMap;
+use vec_key_value_pair::map::VecMap;
 
 //Oh god this is gonna be a mess
 #[derive(Debug, Default)]

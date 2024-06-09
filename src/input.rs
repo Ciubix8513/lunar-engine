@@ -1,6 +1,6 @@
 use std::sync::{OnceLock, RwLock};
 
-use vec_key_value_pair::VecMap;
+use vec_key_value_pair::map::VecMap;
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 use crate::math::vec2::Vec2;

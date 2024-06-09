@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_lines)]
 use std::sync::RwLock;
 
-use vec_key_value_pair::VecMap;
+use vec_key_value_pair::map::VecMap;
 use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};

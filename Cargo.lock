@@ -1837,9 +1837,9 @@ checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
 
 [[package]]
 name = "vec_key_value_pair"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7014fe6bb0e05b34bdaa7ec63a7516070589f8194fd973790715a276c7f39674"
+checksum = "2be7ea4e3c05c0632b43895013cf43c983926892f432165ea1e62cecd73c6b1d"
 
 [[package]]
 name = "version_check"

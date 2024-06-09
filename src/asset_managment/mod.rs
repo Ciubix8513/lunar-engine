@@ -21,7 +21,7 @@ use std::sync::Arc;
 use std::thread;
 
 use rand::Rng;
-use vec_key_value_pair::VecMap;
+use vec_key_value_pair::map::VecMap;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::grimoire;
