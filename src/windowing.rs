@@ -3,10 +3,11 @@ use std::sync::RwLock;
 
 use vec_key_value_pair::map::VecMap;
 use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
+use winit::window::Window;
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
-pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfiguration, Texture) {
+pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();
     size.width = size.width.max(1);
     size.height = size.width.max(1);
@@ -15,11 +16,9 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 
     let instance = wgpu::Instance::default();
 
-    let surface = unsafe {
-        instance
-            .create_surface(&window)
-            .expect("Failed to createate surface")
-    };
+    let surface = instance
+        .create_surface(window)
+        .expect("Failed to createate surface");
 
     log::debug!("Created surface");
 
@@ -44,7 +43,7 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
         let r = futures::executor::block_on(req_device(
             &adapter,
             &wgpu::DeviceDescriptor {
-                limits,
+                required_limits: limits,
                 ..Default::default()
             },
         ));
@@ -104,6 +103,7 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
         present_mode: wgpu::PresentMode::AutoNoVsync,
         view_formats: vec![format],
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        desired_maximum_frame_latency: 2,
     };
     surface.configure(device, &surface_config);
 
@@ -151,9 +151,9 @@ pub fn initialize_gpu(window: &winit::window::Window) -> (Surface, SurfaceConfig
 }
 
 #[allow(clippy::future_not_send)]
-async fn req_adapter<'a>(
+async fn req_adapter<'a, 'b>(
     instance: wgpu::Instance,
-    options: &wgpu::RequestAdapterOptions<'a>,
+    options: &wgpu::RequestAdapterOptions<'a, 'b>,
 ) -> Option<wgpu::Adapter> {
     instance.request_adapter(options).await
 }

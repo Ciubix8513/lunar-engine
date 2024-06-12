@@ -51,9 +51,9 @@ use std::{
 
 use wgpu::SurfaceConfiguration;
 use winit::{
+    application::ApplicationHandler,
     dpi::{PhysicalPosition, PhysicalSize},
-    event::{self, Event},
-    event_loop::EventLoopWindowTarget,
+    event,
     window::CursorGrabMode,
 };
 
@@ -99,6 +99,7 @@ pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
     height: 0,
 });
 //TODO find a better way than just staticing it
+static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
 
 #[cfg(target_arch = "wasm32")]
 static SURFACE: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::Surface>>> = OnceLock::new();
@@ -135,6 +136,64 @@ static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateIntern
     modified: false,
 });
 
+fn reset_cursor() {
+    let window = WINDOW.get().unwrap();
+
+    let pos = window.inner_size();
+    if let Err(e) = window.set_cursor_position(PhysicalPosition {
+        x: pos.width / 2,
+        y: pos.height / 2,
+    }) {
+        log::error!("Failed to move cursor {e}");
+    }
+}
+
+fn process_cursor() {
+    let mut state = CURSOR_STATE.write().unwrap();
+
+    if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
+        reset_cursor();
+    }
+
+    if !state.modified {
+        return;
+    }
+    state.modified = false;
+    let window = WINDOW.get().unwrap();
+
+    window.set_cursor_visible(state.visible);
+
+    let g_mode = state.grab_mode;
+    let res = window.set_cursor_grab(match g_mode {
+        CursorState::Locked => CursorGrabMode::Locked,
+        CursorState::Free => CursorGrabMode::None,
+    });
+    if let Err(e) = res {
+        match e {
+            winit::error::ExternalError::NotSupported(_) => {
+                //Once a lock has failed, it can never unfail, so no need to reset this
+                //afterwards :3
+                //
+                //This can only unfail if the user changes platform, buuuut, i literally don't
+                //think there's a way that could happen
+                state.lock_failed = true;
+                drop(state);
+
+                log::warn!("Failed to lock cursor, doing manually");
+                if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
+                    log::error!("Cursor is fucked :3 {e}");
+                }
+                reset_cursor();
+            }
+
+            winit::error::ExternalError::Ignored => {
+                log::warn!("Cursor state change ignored");
+            }
+            winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
+        }
+    }
+}
+
 //Exits the application and closes the window
 pub fn quit() {
     QUIT.set(true).unwrap();
@@ -160,90 +219,42 @@ pub fn delta_time() -> f32 {
 // }
 
 ///Contains main state of the app
+#[allow(clippy::type_complexity)]
 pub struct State<T> {
-    window: OnceCell<winit::window::Window>,
+    first_resume: bool,
     surface_config: OnceCell<SurfaceConfiguration>,
     contents: T,
     closed: bool, //Various state related stuff
+    init: Option<Box<dyn FnOnce(&mut T)>>,
+    run: Option<Box<dyn Fn(&mut T)>>,
+    end: Option<Box<dyn FnOnce(&mut T)>>,
 }
 
 impl<T: Default> Default for State<T> {
     fn default() -> Self {
         Self {
-            window: OnceCell::default(),
+            first_resume: false,
             surface_config: OnceCell::default(),
             contents: Default::default(),
             closed: Default::default(),
+            init: None,
+            run: None,
+            end: None,
         }
     }
 }
 
 impl<T> State<T> {
-    fn reset_cursor(&self) {
-        let window = self.window.get().unwrap();
-
-        let pos = window.inner_size();
-        if let Err(e) = window.set_cursor_position(PhysicalPosition {
-            x: pos.width / 2,
-            y: pos.height / 2,
-        }) {
-            log::error!("Failed to move cursor {e}");
-        }
-    }
-
-    fn process_cursor(&self) {
-        let mut state = CURSOR_STATE.write().unwrap();
-
-        if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
-            self.reset_cursor();
-        }
-
-        if !state.modified {
-            return;
-        }
-        state.modified = false;
-        let window = self.window.get().unwrap();
-
-        self.window.get().unwrap().set_cursor_visible(state.visible);
-
-        let g_mode = state.grab_mode;
-        let res = window.set_cursor_grab(match g_mode {
-            CursorState::Locked => CursorGrabMode::Locked,
-            CursorState::Free => CursorGrabMode::None,
-        });
-        if let Err(e) = res {
-            match e {
-                winit::error::ExternalError::NotSupported(_) => {
-                    //Once a lock has failed, it can never unfail, so no need to reset this
-                    //afterwards :3
-                    //
-                    //This can only unfail if the user changes platform, buuuut, i literally don't
-                    //think there's a way that could happen
-                    state.lock_failed = true;
-                    drop(state);
-
-                    log::warn!("Failed to lock cursor, doing manually");
-                    if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
-                        log::error!("Cursor is fucked :3 {e}");
-                    }
-                    self.reset_cursor();
-                }
-
-                winit::error::ExternalError::Ignored => {
-                    log::warn!("Cursor state change ignored");
-                }
-                winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
-            }
-        }
-    }
-
     ///Creates a new state with the given custom state
-    pub const fn new(contents: T) -> Self {
+    pub fn new(contents: T) -> Self {
         Self {
-            window: OnceCell::new(),
+            first_resume: false,
             surface_config: OnceCell::new(),
             contents,
             closed: false,
+            init: None,
+            run: None,
+            end: None,
         }
     }
 
@@ -255,10 +266,14 @@ impl<T> State<T> {
     #[allow(clippy::missing_panics_doc)]
     pub fn run<F, F1, F2>(mut self, init: F, run: F1, end: F2)
     where
-        F: FnOnce(&mut T),
-        F1: Fn(&mut T) + Copy,
-        F2: FnOnce(&mut T) + Copy,
+        F: FnOnce(&mut T) + 'static,
+        F1: Fn(&mut T) + Copy + 'static,
+        F2: FnOnce(&mut T) + Copy + 'static,
     {
+        self.init = Some(Box::new(init));
+        self.run = Some(Box::new(run));
+        self.end = Some(Box::new(end));
+
         #[cfg(target_arch = "wasm32")]
         {
             std::panic::set_hook(Box::new(|e| {
@@ -271,16 +286,30 @@ impl<T> State<T> {
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
+
+        event_loop
+            .run_app(&mut self)
+            .expect("Failed to start event loop");
+    }
+}
+
+impl<T> ApplicationHandler for State<T> {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if self.first_resume {
+            return;
+        }
+
         #[cfg(not(target_arch = "wasm32"))]
-        let builder = winit::window::WindowBuilder::new();
+        let attributes = winit::window::Window::default_attributes();
         let window;
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen::JsCast;
-            use winit::platform::web::WindowBuilderExtWebSys;
+            use winit::platform::web::WindowAttributesExtWebSys;
 
-            let mut builder = winit::window::WindowBuilder::new();
+            let mut attributes = winit::window::Window::default_attributes();
 
+            //Acquire a canvas as a base for the window
             let canvas = web_sys::window()
                 .unwrap()
                 .document()
@@ -296,12 +325,11 @@ impl<T> State<T> {
             log::info!("Canvas size = {width} x {height}");
 
             log::debug!("Found canvas");
-            builder = builder.with_canvas(Some(canvas));
+            attributes = attributes.with_canvas(Some(canvas));
 
-            window = builder
-                .build(&event_loop)
+            window = event_loop
+                .create_window(attributes)
                 .expect("Failed to create the window");
-
             //Resize window to the canvas size
             //TODO Find a better solution to this hack
             _ = window.request_inner_size(PhysicalSize::new(width, height));
@@ -309,16 +337,17 @@ impl<T> State<T> {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            window = builder
-                .build(&event_loop)
+            window = event_loop
+                .create_window(attributes)
                 .expect("Failed to create the window");
         }
 
         log::debug!("Created window");
 
-        self.window.set(window).unwrap();
-        let (surface, config, depth_stencil) =
-            windowing::initialize_gpu(self.window.get().unwrap());
+        WINDOW.set(window).unwrap();
+        let window = WINDOW.get().unwrap();
+
+        let (surface, config, depth_stencil) = windowing::initialize_gpu(window);
 
         log::debug!("Inititalized GPU");
 
@@ -336,138 +365,120 @@ impl<T> State<T> {
                 .set(RwLock::new(WgpuWrapper::new(depth_stencil)))
                 .unwrap();
         }
-        init(&mut self.contents);
-
-        event_loop
-            .run(move |e, w| {
-                w.set_control_flow(winit::event_loop::ControlFlow::Poll);
-                self.event_handler(e, w, run, end);
-            })
-            .expect("Failed to start event loop");
+        self.init.take().unwrap()(&mut self.contents);
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     }
 
-    fn event_handler<T1, F, F1>(
+    fn window_event(
         &mut self,
-        event: Event<T1>,
-        window: &EventLoopWindowTarget<T1>,
-        run_func: F,
-        end: F1,
-    ) where
-        F: Fn(&mut T),
-        F1: FnOnce(&mut T),
-    {
-        if let Event::WindowEvent {
-            window_id: _,
-            event,
-        } = event
-        {
-            match event {
-                event::WindowEvent::Resized(size) => {
-                    RESOLUTION.write().unwrap().width = size.width;
-                    RESOLUTION.write().unwrap().height = size.height;
-                    self.surface_config.get_mut().unwrap().width = size.width;
-                    self.surface_config.get_mut().unwrap().height = size.height;
-                    let device = DEVICE.get().unwrap();
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        _: winit::window::WindowId,
+        event: event::WindowEvent,
+    ) {
+        match event {
+            event::WindowEvent::Resized(size) => {
+                RESOLUTION.write().unwrap().width = size.width;
+                RESOLUTION.write().unwrap().height = size.height;
+                self.surface_config.get_mut().unwrap().width = size.width;
+                self.surface_config.get_mut().unwrap().height = size.height;
+                let device = DEVICE.get().unwrap();
 
-                    SURFACE
-                        .get()
-                        .unwrap()
-                        .write()
-                        .unwrap()
-                        .configure(device, self.surface_config.get().unwrap());
-                    let desc = windowing::get_depth_descriptor(size.width, size.height);
+                SURFACE
+                    .get()
+                    .unwrap()
+                    .write()
+                    .unwrap()
+                    .configure(device, self.surface_config.get().unwrap());
+                let desc = windowing::get_depth_descriptor(size.width, size.height);
 
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
-                    }
-
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
-                    }
-
-                    // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
-                    // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                    //     label: Some("Screenshot buffer"),
-                    //     size: bpr * size.height as u64,
-                    //     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-                    //     mapped_at_creation: false,
-                    // });
+                #[cfg(target_arch = "wasm32")]
+                {
+                    **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
                 }
-                event::WindowEvent::CloseRequested => {
-                    window.exit();
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+                }
+
+                // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
+                // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                //     label: Some("Screenshot buffer"),
+                //     size: bpr * size.height as u64,
+                //     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                //     mapped_at_creation: false,
+                // });
+            }
+            event::WindowEvent::CloseRequested => {
+                event_loop.exit();
+                self.closed = true;
+            }
+            event::WindowEvent::RedrawRequested => {
+                process_cursor();
+
+                let start = chrono::Local::now();
+
+                if QUIT.get().is_some() {
+                    event_loop.exit();
                     self.closed = true;
                 }
-                event::WindowEvent::RedrawRequested => {
-                    self.process_cursor();
+                if self.closed {
+                    //This should be fine but needs further testing
+                    self.end.take().unwrap()(&mut self.contents);
 
-                    let start = chrono::Local::now();
-
-                    if QUIT.get().is_some() {
-                        window.exit();
-                        self.closed = true;
-                    }
-                    if self.closed {
-                        //This should be fine but needs further testing
-                        end(&mut self.contents);
-
-                        return;
-                    }
-                    run_func(&mut self.contents);
-                    self.window.get().unwrap().request_redraw();
-                    input::update();
-                    let finish = chrono::Local::now();
-
-                    let delta =
-                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
-
-                    *DELTA_TIME.write().unwrap() = delta;
+                    return;
                 }
-                event::WindowEvent::KeyboardInput {
-                    device_id: _,
-                    event,
-                    is_synthetic: _,
-                } => {
-                    let state = match event.state {
-                        event::ElementState::Pressed => input::KeyState::Down,
-                        event::ElementState::Released => input::KeyState::Up,
-                    };
-                    let keycode =
-                        if let winit::keyboard::PhysicalKey::Code(code) = event.physical_key {
-                            Some(code)
-                        } else {
-                            None
-                        };
-                    if keycode.is_none() {
-                        return;
-                    }
-                    input::set_key(keycode.unwrap(), state);
-                }
-                event::WindowEvent::MouseInput {
-                    device_id: _,
-                    state,
-                    button,
-                } => match state {
-                    event::ElementState::Pressed => {
-                        input::set_mouse_button(button, input::KeyState::Down);
-                    }
-                    event::ElementState::Released => {
-                        input::set_mouse_button(button, input::KeyState::Up);
-                    }
-                },
+                self.run.as_ref().unwrap()(&mut self.contents);
+                WINDOW.get().unwrap().request_redraw();
+                input::update();
+                let finish = chrono::Local::now();
 
-                event::WindowEvent::CursorMoved {
-                    device_id: _,
-                    position,
-                } => {
-                    input::set_cursor_position(math::vec2::Vec2 {
-                        x: position.x as f32,
-                        y: position.y as f32,
-                    });
-                }
-                _ => {}
+                let delta = (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
+
+                *DELTA_TIME.write().unwrap() = delta;
             }
+            event::WindowEvent::KeyboardInput {
+                device_id: _,
+                event,
+                is_synthetic: _,
+            } => {
+                let state = match event.state {
+                    event::ElementState::Pressed => input::KeyState::Down,
+                    event::ElementState::Released => input::KeyState::Up,
+                };
+                let keycode = if let winit::keyboard::PhysicalKey::Code(code) = event.physical_key {
+                    Some(code)
+                } else {
+                    None
+                };
+                if keycode.is_none() {
+                    return;
+                }
+                input::set_key(keycode.unwrap(), state);
+            }
+            event::WindowEvent::MouseInput {
+                device_id: _,
+                state,
+                button,
+            } => match state {
+                event::ElementState::Pressed => {
+                    input::set_mouse_button(button, input::KeyState::Down);
+                }
+                event::ElementState::Released => {
+                    input::set_mouse_button(button, input::KeyState::Up);
+                }
+            },
+
+            event::WindowEvent::CursorMoved {
+                device_id: _,
+                position,
+            } => {
+                input::set_cursor_position(math::vec2::Vec2 {
+                    x: position.x as f32,
+                    y: position.y as f32,
+                });
+            }
+            _ => {}
         }
     }
 }

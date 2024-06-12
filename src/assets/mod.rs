@@ -125,6 +125,7 @@ impl Texture {
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
             },
+            wgpu::util::TextureDataOrder::LayerMajor,
             bytemuck::cast_slice(&image.data),
         );
 

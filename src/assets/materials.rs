@@ -161,6 +161,7 @@ impl MaterialTrait for TextureUnlit {
                         ],
                     },
                 ],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
@@ -187,6 +188,7 @@ impl MaterialTrait for TextureUnlit {
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             multiview: None,
         });
