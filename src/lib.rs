@@ -244,7 +244,7 @@ impl<T: Default> Default for State<T> {
     }
 }
 
-impl<T> State<T> {
+impl<T: 'static> State<T> {
     ///Creates a new state with the given custom state
     pub fn new(contents: T) -> Self {
         Self {
@@ -287,9 +287,17 @@ impl<T> State<T> {
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
 
-        event_loop
-            .run_app(&mut self)
-            .expect("Failed to start event loop");
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            event_loop
+                .run_app(&mut self)
+                .expect("Failed to start event loop");
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::EventLoopExtWebSys;
+            event_loop.spawn_app(self);
+        }
     }
 }
 
