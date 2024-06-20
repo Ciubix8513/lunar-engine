@@ -233,7 +233,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///Creates a marker component. A marker component has no function, but it can be used to
 ///distinguish an entity.
 ///
-///#[Examples]
+///# Examples
 ///```
 ///#[marker_component]
 ///struct Marker;
