@@ -14,23 +14,25 @@ fn parse_log_level(v: &str) -> log::LevelFilter {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[allow(unused_mut)]
 pub fn initialize_logging() {
-    let vars = std::env::vars();
-
     let mut log_level = log::LevelFilter::Info;
     let mut engine_log_level = log::LevelFilter::Info;
     let mut wgpu_log_level = log::LevelFilter::Warn;
 
     let mut log_to_file = false;
 
-    for (name, value) in vars {
-        match (&name.to_uppercase()) as &str {
-            "LOG_LEVEL" => log_level = parse_log_level(&value),
-            "ENGINE_LOG_LEVEL" => engine_log_level = parse_log_level(&value),
-            "GENERATE_LOGS" => log_to_file = true,
-            "WGPU_LOG_LEVEL" => wgpu_log_level = parse_log_level(&value),
-            _ => {}
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let vars = std::env::vars();
+        for (name, value) in vars {
+            match (&name.to_uppercase()) as &str {
+                "LOG_LEVEL" => log_level = parse_log_level(&value),
+                "ENGINE_LOG_LEVEL" => engine_log_level = parse_log_level(&value),
+                "GENERATE_LOGS" => log_to_file = true,
+                "WGPU_LOG_LEVEL" => wgpu_log_level = parse_log_level(&value),
+                _ => {}
+            }
         }
     }
 
@@ -43,9 +45,4 @@ pub fn initialize_logging() {
         b = b.log_to_file();
     }
     b.init().unwrap();
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn initialize_logging() {
-    wasm_logger::init(wasm_logger::Config::default());
 }

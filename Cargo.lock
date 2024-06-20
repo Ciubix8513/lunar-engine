@@ -1036,7 +1036,6 @@ dependencies = [
  "send_wrapper",
  "vec_key_value_pair",
  "wasm-bindgen",
- "wasm-logger",
  "web-sys",
  "wgpu",
  "winit",
@@ -1048,12 +1047,14 @@ version = "0.1.0"
 
 [[package]]
 name = "lunar-logger"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82a82778ae295b3d04547ac06e156745ef4333384b2e979b42b90bb6bd50739c"
+checksum = "f03345dea12c20ef0fcfceb867d88b64a2938c032edabdc057eda6ed6b6a3376"
 dependencies = [
  "chrono",
  "log",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2097,17 +2098,6 @@ name = "wasm-bindgen-shared"
 version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
-
-[[package]]
-name = "wasm-logger"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "074649a66bb306c8f2068c9016395fa65d8e08d2affcbf95acf3c24c3ab19718"
-dependencies = [
- "log",
- "wasm-bindgen",
- "web-sys",
-]
 
 [[package]]
 name = "wayland-backend"
