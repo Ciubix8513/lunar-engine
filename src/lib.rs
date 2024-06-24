@@ -49,6 +49,7 @@ use std::{
     sync::{OnceLock, RwLock},
 };
 
+use chrono::DateTime;
 use wgpu::SurfaceConfiguration;
 use winit::{
     application::ApplicationHandler,
@@ -224,7 +225,8 @@ pub struct State<T> {
     first_resume: bool,
     surface_config: OnceCell<SurfaceConfiguration>,
     contents: T,
-    closed: bool, //Various state related stuff
+    closed: bool,
+    frame_start: Option<DateTime<chrono::Local>>,
     init: Option<Box<dyn FnOnce(&mut T)>>,
     run: Option<Box<dyn Fn(&mut T)>>,
     end: Option<Box<dyn FnOnce(&mut T)>>,
@@ -237,6 +239,7 @@ impl<T: Default> Default for State<T> {
             surface_config: OnceCell::default(),
             contents: Default::default(),
             closed: Default::default(),
+            frame_start: Default::default(),
             init: None,
             run: None,
             end: None,
@@ -252,6 +255,7 @@ impl<T: 'static> State<T> {
             surface_config: OnceCell::new(),
             contents,
             closed: false,
+            frame_start: None,
             init: None,
             run: None,
             end: None,
@@ -373,8 +377,10 @@ impl<T> ApplicationHandler for State<T> {
                 .set(RwLock::new(WgpuWrapper::new(depth_stencil)))
                 .unwrap();
         }
+
         self.init.take().unwrap()(&mut self.contents);
-        event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
+
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
     }
 
     fn window_event(
@@ -422,9 +428,18 @@ impl<T> ApplicationHandler for State<T> {
                 self.closed = true;
             }
             event::WindowEvent::RedrawRequested => {
-                process_cursor();
+                //Frame time includes the wait between frames
+                if let Some(start) = self.frame_start {
+                    let finish = chrono::Local::now();
 
-                let start = chrono::Local::now();
+                    let delta =
+                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
+
+                    *DELTA_TIME.write().unwrap() = delta;
+                }
+                self.frame_start = Some(chrono::Local::now());
+
+                process_cursor();
 
                 if QUIT.get().is_some() {
                     event_loop.exit();
@@ -437,13 +452,9 @@ impl<T> ApplicationHandler for State<T> {
                     return;
                 }
                 self.run.as_ref().unwrap()(&mut self.contents);
-                WINDOW.get().unwrap().request_redraw();
                 input::update();
-                let finish = chrono::Local::now();
 
-                let delta = (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
-
-                *DELTA_TIME.write().unwrap() = delta;
+                WINDOW.get().unwrap().request_redraw();
             }
             event::WindowEvent::KeyboardInput {
                 device_id: _,
