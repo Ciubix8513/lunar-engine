@@ -2,7 +2,7 @@
 use std::sync::RwLock;
 
 use vec_key_value_pair::map::VecMap;
-use wgpu::{util::StagingBelt, Surface, SurfaceConfiguration, Texture};
+use wgpu::{util::StagingBelt, Backends, Surface, SurfaceConfiguration, Texture};
 use winit::window::Window;
 
 use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
@@ -14,7 +14,10 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
     log::debug!("Window size is {size:?}");
     *RESOLUTION.write().unwrap() = size;
 
-    let instance = wgpu::Instance::default();
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: Backends::GL | Backends::VULKAN,
+        ..Default::default()
+    });
 
     let surface = instance
         .create_surface(window)
