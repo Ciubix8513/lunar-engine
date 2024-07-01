@@ -398,6 +398,10 @@ impl Mat4x4 {
     #[must_use]
     ///Creates a rotation matrix for the given euler angles
     pub fn rotation_matrix_euler(rotation: &Vec3) -> Self {
+        if rotation.x == 0.0 && rotation.y == 0.0 && rotation.z == 0.0 {
+            return IDENTITY;
+        }
+
         let sin_x = rotation.x.to_radians().sin();
         let cos_x = rotation.x.to_radians().cos();
 
