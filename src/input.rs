@@ -1,9 +1,9 @@
 use std::sync::{OnceLock, RwLock};
 
 use vec_key_value_pair::map::VecMap;
-use winit::{event::MouseButton, keyboard::KeyCode};
+use winit::{dpi::PhysicalPosition, event::MouseButton, keyboard::KeyCode, window::CursorGrabMode};
 
-use crate::math::vec2::Vec2;
+use crate::{math::vec2::Vec2, WINDOW};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 ///Represents the state of the key
@@ -102,4 +102,98 @@ pub(crate) fn update() {
     let mut last = input.previous_cursor_position.write().unwrap();
     *input.cursor_delta.write().unwrap() = *cur - *last;
     *last = *cur;
+}
+
+//Sets the cursor grab mode
+// pub fn set_cursor_grab_mode(mode: CursorState) {
+//     let mut state = CURSOR_STATE.write().unwrap();
+//     state.grab_mode = mode;
+//     state.modified = true;
+// }
+
+//Sets the cursor grab mode
+// pub fn set_cursor_visible(mode: bool) {
+//     let mut state = CURSOR_STATE.write().unwrap();
+//     state.visible = mode;
+//     state.modified = true;
+// }
+
+///Defines behaviour of the cursor inside the window
+#[derive(Clone, Copy)]
+pub enum CursorState {
+    //Cursor is locked to the window
+    Locked,
+    //Cursor is free
+    Free,
+}
+
+struct CursorStateInternal {
+    grab_mode: CursorState,
+    lock_failed: bool,
+    visible: bool,
+    modified: bool,
+}
+static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateInternal {
+    grab_mode: CursorState::Free,
+    lock_failed: false,
+    visible: true,
+    modified: false,
+});
+
+fn reset_cursor() {
+    let window = WINDOW.get().unwrap();
+
+    let pos = window.inner_size();
+    if let Err(e) = window.set_cursor_position(PhysicalPosition {
+        x: pos.width / 2,
+        y: pos.height / 2,
+    }) {
+        log::error!("Failed to move cursor {e}");
+    }
+}
+
+pub(crate) fn process_cursor() {
+    let mut state = CURSOR_STATE.write().unwrap();
+
+    if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
+        reset_cursor();
+    }
+
+    if !state.modified {
+        return;
+    }
+    state.modified = false;
+    let window = WINDOW.get().unwrap();
+
+    window.set_cursor_visible(state.visible);
+
+    let g_mode = state.grab_mode;
+    let res = window.set_cursor_grab(match g_mode {
+        CursorState::Locked => CursorGrabMode::Locked,
+        CursorState::Free => CursorGrabMode::None,
+    });
+    if let Err(e) = res {
+        match e {
+            winit::error::ExternalError::NotSupported(_) => {
+                //Once a lock has failed, it can never unfail, so no need to reset this
+                //afterwards :3
+                //
+                //This can only unfail if the user changes platform, buuuut, i literally don't
+                //think there's a way that could happen
+                state.lock_failed = true;
+                drop(state);
+
+                log::warn!("Failed to lock cursor, doing manually");
+                if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
+                    log::error!("Cursor is fucked :3 {e}");
+                }
+                reset_cursor();
+            }
+
+            winit::error::ExternalError::Ignored => {
+                log::warn!("Cursor state change ignored");
+            }
+            winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
+        }
+    }
 }
