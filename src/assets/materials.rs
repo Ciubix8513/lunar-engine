@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
 
-use super::{BindgroupState, MaterialTrait, Texture};
+use super::{material::MaterialTrait, BindgroupState, Texture};
 
+///Basic material that renders an object with a given texture, without lighting
 pub struct TextureUnlit {
     #[cfg(target_arch = "wasm32")]
     pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
@@ -25,6 +26,7 @@ pub struct TextureUnlit {
 impl TextureUnlit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
+    ///Creates a new material with a give texture id
     pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
         Box::new(Self {
             pipeline: None,
