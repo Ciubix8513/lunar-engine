@@ -11,6 +11,7 @@ use crate::{
 use super::transform::Transform;
 
 #[derive(Debug, Default)]
+///Mesh component used for rendering
 pub struct Mesh {
     mesh_id: Option<UUID>,
     material_id: Option<UUID>,
@@ -35,6 +36,7 @@ impl Component for Mesh {
 
 impl Mesh {
     #[must_use]
+    ///Creates a new mesh with the given mesh and material ids
     pub const fn new(mesh: UUID, material: UUID) -> Self {
         Self {
             mesh_id: Some(mesh),
@@ -71,7 +73,7 @@ impl Mesh {
     }
 
     #[must_use]
-    pub fn get_matrix(&self) -> Mat4x4 {
+    pub(crate) fn get_matrix(&self) -> Mat4x4 {
         self.transform_reference
             .as_ref()
             .unwrap()

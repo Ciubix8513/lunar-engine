@@ -16,9 +16,13 @@ use crate::{
 use super::transform::Transform;
 
 #[derive(Debug, Default)]
+///Camera used for rendering of the objects
 pub struct Camera {
+    ///Fov of the camera in radians
     pub fov: f32,
+    ///Near plane of the camera
     pub near: f32,
+    ///Far plane of the camera
     pub far: f32,
     transorm_reference: Option<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
@@ -47,6 +51,7 @@ impl Component for Camera {
 
 impl Camera {
     #[must_use]
+    ///Creates a new Camera
     pub fn new(fov: f32, near: f32, far: f32) -> Self {
         Self {
             fov,
@@ -57,6 +62,7 @@ impl Camera {
     }
 
     #[must_use]
+    ///Returns the transformation matrix of the camera multiplied by the projection matrix
     pub fn matrix(&self) -> Mat4x4 {
         let binding = self.transorm_reference.as_ref().unwrap();
         let transform = binding.borrow();
@@ -78,7 +84,8 @@ impl Camera {
         camera_matrix * projection_matrix
     }
 
-    pub fn initialize_gpu(&mut self) {
+    ///Initializes gpu related components of the camera: Buffers, bindgroups, etc.
+    pub(crate) fn initialize_gpu(&mut self) {
         let device = DEVICE.get().unwrap();
         let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
 
@@ -102,7 +109,8 @@ impl Camera {
         self.bind_group = Some(bind_group);
     }
 
-    pub fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    ///Updates the buffer of the camera with the new camera matrix
+    pub(crate) fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
 
         staging_belt
@@ -116,7 +124,8 @@ impl Camera {
             .copy_from_slice(bytemuck::bytes_of(&self.matrix()));
     }
 
-    pub fn set_bindgroup<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+    ///Sets bindgroups of the camera for rendering
+    pub(crate) fn set_bindgroup<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
     where
         'a: 'b,
     {
