@@ -211,6 +211,10 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
     .parse::<TokenStream>()
     .unwrap();
 
+    let comment = format!("///Alias of [`{base}`]")
+        .parse::<TokenStream>()
+        .unwrap();
+
     let mut items = items;
 
     let tmp = if let TokenTree::Group(i) = items.last().unwrap() {
@@ -223,8 +227,13 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     *items.last_mut().unwrap() = tmp;
 
-    let mut o = items.into_iter().collect::<TokenStream>();
-    o.extend([deref, deref_mut, component_impl]);
+    let mut o = comment.into_iter().collect::<TokenStream>();
+    o.extend([
+        items.into_iter().collect::<TokenStream>(),
+        deref,
+        deref_mut,
+        component_impl,
+    ]);
 
     o
 }
