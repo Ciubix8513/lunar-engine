@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use lunar_engine_derive::as_any;
+
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
@@ -16,19 +18,13 @@ pub struct Mesh {
 }
 
 impl Component for Mesh {
+    #[as_any]
+
     fn mew() -> Self
     where
         Self: Sized,
     {
         Self::default()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 
     #[allow(unused_variables)]

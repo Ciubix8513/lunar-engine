@@ -1,3 +1,5 @@
+use lunar_engine_derive::as_any;
+
 use crate::asset_managment::{Asset, AssetStore, UUID};
 
 use super::BindgroupState;
@@ -24,6 +26,8 @@ pub struct Material {
 }
 
 impl Asset for Material {
+    #[as_any]
+
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }
@@ -50,13 +54,6 @@ impl Asset for Material {
 
     fn is_initialized(&self) -> bool {
         self.initialized
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 

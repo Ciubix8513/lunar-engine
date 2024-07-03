@@ -104,7 +104,8 @@ pub trait Asset: Send + Sync + std::any::Any {
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
     ///Converts trait object to a `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     ///# use lunar_engine::asset_managment::Asset;
     ///# use std::any::Any;
@@ -126,7 +127,8 @@ pub trait Asset: Send + Sync + std::any::Any {
     fn as_any(&self) -> &dyn std::any::Any;
     ///Converts trait object to a mutable `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     ///# use lunar_engine::asset_managment::Asset;
     ///# use std::any::Any;

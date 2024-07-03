@@ -32,7 +32,8 @@ pub trait Component: std::any::Any {
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
     ///Converts trait object to a `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     /// # use lunar_engine::ecs::Component;
     /// # struct A;
@@ -49,7 +50,8 @@ pub trait Component: std::any::Any {
     fn as_any(&self) -> &dyn std::any::Any;
     ///Converts trait object to a mutable `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     /// # use lunar_engine::ecs::Component;
     /// # struct A;
@@ -75,7 +77,7 @@ pub trait Component: std::any::Any {
     ///
     ///# Note
     ///
-    ///This function is not meant to be defined manually, use [`lunar_engine_derive::dependencies`]
+    ///This function is not meant to be implemented manually, use [`lunar_engine_derive::dependencies`]
     ///macro instead.
     #[allow(unused_variables)]
     fn check_dependencies(entity: &Entity) -> Result<(), &'static str>
@@ -86,7 +88,7 @@ pub trait Component: std::any::Any {
     }
 
     #[allow(clippy::missing_errors_doc, unused_variables)]
-    ///See `check_dependencies`
+    ///See [`Component::check_dependencies`]
     fn check_dependencies_instanced(&self, entity: &Entity) -> Result<(), &'static str> {
         Ok(())
     }

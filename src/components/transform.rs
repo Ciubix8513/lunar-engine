@@ -1,3 +1,5 @@
+use lunar_engine_derive::as_any;
+
 use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
 
 use crate::ecs::{Component, ComponentReference};
@@ -29,6 +31,8 @@ impl Default for Transform {
 }
 
 impl Component for Transform {
+    #[as_any]
+
     fn mew() -> Self
     where
         Self: Sized,
@@ -39,12 +43,6 @@ impl Component for Transform {
             position: Vec3::default(),
             parent: None,
         }
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 

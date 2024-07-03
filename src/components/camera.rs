@@ -1,7 +1,7 @@
 use std::num::NonZeroU64;
 
 use log::debug;
-use lunar_engine_derive::{alias, dependencies};
+use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
 // use lunar_engine::ecs;
@@ -26,6 +26,7 @@ pub struct Camera {
 }
 
 impl Component for Camera {
+    #[as_any]
     #[dependencies(Transform)]
     fn mew() -> Self
     where
@@ -41,14 +42,6 @@ impl Component for Camera {
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
         debug!("set self reference called");
         self.transorm_reference = Some(reference.get_component().unwrap());
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 

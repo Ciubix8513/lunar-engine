@@ -8,6 +8,7 @@ use lunar_engine::{
     input,
     math::{mat4x4::Mat4x4, vec4::Vec4},
 };
+use lunar_engine_derive::as_any;
 use winit::keyboard::KeyCode;
 
 #[derive(Debug)]
@@ -33,6 +34,7 @@ impl FreeCam {
 }
 
 impl Component for FreeCam {
+    #[as_any]
     fn mew() -> Self
     where
         Self: Sized,
@@ -48,14 +50,6 @@ impl Component for FreeCam {
 
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
         self.transorm_reference = Some(reference.get_component().unwrap())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 
     fn update(&mut self) {
