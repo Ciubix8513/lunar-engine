@@ -84,7 +84,7 @@ pub type UUID = u128;
 ///
 ///ID must not be set before the asset is registered
 pub trait Asset: Send + Sync + std::any::Any {
-    ///Returns id of the entity
+    ///Returns id of the asset
     fn get_id(&self) -> UUID;
     ///Performs initialization of the asset
     ///
@@ -98,7 +98,7 @@ pub trait Asset: Send + Sync + std::any::Any {
     ///# Errors
     ///Returns an error if the id was already set
     fn set_id(&mut self, id: UUID) -> Result<(), Error>;
-    ///Returns wether or not the asset is initialized
+    ///Returns whether or not the asset is initialized
     fn is_initialized(&self) -> bool;
     //Will not be needed after Rust 1.75.0
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
