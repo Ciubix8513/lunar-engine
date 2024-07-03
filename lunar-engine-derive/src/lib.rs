@@ -15,7 +15,7 @@ fn comp_error(error: &str, item: TokenStream) -> TokenStream {
 ///Describes various struct types
 enum StructType {
     ///Normal struct
-    ///```
+    ///```ignore
     ///struct A {
     /// ...
     ///}
@@ -23,13 +23,13 @@ enum StructType {
     Regular,
     ///Tupple struct
     ///
-    ///```
+    ///```ignore
     ///struct A(...);
     ///```
     Tupple,
     ///Empty struct
     ///
-    ///```
+    ///```ignore
     ///struct A;
     ///```
     Empty,
@@ -95,7 +95,7 @@ fn is_struct_declaration(item: &TokenStream) -> Option<StructType> {
 ///component calls to the aliased component.
 ///
 ///# Examples
-///```
+///```ignore
 ///struct CopmonentA {
 /// ...
 ///}
@@ -234,7 +234,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///distinguish an entity.
 ///
 ///# Examples
-///```
+///```ignore
 ///#[marker_component]
 ///struct Marker;
 ///
@@ -309,7 +309,7 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///Defines dependencies of a component. Must be placed inside the `impl Component` block
 ///
 ///# Examples
-///```
+///```ignore
 ///struct Test;
 ///
 ///impl Component for Test {
@@ -367,4 +367,43 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into_iter()
         .chain(item)
         .collect::<TokenStream>()
+}
+
+#[proc_macro_attribute]
+///Implements `as_any` and `as_any_mut` functions for Components and Assets
+///
+///# Examples
+///```ignore
+///struct TestAsset{
+/// ...
+///}
+///
+///impl Asset for TestAsset{
+///#[as_any]
+/// ...
+///}
+///```
+///
+///```ignore
+///struct TestComponent{
+/// ...
+///}
+///
+///impl Component for TestComponent{
+///#[as_any]
+/// ...
+///}
+///```
+pub fn as_any(_: TokenStream, item: TokenStream) -> TokenStream {
+    let as_any =
+        " fn as_any(&self) -> &dyn std::any::Any { self as &dyn std::any::Any } ".to_string();
+    let as_any_mut =
+        " fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self as &mut dyn std::any::Any } ";
+
+    (as_any + as_any_mut)
+        .parse::<TokenStream>()
+        .unwrap()
+        .into_iter()
+        .chain(item)
+        .collect()
 }
