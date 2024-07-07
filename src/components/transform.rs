@@ -9,10 +9,14 @@ use crate::ecs::{Component, ComponentReference};
 ///Note: rotation is represented as Euler angles using degrees
 #[derive(Debug)]
 pub struct Transform {
+    ///Position of the object
     pub position: Vec3,
+    ///Rotation of the object
     pub rotation: Vec3,
+    ///Scale of the object
     pub scale: Vec3,
-    parent: Option<ComponentReference<Self>>,
+    ///Parent transform of the object
+    pub parent: Option<ComponentReference<Self>>,
 }
 
 impl Default for Transform {
@@ -84,8 +88,8 @@ impl Transform {
         }
     }
 
-    //Returns transformation matrix of the entity, without taking the parent transformation into
-    //account
+    ///Returns transformation matrix of the entity, without taking the parent transformation into
+    ///account
     #[must_use]
     pub fn matrix_local(&self) -> Mat4x4 {
         Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)

@@ -162,6 +162,7 @@ pub type AssetGuard<'a, T> = lock_api::MappedRwLockReadGuard<'a, parking_lot::Ra
 pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot::RawRwLock, T>;
 
 impl<T> AssetReference<T> {
+    ///Borrows the asset immutably
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
@@ -170,6 +171,7 @@ impl<T> AssetReference<T> {
         )
     }
 
+    ///Borrows the asset mutably
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(

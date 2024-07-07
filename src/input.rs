@@ -1,3 +1,4 @@
+//! Functions for getting user input
 use std::sync::{OnceLock, RwLock};
 
 use vec_key_value_pair::map::VecMap;
@@ -121,9 +122,9 @@ pub(crate) fn update() {
 ///Defines behaviour of the cursor inside the window
 #[derive(Clone, Copy)]
 pub enum CursorState {
-    //Cursor is locked to the window
+    ///Cursor is locked in place
     Locked,
-    //Cursor is free
+    ///Cursor is free
     Free,
 }
 

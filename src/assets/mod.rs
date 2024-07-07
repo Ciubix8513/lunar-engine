@@ -16,7 +16,10 @@ pub use mesh::Mesh;
 pub use texture::Texture;
 
 #[derive(Clone, Copy)]
+///Represents bindroup state of an asset that contains gpu related data
 pub enum BindgroupState {
+    ///Bindgroups are not initialized
     Uninitialized,
+    ///Bindgroups are initialized
     Initialized,
 }

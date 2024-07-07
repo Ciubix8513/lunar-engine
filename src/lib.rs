@@ -93,7 +93,7 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 
-//Exits the application and closes the window
+///Exits the application and closes the window
 pub fn quit() {
     QUIT.set(true).unwrap();
 }

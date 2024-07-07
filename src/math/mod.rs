@@ -1,3 +1,6 @@
+//! The math library
+//!
+//! Contains implementations of vectors with length 2,3,4 and 4x4 matrices
 mod mat4x4;
 mod quaternion;
 #[cfg(test)]
