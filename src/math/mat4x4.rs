@@ -6,6 +6,7 @@ use crate::math::vec3::Vec3;
 
 use super::traits::Vector;
 
+#[allow(missing_docs)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
 ///A 4 by 4 matrix of `f32`
@@ -30,30 +31,14 @@ pub struct Mat4x4 {
 
 impl Default for Mat4x4 {
     fn default() -> Self {
-        Self {
-            m00: 1.0,
-            m01: Default::default(),
-            m02: Default::default(),
-            m03: Default::default(),
-            m10: Default::default(),
-            m11: 1.0,
-            m12: Default::default(),
-            m13: Default::default(),
-            m20: Default::default(),
-            m21: Default::default(),
-            m22: 1.0,
-            m23: Default::default(),
-            m30: Default::default(),
-            m31: Default::default(),
-            m32: Default::default(),
-            m33: 1.0,
-        }
+        Self::identity()
     }
 }
 
 
 impl Mat4x4 {
 
+///Identity matrix
 pub const fn identity() -> Self {
         Self {
     m00: 1.0,
@@ -74,6 +59,7 @@ pub const fn identity() -> Self {
     m33: 1.0,}
 }
     #[must_use]
+    ///Creates a new matrix with the given data
     pub const fn new(
         m00: f32,
         m01: f32,
@@ -112,6 +98,7 @@ pub const fn identity() -> Self {
         }
     }
     #[must_use]
+    ///Tranasposes the matrix, consuming it in the process
     pub const fn transpose(self) -> Self {
         Self {
             m00: self.m00,
