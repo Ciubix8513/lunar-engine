@@ -68,11 +68,12 @@ pub mod input;
 pub mod internal;
 mod logging;
 pub mod math;
+pub mod rendering;
+///Various structures
 pub mod structures;
-pub mod system;
 #[cfg(test)]
 mod test_utils;
-pub mod windowing;
+mod windowing;
 #[cfg(target_arch = "wasm32")]
 mod wrappers;
 

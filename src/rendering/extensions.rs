@@ -14,8 +14,11 @@ use crate::{
     DEVICE, STAGING_BELT,
 };
 
+///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
+    ///Color buffer
     pub color: wgpu::TextureView,
+    ///Depth stencil buffer
     pub depth_stencil: wgpu::TextureView,
 }
 
@@ -23,6 +26,7 @@ pub struct AttachmentData {
 ///
 ///Allows for extending the renderer
 pub trait RenderingExtension {
+    ///Uses the extension to render scene
     fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
@@ -31,12 +35,13 @@ pub trait RenderingExtension {
         attachments: &AttachmentData,
     );
 
-    fn get_order(&self) -> u32;
+    ///Returns the priority of the extension, extensions with smaller priorities are rendered first.
+    fn get_priority(&self) -> u32;
 }
 
 impl std::cmp::PartialEq for dyn RenderingExtension {
     fn eq(&self, other: &Self) -> bool {
-        self.get_order().eq(&other.get_order())
+        self.get_priority().eq(&other.get_priority())
     }
 }
 
@@ -50,13 +55,33 @@ impl std::cmp::PartialOrd for dyn RenderingExtension {
 
 impl std::cmp::Ord for dyn RenderingExtension {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.get_order().cmp(&other.get_order())
+        self.get_priority().cmp(&other.get_priority())
     }
 }
 
 #[derive(Default)]
+///Basic renderer that renders all [`crate::components::mesh::Mesh`] components
+///
+///# Usage
+///```
+///# use lunar_engine::rendering::extensions::Base;
+///# use lunar_engine::rendering::render;
+///# struct State {world: lunar_engine::ecs::World, assets: lunar_engine::asset_managment::AssetStore, extension: Base}
+///
+///fn init(state: &mut State) {
+/// state.extension = Base::default();
+///}
+///
+///fn update(state: &mut State) {
+/// render(
+///   &state.world,
+///   &state.assets,
+///   &mut [&mut state.extension]
+///  );
+///}
+///```
 pub struct Base {
-    order: u32,
+    priority: u32,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
@@ -67,9 +92,10 @@ pub struct Base {
 
 impl Base {
     #[must_use]
+    ///Creates a new [`Base`]
     pub const fn new(order: u32) -> Self {
         Self {
-            order,
+            priority: order,
             identifier: Vec::new(),
             v_buffers: Vec::new(),
             mesh_materials: Vec::new(),
@@ -219,7 +245,7 @@ impl RenderingExtension for Base {
                         old = m.1 .1;
                     }
                 }
-                //Again insure at least one window
+                //Again ensure there's at least one window
                 material_split_points.push(current_window.len());
 
                 let mut last = MeshMaterial {
@@ -391,7 +417,7 @@ impl RenderingExtension for Base {
         drop(render_pass);
     }
 
-    fn get_order(&self) -> u32 {
-        self.order
+    fn get_priority(&self) -> u32 {
+        self.priority
     }
 }
