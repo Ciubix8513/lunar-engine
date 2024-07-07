@@ -132,3 +132,77 @@ fn test_transpose() {
     let expected = -80.0;
     assert_eq!(o, expected);
 }
+
+#[test]
+fn test_vec2_dot_product() {
+    let a = Vec2::new(1.0, 0.0);
+    let b = Vec2::new(0.0, 1.0);
+
+    let expected = 0.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+    let a = Vec2::new(1.0, 0.0);
+    let b = Vec2::new(1.0, 0.0);
+
+    let expected = 1.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+}
+
+#[test]
+fn test_vec2_length() {
+    let a = Vec2::new(1.0, 2.0);
+    assert_eq!(a.square_length(), 5.0);
+}
+
+#[test]
+fn test_vec3_dot_product() {
+    let a = Vec3::new(1.0, 0.0, 0.0);
+    let b = Vec3::new(0.0, 1.0, 0.0);
+
+    let expected = 0.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+    let a = Vec3::new(1.0, 0.0, 0.0);
+    let b = Vec3::new(1.0, 0.0, 0.0);
+
+    let expected = 1.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+}
+
+#[test]
+fn test_vec3_length() {
+    let a = Vec3::new(1.0, 2.0, 2.0);
+    assert_eq!(a.square_length(), 9.0);
+    assert_eq!(a.length(), 3.0);
+}
+
+#[test]
+fn test_vec4_dot_product() {
+    let a = Vec4::new(1.0, 0.0, 0.0, 0.0);
+    let b = Vec4::new(0.0, 1.0, 0.0, 0.0);
+
+    let expected = 0.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+    let a = Vec4::new(1.0, 0.0, 0.0, 0.0);
+    let b = Vec4::new(1.0, 0.0, 0.0, 0.0);
+
+    let expected = 1.0;
+    let result = a.dot_product(&b);
+
+    assert_eq!(expected, result);
+}
+
+#[test]
+fn test_vec4_length() {
+    let a = Vec4::new(1.0, 2.0, 2.0, 0.0);
+    assert_eq!(a.square_length(), 9.0);
+    assert_eq!(a.length(), 3.0);
+}

@@ -6,6 +6,7 @@ use rand::Rng;
 pub use crate::math::traits::Vector;
 
 #[repr(C)]
+#[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 3 dimensions
 pub struct Vec3 {
@@ -16,10 +17,12 @@ pub struct Vec3 {
 
 impl Vec3 {
     #[must_use]
+    ///Creates a new vector
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
     #[must_use]
+    ///Cross product of the vector and another vector
     pub fn cross(&self, other: &Self) -> Self {
         Self::new(
             self.y.mul_add(other.z, -self.z * other.y),
@@ -28,6 +31,7 @@ impl Vec3 {
         )
     }
     #[must_use]
+    ///Creates a random vector with values being in the given range
     pub fn random(min: f32, max: f32) -> Self {
         let mut random = rand::thread_rng();
         Self {
@@ -97,29 +101,4 @@ impl From<f32> for Vec3 {
             z: value,
         }
     }
-}
-
-#[test]
-fn test_vec3_dot_product() {
-    let a = Vec3::new(1.0, 0.0, 0.0);
-    let b = Vec3::new(0.0, 1.0, 0.0);
-
-    let expected = 0.0;
-    let result = a.dot_product(&b);
-
-    assert_eq!(expected, result);
-    let a = Vec3::new(1.0, 0.0, 0.0);
-    let b = Vec3::new(1.0, 0.0, 0.0);
-
-    let expected = 1.0;
-    let result = a.dot_product(&b);
-
-    assert_eq!(expected, result);
-}
-
-#[test]
-fn test_vec3_length() {
-    let a = Vec3::new(1.0, 2.0, 2.0);
-    assert_eq!(a.square_length(), 9.0);
-    assert_eq!(a.length(), 3.0);
 }

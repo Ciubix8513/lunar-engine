@@ -98,7 +98,7 @@ pub const fn identity() -> Self {
         }
     }
     #[must_use]
-    ///Tranasposes the matrix, consuming it in the process
+    ///Transposes the matrix, consuming it in the process
     pub const fn transpose(self) -> Self {
         Self {
             m00: self.m00,
