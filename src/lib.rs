@@ -37,7 +37,7 @@
 //! }
 //! ```
 //!
-
+#![deny(missing_docs)]
 #![allow(
     clippy::needless_doctest_main,
     clippy::cast_possible_truncation,
