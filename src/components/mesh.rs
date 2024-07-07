@@ -5,7 +5,7 @@ use lunar_engine_derive::as_any;
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    math::mat4x4::Mat4x4,
+    math::Mat4x4,
 };
 
 use super::transform::Transform;

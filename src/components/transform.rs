@@ -1,6 +1,6 @@
 use lunar_engine_derive::as_any;
 
-use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
+use crate::math::{Mat4x4, Vec3};
 
 use crate::ecs::{Component, ComponentReference};
 

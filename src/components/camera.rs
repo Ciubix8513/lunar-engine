@@ -9,7 +9,7 @@ use crate as lunar_engine;
 use crate::{
     ecs::{Component, ComponentReference},
     grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
-    math::{mat4x4::Mat4x4, vec4::Vec4},
+    math::{Mat4x4, Vec4},
     DEVICE, RESOLUTION, STAGING_BELT,
 };
 

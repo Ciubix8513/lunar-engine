@@ -378,7 +378,7 @@ impl<T> ApplicationHandler for State<T> {
                 device_id: _,
                 position,
             } => {
-                input::set_cursor_position(math::vec2::Vec2 {
+                input::set_cursor_position(math::Vec2 {
                     x: position.x as f32,
                     y: position.y as f32,
                 });

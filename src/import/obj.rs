@@ -1,6 +1,6 @@
 #![allow(clippy::cast_possible_truncation)]
 use crate::{
-    math::{vec2::Vec2, vec3::Vec3},
+    math::{Vec2, Vec3},
     structures::{Mesh, Vertex},
 };
 

@@ -63,7 +63,7 @@ pub fn create_uniform_matrix(label: Option<&str>) -> wgpu::Buffer {
 
     device.create_buffer(&wgpu::BufferDescriptor {
         label,
-        size: std::mem::size_of::<crate::math::mat4x4::Mat4x4>() as u64,
+        size: std::mem::size_of::<crate::math::Mat4x4>() as u64,
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     })

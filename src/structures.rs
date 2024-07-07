@@ -1,6 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 
-use crate::math::{vec2::Vec2, vec3::Vec3, vec4::Vec4};
+use crate::math::{Vec2, Vec3, Vec4};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Pod, Zeroable)]

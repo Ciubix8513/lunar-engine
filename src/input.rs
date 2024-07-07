@@ -3,7 +3,7 @@ use std::sync::{OnceLock, RwLock};
 use vec_key_value_pair::map::VecMap;
 use winit::{dpi::PhysicalPosition, event::MouseButton, keyboard::KeyCode, window::CursorGrabMode};
 
-use crate::{math::vec2::Vec2, WINDOW};
+use crate::{math::Vec2, WINDOW};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 ///Represents the state of the key
