@@ -39,6 +39,7 @@ impl Default for Mat4x4 {
 impl Mat4x4 {
 
 ///Identity matrix
+#[must_use]
 pub const fn identity() -> Self {
         Self {
     m00: 1.0,
@@ -283,6 +284,7 @@ pub const fn identity() -> Self {
     }
 
     ///Returns the trace of the matrix
+    #[must_use]
     pub fn trace(&self) -> f32 {
         self.m00 + self.m11 + self.m22 + self.m33
     }

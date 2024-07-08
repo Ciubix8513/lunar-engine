@@ -169,7 +169,7 @@ async fn req_device<'a>(
     adapter.request_device(descriptor, None).await
 }
 
-pub(crate) fn get_depth_descriptor<'a>(width: u32, height: u32) -> wgpu::TextureDescriptor<'a> {
+pub fn get_depth_descriptor<'a>(width: u32, height: u32) -> wgpu::TextureDescriptor<'a> {
     wgpu::TextureDescriptor {
         label: Some("Depth stencil"),
         size: wgpu::Extent3d {

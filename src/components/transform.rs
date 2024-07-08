@@ -63,11 +63,12 @@ impl Transform {
     }
 
     ///Creates a new transform instance, with a parent
-    pub fn with_parent(
+    #[must_use]
+    pub const fn with_parent(
         position: Vec3,
         rotation: Vec3,
         scale: Vec3,
-        parent: ComponentReference<Transform>,
+        parent: ComponentReference<Self>,
     ) -> Self {
         Self {
             position,
@@ -80,12 +81,14 @@ impl Transform {
     ///Returns transformation of the entity taking transform of the parent into account
     #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
-        if let Some(p) = &self.parent {
-            let parent_mat = p.borrow().matrix();
-            parent_mat * Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
-        } else {
-            Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
-        }
+        self.parent.as_ref().map_or_else(
+            || Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation),
+            |p| {
+                let parent_mat = p.borrow().matrix();
+                parent_mat
+                    * Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
+            },
+        )
     }
 
     ///Returns transformation matrix of the entity, without taking the parent transformation into
@@ -96,7 +99,7 @@ impl Transform {
     }
 
     ///Sets the parent of the entity, applying all parent transformations to this entity
-    pub fn set_parent(mut self, p: ComponentReference<Transform>) {
+    pub fn set_parent(mut self, p: ComponentReference<Self>) {
         self.parent = Some(p);
     }
 }

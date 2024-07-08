@@ -1,6 +1,10 @@
 //! Proc macros for easier use of the ECS
 
-#![allow(clippy::missing_panics_doc, clippy::collapsible_if)]
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::collapsible_if,
+    clippy::too_many_lines
+)]
 use proc_macro::{Group, Punct, TokenStream, TokenTree};
 
 ///Adds a `compile_error` with the defined message, before the provided token stream

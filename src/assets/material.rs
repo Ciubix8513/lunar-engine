@@ -5,6 +5,7 @@ use crate::asset_managment::{Asset, AssetStore, UUID};
 use super::BindgroupState;
 
 ///Trait for implementing materials
+#[allow(clippy::module_name_repetitions)]
 pub trait MaterialTrait {
     ///Render function of the material
     fn render(&self, render_pass: &mut wgpu::RenderPass);

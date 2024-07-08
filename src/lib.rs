@@ -50,6 +50,7 @@ use std::{
 };
 
 use chrono::DateTime;
+#[allow(clippy::wildcard_imports)]
 use internal::*;
 use wgpu::SurfaceConfiguration;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
@@ -123,7 +124,7 @@ impl<T: Default> Default for State<T> {
             surface_config: OnceCell::default(),
             contents: Default::default(),
             closed: Default::default(),
-            frame_start: Default::default(),
+            frame_start: None,
             init: None,
             run: None,
             end: None,
@@ -319,7 +320,7 @@ impl<T> ApplicationHandler for State<T> {
         if self.first_resume {
             return;
         }
-        self.initialize(event_loop)
+        self.initialize(event_loop);
     }
 
     fn window_event(
