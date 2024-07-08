@@ -1,4 +1,6 @@
-use crate::math::{mat4x4::Mat4x4, vec3::Vec3};
+use lunar_engine_derive::as_any;
+
+use crate::math::{Mat4x4, Vec3};
 
 use crate::ecs::{Component, ComponentReference};
 
@@ -7,10 +9,14 @@ use crate::ecs::{Component, ComponentReference};
 ///Note: rotation is represented as Euler angles using degrees
 #[derive(Debug)]
 pub struct Transform {
+    ///Position of the object
     pub position: Vec3,
+    ///Rotation of the object
     pub rotation: Vec3,
+    ///Scale of the object
     pub scale: Vec3,
-    parent: Option<ComponentReference<Self>>,
+    ///Parent transform of the object
+    pub parent: Option<ComponentReference<Self>>,
 }
 
 impl Default for Transform {
@@ -29,6 +35,8 @@ impl Default for Transform {
 }
 
 impl Component for Transform {
+    #[as_any]
+
     fn mew() -> Self
     where
         Self: Sized,
@@ -39,12 +47,6 @@ impl Component for Transform {
             position: Vec3::default(),
             parent: None,
         }
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 
@@ -61,11 +63,12 @@ impl Transform {
     }
 
     ///Creates a new transform instance, with a parent
-    pub fn with_parent(
+    #[must_use]
+    pub const fn with_parent(
         position: Vec3,
         rotation: Vec3,
         scale: Vec3,
-        parent: ComponentReference<Transform>,
+        parent: ComponentReference<Self>,
     ) -> Self {
         Self {
             position,
@@ -78,23 +81,25 @@ impl Transform {
     ///Returns transformation of the entity taking transform of the parent into account
     #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
-        if let Some(p) = &self.parent {
-            let parent_mat = p.borrow().matrix();
-            parent_mat * Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
-        } else {
-            Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
-        }
+        self.parent.as_ref().map_or_else(
+            || Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation),
+            |p| {
+                let parent_mat = p.borrow().matrix();
+                parent_mat
+                    * Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
+            },
+        )
     }
 
-    //Returns transformation matrix of the entity, without taking the parent transformation into
-    //account
+    ///Returns transformation matrix of the entity, without taking the parent transformation into
+    ///account
     #[must_use]
     pub fn matrix_local(&self) -> Mat4x4 {
         Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
     }
 
     ///Sets the parent of the entity, applying all parent transformations to this entity
-    pub fn set_parent(mut self, p: ComponentReference<Transform>) {
+    pub fn set_parent(mut self, p: ComponentReference<Self>) {
         self.parent = Some(p);
     }
 }

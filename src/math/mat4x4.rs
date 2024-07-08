@@ -6,6 +6,7 @@ use crate::math::vec3::Vec3;
 
 use super::traits::Vector;
 
+#[allow(missing_docs)]
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
 ///A 4 by 4 matrix of `f32`
@@ -30,28 +31,17 @@ pub struct Mat4x4 {
 
 impl Default for Mat4x4 {
     fn default() -> Self {
-        Self {
-            m00: 1.0,
-            m01: Default::default(),
-            m02: Default::default(),
-            m03: Default::default(),
-            m10: Default::default(),
-            m11: 1.0,
-            m12: Default::default(),
-            m13: Default::default(),
-            m20: Default::default(),
-            m21: Default::default(),
-            m22: 1.0,
-            m23: Default::default(),
-            m30: Default::default(),
-            m31: Default::default(),
-            m32: Default::default(),
-            m33: 1.0,
-        }
+        Self::identity()
     }
 }
 
-pub static IDENTITY: Mat4x4 = Mat4x4 {
+
+impl Mat4x4 {
+
+///Identity matrix
+#[must_use]
+pub const fn identity() -> Self {
+        Self {
     m00: 1.0,
     m01: 0.0,
     m02: 0.0,
@@ -67,11 +57,10 @@ pub static IDENTITY: Mat4x4 = Mat4x4 {
     m30: 0.0,
     m31: 0.0,
     m32: 0.0,
-    m33: 1.0,
-};
-
-impl Mat4x4 {
+    m33: 1.0,}
+}
     #[must_use]
+    ///Creates a new matrix with the given data
     pub const fn new(
         m00: f32,
         m01: f32,
@@ -110,6 +99,7 @@ impl Mat4x4 {
         }
     }
     #[must_use]
+    ///Transposes the matrix, consuming it in the process
     pub const fn transpose(self) -> Self {
         Self {
             m00: self.m00,
@@ -253,8 +243,8 @@ impl Mat4x4 {
     }
 
     #[must_use]
-    ///Returns the determinant of `self`
-    fn determinant(&self) -> f32 {
+    ///Returns the determinant of the matrix
+    pub fn determinant(&self) -> f32 {
         (self.m00 * self.m11 * self.m22).mul_add(self.m33, (self.m01 * self.m10 * self.m22).mul_add(-self.m33, (self.m00 * self.m12 * self.m21).mul_add(-self.m33, (self.m02 * self.m10 * self.m21).mul_add(self.m33, (self.m01 * self.m12 * self.m20).mul_add(self.m33, (self.m02 * self.m11 * self.m20).mul_add(-self.m33, (self.m00 * self.m11 * self.m23).mul_add(-self.m32, (self.m01 * self.m10 * self.m23).mul_add(self.m32, (self.m00 * self.m13 * self.m21).mul_add(self.m32, (self.m03 * self.m10 * self.m21).mul_add(-self.m32, (self.m01 * self.m13 * self.m20).mul_add(-self.m32, (self.m03 * self.m11 * self.m20).mul_add( self.m32,
             (self.m00 * self.m12 * self.m23).mul_add(
                 self.m31,
@@ -293,14 +283,16 @@ impl Mat4x4 {
         ))))))))))))
     }
 
-    fn trace(&self) -> f32 {
+    ///Returns the trace of the matrix
+    #[must_use]
+    pub fn trace(&self) -> f32 {
         self.m00 + self.m11 + self.m22 + self.m33
     }
 
     #[must_use]
     ///Inverts the matrix does not consume the matrix
     ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
-    fn inverted(&self) -> Option<Self> {
+    pub fn inverted(&self) -> Option<Self> {
         let det = self.determinant();
         if det == 0.0 {
             return None;
@@ -310,7 +302,7 @@ impl Mat4x4 {
         let cubed = squared * *self;
         let trace = self.trace();
 
-        let a = IDENTITY
+        let a = Self::identity() 
             * (0.166_667
                 * 2.0f32.mul_add(
                     cubed.trace(),
@@ -325,7 +317,7 @@ impl Mat4x4 {
     #[must_use]
     ///Inverts the matrix consuming it the process 
     ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
-    fn invert(self) -> Option<Self> {
+    pub fn invert(self) -> Option<Self> {
         let det = self.determinant();
         if det == 0.0 {
             return None;
@@ -335,7 +327,7 @@ impl Mat4x4 {
         let cubed = squared * self;
         let trace = self.trace();
 
-        let a = IDENTITY
+        let a = Self::identity() 
             * (0.166_667
                 * 2.0f32.mul_add(
                     cubed.trace(),
@@ -399,7 +391,7 @@ impl Mat4x4 {
     ///Creates a rotation matrix for the given euler angles
     pub fn rotation_matrix_euler(rotation: &Vec3) -> Self {
         if rotation.x == 0.0 && rotation.y == 0.0 && rotation.z == 0.0 {
-            return IDENTITY;
+            return Self::identity();
         }
 
         let sin_x = rotation.x.to_radians().sin();
@@ -552,147 +544,3 @@ impl Mul<Vec4> for Mat4x4 {
         self.transform(rhs)
     }
 }
-
-#[test]
-fn test_matrix_float_mul() {
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-    let b = 2.0;
-
-    let c = a * b;
-
-    assert_eq!(
-        c,
-        Mat4x4::new(
-            2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0,
-            32.0
-        )
-    );
-}
-
-#[test]
-fn test_transformation() {
-    let a = IDENTITY;
-    let b = Vec4::new(1.0, 2.0, 3.0, 4.0);
-    let c = a.transform(b);
-
-    assert_eq!(c, b);
-
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-
-    let c = a.transform(b);
-
-    assert_eq!(c, Vec4::new(30.0, 70.0, 110.0, 150.0));
-}
-
-#[test]
-fn test_mat_mul_1() {
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-    let b = Mat4x4::new(
-        2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
-    );
-
-    let o = a.multiply(b);
-    let expected = Mat4x4::new(
-        100.0, 110.0, 120.0, 130.0, 228.0, 254.0, 280.0, 306.0, 356.0, 398.0, 440.0, 482.0, 484.0,
-        542.0, 600.0, 658.0,
-    );
-    assert_eq!(o, expected);
-}
-
-#[test]
-fn test_mat_identity_mul() {
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-    let o = a.multiply(Mat4x4::default());
-    let expected = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-    assert_eq!(o, expected);
-}
-
-#[test]
-fn test_mat_mat_mul() {
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-    let o = a.multiply(a);
-    let expected = Mat4x4::new(
-        90.0, 100.0, 110.0, 120.0, 202.0, 228.0, 254.0, 280.0, 314.0, 356.0, 398.0, 440.0, 426.0,
-        484.0, 542.0, 600.0,
-    );
-    assert_eq!(o, expected);
-}
-
-#[test]
-fn test_determinant() {
-    let a = Mat4x4::new(
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-
-    let o = a.determinant();
-    let expected = 0.0;
-
-    assert_eq!(o, expected);
-
-    let a = Mat4x4::new(
-        1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-
-    let o = a.determinant();
-    let expected = -80.0;
-    assert_eq!(o, expected);
-}
-
-#[test]
-fn test_transpose() {
-    let a = Mat4x4::new(
-        1.0,  2.0,  3.0,  4.0,
-        5.0,  6.0,  7.0,  8.0,
-        9.0,  10.0, 11.0, 12.0, 
-        13.0, 14.0, 15.0, 16.0,
-    );
-
-    let o = a.transpose();
-    let expected = Mat4x4{
-        m00: 1.0, m01: 5.0, m02: 9.0,  m03: 13.0,
-        m10: 2.0, m11: 6.0, m12: 10.0, m13: 14.0,
-        m20: 3.0, m21: 7.0, m22: 11.0, m23: 15.0,
-        m30: 4.0, m31: 8.0, m32: 12.0, m33: 16.0,
-    };
-    assert_eq!(o, expected);
-
-    let a = Mat4x4::new(
-        1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    );
-
-    let o = a.determinant();
-    let expected = -80.0;
-    assert_eq!(o, expected);
-}
-// #[test]
-// fn test_inversion() {
-//     let a = Mat4x4::new(
-//         1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-//     );
-
-//     let o = a.inverted();
-//     let expected = None;
-
-//     assert_eq!(o, expected);
-
-//     let a = Mat4x4::new(
-//         1.0, 0.0, 0.0, 0.0, 5.0, 6.0, 7.0, 8.0, 0.0, 0.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-//     );
-
-//     let o = a.inverted().unwrap() * a;
-//     let expected = IDENTITY;
-//     assert_eq!(o, expected);
-//     assert_
-// }

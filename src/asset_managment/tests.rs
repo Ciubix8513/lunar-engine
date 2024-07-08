@@ -1,3 +1,5 @@
+use lunar_engine_derive::as_any;
+
 use super::*;
 
 struct TestAsset {
@@ -16,6 +18,7 @@ impl TestAsset {
 }
 
 impl Asset for TestAsset {
+    #[as_any]
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }
@@ -38,14 +41,6 @@ impl Asset for TestAsset {
             self.id = Some(id);
             Ok(())
         }
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 
     fn is_initialized(&self) -> bool {

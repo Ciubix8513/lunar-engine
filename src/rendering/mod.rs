@@ -1,14 +1,13 @@
-//! Contains the rendering system, used with the ecs
+//! The rendering system, used with the ecs
 //!
 //! # Rendering system
 //!
 //! A scene consists of a world and an asset store.
+//! The asset store SHOULD consists only of the assets needed for the scene, however they MAY
+//! contain other assets.
 //!
-//! The asset store consists ONLY of the assets needed for the scene, nothing else.
-//!
-//! The render function accepts a world and an asset store
-//!
-//! The rendering function gets the asset ids and queries them from the store
+//! The render function accepts a world and an asset store.
+//! The rendering function gets the asset ids and queries them from the store.
 
 use log::trace;
 
@@ -18,6 +17,7 @@ use crate::{
 
 use self::extensions::{AttachmentData, RenderingExtension};
 
+///System for making custom renderers for objects, also contains implemented rendering extensions
 pub mod extensions;
 
 ///Renders all the entities in the world

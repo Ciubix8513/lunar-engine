@@ -5,7 +5,7 @@ use vec_key_value_pair::map::VecMap;
 use wgpu::{util::StagingBelt, Backends, Surface, SurfaceConfiguration, Texture};
 use winit::window::Window;
 
-use crate::{input::InputState, math::vec2::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
+use crate::{input::InputState, math::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
 
 pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();
@@ -169,7 +169,7 @@ async fn req_device<'a>(
     adapter.request_device(descriptor, None).await
 }
 
-pub(crate) fn get_depth_descriptor<'a>(width: u32, height: u32) -> wgpu::TextureDescriptor<'a> {
+pub fn get_depth_descriptor<'a>(width: u32, height: u32) -> wgpu::TextureDescriptor<'a> {
     wgpu::TextureDescriptor {
         label: Some("Depth stencil"),
         size: wgpu::Extent3d {

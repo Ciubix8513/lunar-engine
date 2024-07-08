@@ -84,7 +84,7 @@ pub type UUID = u128;
 ///
 ///ID must not be set before the asset is registered
 pub trait Asset: Send + Sync + std::any::Any {
-    ///Returns id of the entity
+    ///Returns id of the asset
     fn get_id(&self) -> UUID;
     ///Performs initialization of the asset
     ///
@@ -98,13 +98,14 @@ pub trait Asset: Send + Sync + std::any::Any {
     ///# Errors
     ///Returns an error if the id was already set
     fn set_id(&mut self, id: UUID) -> Result<(), Error>;
-    ///Returns wether or not the asset is initialized
+    ///Returns whether or not the asset is initialized
     fn is_initialized(&self) -> bool;
     //Will not be needed after Rust 1.75.0
     //Cannot be implemented automatically, well... likely can be, but i can't be bothered
     ///Converts trait object to a `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     ///# use lunar_engine::asset_managment::Asset;
     ///# use std::any::Any;
@@ -126,7 +127,8 @@ pub trait Asset: Send + Sync + std::any::Any {
     fn as_any(&self) -> &dyn std::any::Any;
     ///Converts trait object to a mutable `std::any::Any` reference
     ///
-    ///This function should be implemented as follows
+    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
+    ///Alternatively this function should be implemented as follows
     ///```
     ///# use lunar_engine::asset_managment::Asset;
     ///# use std::any::Any;
@@ -160,6 +162,7 @@ pub type AssetGuard<'a, T> = lock_api::MappedRwLockReadGuard<'a, parking_lot::Ra
 pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot::RawRwLock, T>;
 
 impl<T> AssetReference<T> {
+    ///Borrows the asset immutably
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
@@ -168,6 +171,7 @@ impl<T> AssetReference<T> {
         )
     }
 
+    ///Borrows the asset mutably
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(

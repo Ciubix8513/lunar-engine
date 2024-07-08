@@ -1,5 +1,6 @@
 use std::ops::Div;
 
+///Trait all vectors must implement
 pub trait Vector: Div<f32> + Sized + Copy {
     ///Returns squared length of the vector, much faster than `length()`
     fn square_length(&self) -> f32;

@@ -1,14 +1,17 @@
 #![allow(dead_code)]
 
+use lunar_engine_derive::as_any;
+
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    math::mat4x4::Mat4x4,
+    math::Mat4x4,
 };
 
 use super::transform::Transform;
 
 #[derive(Debug, Default)]
+///Mesh component used for rendering
 pub struct Mesh {
     mesh_id: Option<UUID>,
     material_id: Option<UUID>,
@@ -16,19 +19,13 @@ pub struct Mesh {
 }
 
 impl Component for Mesh {
+    #[as_any]
+
     fn mew() -> Self
     where
         Self: Sized,
     {
         Self::default()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 
     #[allow(unused_variables)]
@@ -39,6 +36,7 @@ impl Component for Mesh {
 
 impl Mesh {
     #[must_use]
+    ///Creates a new mesh with the given mesh and material ids
     pub const fn new(mesh: UUID, material: UUID) -> Self {
         Self {
             mesh_id: Some(mesh),
@@ -75,7 +73,7 @@ impl Mesh {
     }
 
     #[must_use]
-    pub fn get_matrix(&self) -> Mat4x4 {
+    pub(crate) fn get_matrix(&self) -> Mat4x4 {
         self.transform_reference
             .as_ref()
             .unwrap()

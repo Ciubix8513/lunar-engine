@@ -37,7 +37,7 @@
 //! }
 //! ```
 //!
-
+#![deny(missing_docs)]
 #![allow(
     clippy::needless_doctest_main,
     clippy::cast_possible_truncation,
@@ -50,16 +50,13 @@ use std::{
 };
 
 use chrono::DateTime;
+#[allow(clippy::wildcard_imports)]
+use internal::*;
 use wgpu::SurfaceConfiguration;
-use winit::{
-    application::ApplicationHandler,
-    dpi::{PhysicalPosition, PhysicalSize},
-    event,
-    window::CursorGrabMode,
-};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
 
 #[cfg(target_arch = "wasm32")]
-use wrappers::WgpuWrapper;
+use crate::wrappers::WgpuWrapper;
 
 pub mod asset_managment;
 pub mod assets;
@@ -69,36 +66,18 @@ mod grimoire;
 mod helpers;
 pub mod import;
 pub mod input;
+pub mod internal;
 mod logging;
 pub mod math;
+pub mod rendering;
+///Various structures
 pub mod structures;
-pub mod system;
 #[cfg(test)]
 mod test_utils;
-pub mod windowing;
+mod windowing;
 #[cfg(target_arch = "wasm32")]
 mod wrappers;
 
-#[cfg(target_arch = "wasm32")]
-pub static DEVICE: OnceLock<wrappers::WgpuWrapper<wgpu::Device>> = OnceLock::new();
-#[cfg(target_arch = "wasm32")]
-pub static QUEUE: OnceLock<wrappers::WgpuWrapper<wgpu::Queue>> = OnceLock::new();
-
-#[cfg(not(target_arch = "wasm32"))]
-pub static DEVICE: OnceLock<wgpu::Device> = OnceLock::new();
-#[cfg(not(target_arch = "wasm32"))]
-pub static QUEUE: OnceLock<wgpu::Queue> = OnceLock::new();
-pub static FORMAT: OnceLock<wgpu::TextureFormat> = OnceLock::new();
-
-#[cfg(target_arch = "wasm32")]
-pub static STAGING_BELT: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::util::StagingBelt>>> =
-    OnceLock::new();
-#[cfg(not(target_arch = "wasm32"))]
-pub static STAGING_BELT: OnceLock<RwLock<wgpu::util::StagingBelt>> = OnceLock::new();
-pub static RESOLUTION: RwLock<PhysicalSize<u32>> = RwLock::new(PhysicalSize {
-    width: 0,
-    height: 0,
-});
 //TODO find a better way than just staticing it
 static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
 
@@ -115,87 +94,7 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 
-///Defines behaviour of the cursor inside the window
-#[derive(Clone, Copy)]
-pub enum CursorState {
-    //Cursor is locked to the window
-    Locked,
-    //Cursor is free
-    Free,
-}
-
-struct CursorStateInternal {
-    grab_mode: CursorState,
-    lock_failed: bool,
-    visible: bool,
-    modified: bool,
-}
-static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateInternal {
-    grab_mode: CursorState::Free,
-    lock_failed: false,
-    visible: true,
-    modified: false,
-});
-
-fn reset_cursor() {
-    let window = WINDOW.get().unwrap();
-
-    let pos = window.inner_size();
-    if let Err(e) = window.set_cursor_position(PhysicalPosition {
-        x: pos.width / 2,
-        y: pos.height / 2,
-    }) {
-        log::error!("Failed to move cursor {e}");
-    }
-}
-
-fn process_cursor() {
-    let mut state = CURSOR_STATE.write().unwrap();
-
-    if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
-        reset_cursor();
-    }
-
-    if !state.modified {
-        return;
-    }
-    state.modified = false;
-    let window = WINDOW.get().unwrap();
-
-    window.set_cursor_visible(state.visible);
-
-    let g_mode = state.grab_mode;
-    let res = window.set_cursor_grab(match g_mode {
-        CursorState::Locked => CursorGrabMode::Locked,
-        CursorState::Free => CursorGrabMode::None,
-    });
-    if let Err(e) = res {
-        match e {
-            winit::error::ExternalError::NotSupported(_) => {
-                //Once a lock has failed, it can never unfail, so no need to reset this
-                //afterwards :3
-                //
-                //This can only unfail if the user changes platform, buuuut, i literally don't
-                //think there's a way that could happen
-                state.lock_failed = true;
-                drop(state);
-
-                log::warn!("Failed to lock cursor, doing manually");
-                if let Err(e) = window.set_cursor_grab(CursorGrabMode::Confined) {
-                    log::error!("Cursor is fucked :3 {e}");
-                }
-                reset_cursor();
-            }
-
-            winit::error::ExternalError::Ignored => {
-                log::warn!("Cursor state change ignored");
-            }
-            winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
-        }
-    }
-}
-
-//Exits the application and closes the window
+///Exits the application and closes the window
 pub fn quit() {
     QUIT.set(true).unwrap();
 }
@@ -204,20 +103,6 @@ pub fn quit() {
 pub fn delta_time() -> f32 {
     *DELTA_TIME.read().unwrap()
 }
-
-//Sets the cursor grab mode
-// pub fn set_cursor_grab_mode(mode: CursorState) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.grab_mode = mode;
-//     state.modified = true;
-// }
-
-//Sets the cursor grab mode
-// pub fn set_cursor_visible(mode: bool) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.visible = mode;
-//     state.modified = true;
-// }
 
 ///Contains main state of the app
 #[allow(clippy::type_complexity)]
@@ -239,7 +124,7 @@ impl<T: Default> Default for State<T> {
             surface_config: OnceCell::default(),
             contents: Default::default(),
             closed: Default::default(),
-            frame_start: Default::default(),
+            frame_start: None,
             init: None,
             run: None,
             end: None,
@@ -286,7 +171,10 @@ impl<T: 'static> State<T> {
         }
 
         //Initialize logging first
-        logging::initialize_logging();
+
+        if logging::initialize_logging().is_err() {
+            log::warn!("Logger already initialized");
+        }
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
@@ -304,13 +192,8 @@ impl<T: 'static> State<T> {
         }
     }
 }
-
-impl<T> ApplicationHandler for State<T> {
-    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        if self.first_resume {
-            return;
-        }
-
+impl<T> State<T> {
+    fn initialize(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         #[cfg(not(target_arch = "wasm32"))]
         let attributes = winit::window::Window::default_attributes();
         let window;
@@ -383,6 +266,66 @@ impl<T> ApplicationHandler for State<T> {
         event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
     }
 
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        RESOLUTION.write().unwrap().width = size.width;
+        RESOLUTION.write().unwrap().height = size.height;
+        self.surface_config.get_mut().unwrap().width = size.width;
+        self.surface_config.get_mut().unwrap().height = size.height;
+        let device = DEVICE.get().unwrap();
+
+        SURFACE
+            .get()
+            .unwrap()
+            .write()
+            .unwrap()
+            .configure(device, self.surface_config.get().unwrap());
+        let desc = windowing::get_depth_descriptor(size.width, size.height);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+        }
+    }
+
+    fn redraw(&mut self) {
+        //Frame time includes the wait between frames
+        if let Some(start) = self.frame_start {
+            let finish = chrono::Local::now();
+
+            let delta = (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
+
+            *DELTA_TIME.write().unwrap() = delta;
+        }
+        self.frame_start = Some(chrono::Local::now());
+
+        input::process_cursor();
+
+        if self.closed {
+            //This should be fine but needs further testing
+            self.end.take().unwrap()(&mut self.contents);
+
+            return;
+        }
+        self.run.as_ref().unwrap()(&mut self.contents);
+        input::update();
+
+        WINDOW.get().unwrap().request_redraw();
+    }
+}
+
+impl<T> ApplicationHandler for State<T> {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if self.first_resume {
+            return;
+        }
+        self.initialize(event_loop);
+    }
+
     fn window_event(
         &mut self,
         event_loop: &winit::event_loop::ActiveEventLoop,
@@ -390,71 +333,18 @@ impl<T> ApplicationHandler for State<T> {
         event: event::WindowEvent,
     ) {
         match event {
-            event::WindowEvent::Resized(size) => {
-                RESOLUTION.write().unwrap().width = size.width;
-                RESOLUTION.write().unwrap().height = size.height;
-                self.surface_config.get_mut().unwrap().width = size.width;
-                self.surface_config.get_mut().unwrap().height = size.height;
-                let device = DEVICE.get().unwrap();
-
-                SURFACE
-                    .get()
-                    .unwrap()
-                    .write()
-                    .unwrap()
-                    .configure(device, self.surface_config.get().unwrap());
-                let desc = windowing::get_depth_descriptor(size.width, size.height);
-
-                #[cfg(target_arch = "wasm32")]
-                {
-                    **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
-                }
-
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
-                }
-
-                // let bpr = helpers::calculate_bpr(size.width, *FORMAT.get().unwrap());
-                // self.screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                //     label: Some("Screenshot buffer"),
-                //     size: bpr * size.height as u64,
-                //     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-                //     mapped_at_creation: false,
-                // });
-            }
+            event::WindowEvent::Resized(size) => self.resize(size),
             event::WindowEvent::CloseRequested => {
                 event_loop.exit();
                 self.closed = true;
             }
             event::WindowEvent::RedrawRequested => {
-                //Frame time includes the wait between frames
-                if let Some(start) = self.frame_start {
-                    let finish = chrono::Local::now();
-
-                    let delta =
-                        (finish - start).abs().num_microseconds().unwrap() as f32 / 1_000_000.0;
-
-                    *DELTA_TIME.write().unwrap() = delta;
-                }
-                self.frame_start = Some(chrono::Local::now());
-
-                process_cursor();
-
                 if QUIT.get().is_some() {
                     event_loop.exit();
                     self.closed = true;
                 }
-                if self.closed {
-                    //This should be fine but needs further testing
-                    self.end.take().unwrap()(&mut self.contents);
 
-                    return;
-                }
-                self.run.as_ref().unwrap()(&mut self.contents);
-                input::update();
-
-                WINDOW.get().unwrap().request_redraw();
+                self.redraw();
             }
             event::WindowEvent::KeyboardInput {
                 device_id: _,
@@ -492,7 +382,7 @@ impl<T> ApplicationHandler for State<T> {
                 device_id: _,
                 position,
             } => {
-                input::set_cursor_position(math::vec2::Vec2 {
+                input::set_cursor_position(math::Vec2 {
                     x: position.x as f32,
                     y: position.y as f32,
                 });

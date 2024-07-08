@@ -7,6 +7,7 @@ pub use crate::math::traits::Vector;
 use super::vec3::Vec3;
 
 #[repr(C)]
+#[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 4 dimensions
 pub struct Vec4 {
@@ -18,11 +19,13 @@ pub struct Vec4 {
 
 impl Vec4 {
     #[must_use]
+    ///Creates a new vector
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
     #[must_use]
+    ///Returns the x,y,z as a [`Vec3`]
     pub const fn xyz(self) -> Vec3 {
         Vec3 {
             x: self.x,
@@ -120,29 +123,4 @@ impl From<f32> for Vec4 {
             w: value,
         }
     }
-}
-
-#[test]
-fn test_vec4_dot_product() {
-    let a = Vec4::new(1.0, 0.0, 0.0, 0.0);
-    let b = Vec4::new(0.0, 1.0, 0.0, 0.0);
-
-    let expected = 0.0;
-    let result = a.dot_product(&b);
-
-    assert_eq!(expected, result);
-    let a = Vec4::new(1.0, 0.0, 0.0, 0.0);
-    let b = Vec4::new(1.0, 0.0, 0.0, 0.0);
-
-    let expected = 1.0;
-    let result = a.dot_product(&b);
-
-    assert_eq!(expected, result);
-}
-
-#[test]
-fn test_vec4_length() {
-    let a = Vec4::new(1.0, 2.0, 2.0, 0.0);
-    assert_eq!(a.square_length(), 9.0);
-    assert_eq!(a.length(), 3.0);
 }

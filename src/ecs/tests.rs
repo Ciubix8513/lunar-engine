@@ -1,4 +1,4 @@
-use lunar_engine_derive::{alias, dependencies};
+use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
 
@@ -10,6 +10,8 @@ struct TestComponent1 {
 }
 
 impl Component for TestComponent1 {
+    #[as_any]
+
     fn mew() -> Self
     where
         Self: Sized,
@@ -19,14 +21,6 @@ impl Component for TestComponent1 {
 
     fn update(&mut self) {
         self.value += 10;
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 
@@ -36,6 +30,7 @@ struct TestComponent {
 }
 
 impl Component for TestComponent {
+    #[as_any]
     fn mew() -> Self
     where
         Self: Sized,
@@ -45,13 +40,6 @@ impl Component for TestComponent {
 
     fn update(&mut self) {
         self.value += 10;
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 
@@ -65,18 +53,12 @@ impl std::fmt::Debug for TestComponent2 {
     }
 }
 impl Component for TestComponent2 {
+    #[as_any]
     fn mew() -> Self
     where
         Self: Sized,
     {
         Self { weak: None }
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
@@ -88,20 +70,13 @@ impl Component for TestComponent2 {
 struct TestComponent3;
 
 impl Component for TestComponent3 {
+    #[as_any]
     #[dependencies(TestComponent)]
     fn mew() -> Self
     where
         Self: Sized,
     {
         Self
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 

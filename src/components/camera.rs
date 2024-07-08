@@ -1,7 +1,7 @@
 use std::num::NonZeroU64;
 
 use log::debug;
-use lunar_engine_derive::{alias, dependencies};
+use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
 // use lunar_engine::ecs;
@@ -9,16 +9,20 @@ use crate as lunar_engine;
 use crate::{
     ecs::{Component, ComponentReference},
     grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
-    math::{mat4x4::Mat4x4, vec4::Vec4},
+    math::{Mat4x4, Vec4},
     DEVICE, RESOLUTION, STAGING_BELT,
 };
 
 use super::transform::Transform;
 
 #[derive(Debug, Default)]
+///Camera used for rendering of the objects
 pub struct Camera {
+    ///Fov of the camera in radians
     pub fov: f32,
+    ///Near plane of the camera
     pub near: f32,
+    ///Far plane of the camera
     pub far: f32,
     transorm_reference: Option<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
@@ -26,6 +30,7 @@ pub struct Camera {
 }
 
 impl Component for Camera {
+    #[as_any]
     #[dependencies(Transform)]
     fn mew() -> Self
     where
@@ -42,18 +47,11 @@ impl Component for Camera {
         debug!("set self reference called");
         self.transorm_reference = Some(reference.get_component().unwrap());
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
-    }
 }
 
 impl Camera {
     #[must_use]
+    ///Creates a new Camera
     pub fn new(fov: f32, near: f32, far: f32) -> Self {
         Self {
             fov,
@@ -64,6 +62,7 @@ impl Camera {
     }
 
     #[must_use]
+    ///Returns the transformation matrix of the camera multiplied by the projection matrix
     pub fn matrix(&self) -> Mat4x4 {
         let binding = self.transorm_reference.as_ref().unwrap();
         let transform = binding.borrow();
@@ -85,7 +84,8 @@ impl Camera {
         camera_matrix * projection_matrix
     }
 
-    pub fn initialize_gpu(&mut self) {
+    ///Initializes gpu related components of the camera: Buffers, bindgroups, etc.
+    pub(crate) fn initialize_gpu(&mut self) {
         let device = DEVICE.get().unwrap();
         let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
 
@@ -109,7 +109,8 @@ impl Camera {
         self.bind_group = Some(bind_group);
     }
 
-    pub fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    ///Updates the buffer of the camera with the new camera matrix
+    pub(crate) fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
 
         staging_belt
@@ -123,7 +124,8 @@ impl Camera {
             .copy_from_slice(bytemuck::bytes_of(&self.matrix()));
     }
 
-    pub fn set_bindgroup<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
+    ///Sets bindgroups of the camera for rendering
+    pub(crate) fn set_bindgroup<'a, 'b>(&'a self, render_pass: &mut wgpu::RenderPass<'b>)
     where
         'a: 'b,
     {

@@ -11,7 +11,7 @@ use lunar_engine::{
     system::rendering::{self, extensions::Base},
     State,
 };
-use lunar_engine_derive::{dependencies, marker_component};
+use lunar_engine_derive::{as_any, dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
 use crate::camera_movement::FreeCam;
@@ -37,6 +37,7 @@ struct Spiny {
 }
 
 impl Component for Spiny {
+    #[as_any]
     #[dependencies(Transform)]
 
     fn mew() -> Self
@@ -56,14 +57,6 @@ impl Component for Spiny {
     fn update(&mut self) {
         self.transform.as_ref().unwrap().borrow_mut().rotation.y +=
             self.speed * lunar_engine::delta_time();
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self as &dyn std::any::Any
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self as &mut dyn std::any::Any
     }
 }
 
