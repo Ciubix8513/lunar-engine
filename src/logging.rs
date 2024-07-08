@@ -15,10 +15,11 @@ fn parse_log_level(v: &str) -> log::LevelFilter {
 }
 
 #[allow(unused_mut)]
-pub fn initialize_logging() {
+pub fn initialize_logging() -> Result<(), lunar_logger::LoggerError> {
     let mut log_level = log::LevelFilter::Info;
     let mut engine_log_level = log::LevelFilter::Info;
     let mut wgpu_log_level = log::LevelFilter::Warn;
+    let mut wgpu_hal_log_level = log::LevelFilter::Warn;
 
     let mut log_to_file = false;
 
@@ -31,6 +32,7 @@ pub fn initialize_logging() {
                 "ENGINE_LOG_LEVEL" => engine_log_level = parse_log_level(&value),
                 "GENERATE_LOGS" => log_to_file = true,
                 "WGPU_LOG_LEVEL" => wgpu_log_level = parse_log_level(&value),
+                "WGPU_HAL_LOG_LEVEL" => wgpu_hal_log_level = parse_log_level(&value),
                 _ => {}
             }
         }
@@ -38,11 +40,11 @@ pub fn initialize_logging() {
 
     let mut b = lunar_logger::Builder::new()
         .add_crate_filter("wgpu", wgpu_log_level)
-        .add_crate_filter("wgpu_hal", wgpu_log_level)
+        .add_crate_filter("wgpu_hal", wgpu_hal_log_level)
         .add_crate_filter("lunar_engine", engine_log_level)
         .default_filter(log_level);
     if log_to_file {
         b = b.log_to_file();
     }
-    b.init().unwrap();
+    b.init()
 }

@@ -17,6 +17,8 @@ async fn gen_gpu_async(instance: &wgpu::Instance) -> (wgpu::Device, wgpu::Queue)
 
 ///Generates all the necessary gpu data for tests
 pub(crate) fn generate_gpu() {
+    _ = crate::logging::initialize_logging();
+
     let instance = wgpu::Instance::default();
     let (device, queue) = block_on(gen_gpu_async(&instance));
     #[cfg(not(target_arch = "wasm32"))]
