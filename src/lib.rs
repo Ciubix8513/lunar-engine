@@ -171,7 +171,10 @@ impl<T: 'static> State<T> {
         }
 
         //Initialize logging first
-        logging::initialize_logging();
+
+        if logging::initialize_logging().is_err() {
+            log::warn!("Logger already initialized");
+        }
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
