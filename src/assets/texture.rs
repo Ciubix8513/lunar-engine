@@ -8,8 +8,10 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     asset_managment::{Asset, UUID},
-    structures::Image,
+    helpers::flip_texture,
 };
+
+use lunar_png::Image;
 
 ///Stores texture data
 pub struct Texture {
@@ -45,6 +47,8 @@ enum Static {
 enum ImageFormat {
     ///.bmp bitmap(only 32 bpp without compression)
     Bmp,
+    ///.png image
+    Png,
 }
 
 #[allow(unused_variables)]
@@ -90,6 +94,47 @@ impl Texture {
         }
     }
 
+    ///Initializes a texture to load a png file in runtime
+    ///
+    ///Currently unsupported on the web target
+    ///
+    #[must_use]
+    pub fn new_png(path: &Path) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            image_format: ImageFormat::Png,
+            filepath: Some(path.to_owned()),
+            r#static: Static::No,
+            mip_count: 1,
+            sample_count: 1,
+            adress_mode: wgpu::AddressMode::ClampToEdge,
+            filter: wgpu::FilterMode::Linear,
+            sampler: None,
+            texture: None,
+        }
+    }
+
+    ///Initializes a texture to parse the texture in runtime, but being loaded at comp time
+    ///
+    ///Is only supposed to be used for small textures that are always needed
+    #[must_use]
+    pub fn static_png(data: &'static [u8]) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            image_format: ImageFormat::Png,
+            filepath: None,
+            r#static: Static::Yes(data.to_vec(), None),
+            mip_count: 1,
+            sample_count: 1,
+            adress_mode: wgpu::AddressMode::ClampToEdge,
+            filter: wgpu::FilterMode::Linear,
+            sampler: None,
+            texture: None,
+        }
+    }
+
     /// Loads image data into `wgpu::Texture`
     fn load_into_gpu(&mut self, image: &Arc<RwLock<Image>>) {
         let device = crate::DEVICE.get().unwrap();
@@ -116,7 +161,7 @@ impl Texture {
                 view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
             },
             wgpu::util::TextureDataOrder::LayerMajor,
-            bytemuck::cast_slice(&image.data),
+            &image.data,
         );
 
         drop(image);
@@ -206,6 +251,16 @@ impl Asset for Texture {
             ImageFormat::Bmp => match crate::import::bmp::parse(&image) {
                 Ok(it) => it,
                 Err(err) => return Err(err),
+            },
+            ImageFormat::Png => match lunar_png::read_png(&mut image.into_iter()) {
+                Ok(mut img) => {
+                    flip_texture(&mut img);
+                    img.add_alpha();
+                    img.add_channels();
+
+                    img
+                }
+                Err(err) => return Err(Box::new(err)),
             },
         };
 

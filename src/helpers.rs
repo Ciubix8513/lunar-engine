@@ -76,3 +76,24 @@ pub fn calculate_bpr(width: u32, format: wgpu::TextureFormat) -> u64 {
     }
     bpr
 }
+
+pub fn flip_texture(image: &mut lunar_png::Image) {
+    let mult = match image.img_type {
+        lunar_png::ImageType::R8 => 1,
+        lunar_png::ImageType::R16 | lunar_png::ImageType::Ra8 => 2,
+        lunar_png::ImageType::Rgb8 => 3,
+        lunar_png::ImageType::Rgba8 | lunar_png::ImageType::Ra16 => 4,
+        lunar_png::ImageType::Rgb16 => 6,
+        lunar_png::ImageType::Rgba16 => 8,
+    };
+
+    let scanline_len = mult * image.width;
+
+    image.data = image
+        .data
+        .chunks(scanline_len as usize)
+        .rev()
+        .flatten()
+        .copied()
+        .collect();
+}

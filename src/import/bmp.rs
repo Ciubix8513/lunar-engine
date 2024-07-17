@@ -1,5 +1,5 @@
 #![allow(clippy::cast_possible_truncation)]
-use crate::structures::{Image, Pixel};
+use lunar_png::Image;
 
 //Packed may cause issues with incorrect signature
 #[repr(C, packed)]
@@ -80,22 +80,13 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error + Send>> {
             "Unsported bits per pixel",
         )));
     }
-    let mut out = Vec::new();
-
-    for i in data[header.data_offset as usize..].chunks(4) {
-        out.push(*bytemuck::from_bytes::<Pixel>(i));
-    }
-
-    for i in &mut out {
-        *i = Pixel {
-            r: i.b,
-            g: i.g,
-            b: i.r,
-            a: i.a,
-        };
-    }
+    let out = data[header.data_offset as usize..]
+        .chunks(4)
+        .flat_map(|c| [c[2], c[1], c[0], c[3]])
+        .collect();
 
     Ok(Image {
+        img_type: lunar_png::ImageType::Rgba8,
         width: info_header.width,
         height: info_header.height,
         data: out,
