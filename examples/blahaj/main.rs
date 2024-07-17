@@ -7,8 +7,8 @@ use lunar_engine::{
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input,
-    math::vec3::Vec3,
-    system::rendering::{self, extensions::Base},
+    math::Vec3,
+    rendering::{self, extensions::Base},
     State,
 };
 use lunar_engine_derive::{as_any, dependencies, marker_component};

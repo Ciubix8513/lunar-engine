@@ -6,7 +6,7 @@ use lunar_engine::{
     // delta_time,
     ecs::{Component, ComponentReference, SelfReferenceGuard},
     input,
-    math::{mat4x4::Mat4x4, vec4::Vec4},
+    math::{Mat4x4, Vec4},
 };
 use lunar_engine_derive::as_any;
 use winit::keyboard::KeyCode;
