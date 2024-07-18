@@ -12,7 +12,7 @@ My current streaming project, a lot of the code is writen live on my [twitch str
 #### Stage 2: Game engine? idk why not 
 - [x] Rendering abstraction
 - [x] Ecs, or at least ecs like
-- [ ] png format loading
+- [x] png format loading
 - [ ] Better input
 - [ ] OPTIMIZATION
 - [ ] PBR rendering 
