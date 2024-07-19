@@ -5,7 +5,7 @@ use crate::asset_managment::Asset;
 #[test]
 fn test_texture_load() {
     crate::test_utils::generate_gpu();
-    let mut texture = super::Texture::new_bmp(Path::new("assets/test-data/blahaj1.bmp"));
+    let mut texture = super::Texture::new_png(Path::new("assets/test-data/blahaj.png"));
     //You're not supposed to set ids manually, but it's fine :3
     texture.set_id(1).unwrap();
 

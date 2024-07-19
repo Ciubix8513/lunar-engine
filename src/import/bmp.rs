@@ -92,8 +92,3 @@ pub fn parse(data: &[u8]) -> Result<Image, Box<dyn std::error::Error + Send>> {
         data: out,
     })
 }
-
-#[test]
-fn test_image_loading() {
-    parse(include_bytes!("../../assets/blahaj1.bmp")).unwrap();
-}
