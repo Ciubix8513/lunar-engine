@@ -120,11 +120,12 @@ pub(crate) fn update() {
 // }
 
 ///Defines behaviour of the cursor inside the window
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum CursorState {
     ///Cursor is locked in place
     Locked,
     ///Cursor is free
+    #[default]
     Free,
 }
 
