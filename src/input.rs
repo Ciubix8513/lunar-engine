@@ -105,19 +105,19 @@ pub(crate) fn update() {
     *last = *cur;
 }
 
-//Sets the cursor grab mode
-// pub fn set_cursor_grab_mode(mode: CursorState) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.grab_mode = mode;
-//     state.modified = true;
-// }
+///Sets the cursor grab mode
+pub fn set_cursor_grab_mode(mode: CursorState) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.grab_mode = mode;
+    state.modified = true;
+}
 
-//Sets the cursor grab mode
-// pub fn set_cursor_visible(mode: bool) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.visible = mode;
-//     state.modified = true;
-// }
+///Sets the cursor grab mode
+pub fn set_cursor_visible(mode: bool) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.visible = mode;
+    state.modified = true;
+}
 
 ///Defines behaviour of the cursor inside the window
 #[derive(Clone, Copy, Default)]
