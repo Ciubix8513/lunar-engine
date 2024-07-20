@@ -14,8 +14,6 @@ use lunar_engine::{
 use lunar_engine_derive::{as_any, dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
-use crate::camera_movement::FreeCam;
-
 #[derive(Default)]
 struct MyState {
     frame: u32,
@@ -25,8 +23,6 @@ struct MyState {
     blahaj_mesh: u128,
     blahaj_mat: u128,
 }
-
-mod camera_movement;
 
 #[marker_component]
 struct Blahaj;
@@ -101,7 +97,6 @@ fn init(state: &mut MyState) {
                 c.far = 100.0;
                 c
             })
-            .create_component(|| FreeCam::new(10.0))
             .create()
             .unwrap(),
     );
