@@ -81,7 +81,10 @@ impl std::cmp::Ord for dyn RenderingExtension {
 ///}
 ///```
 pub struct Base {
-    priority: u32,
+    ///Priority of the extension
+    pub priority: u32,
+    ///Clear color used for rendering
+    pub clear_color: wgpu::Color,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
@@ -96,6 +99,30 @@ impl Base {
     pub const fn new(order: u32) -> Self {
         Self {
             priority: order,
+            clear_color: wgpu::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+            identifier: Vec::new(),
+            v_buffers: Vec::new(),
+            mesh_materials: Vec::new(),
+            num_instances: Vec::new(),
+            mesh_refs: Vec::new(),
+        }
+    }
+
+    ///Creates a new [`Base`] with a pre defined clear color
+    ///
+    ///The clear color is the color that is used as a background
+    ///
+    ///Everything rendered with this extension will have that color in the parts not occupied by a mesh.
+    #[must_use]
+    pub fn new_with_color(order: u32, color: wgpu::Color) -> Self {
+        Self {
+            priority: order,
+            clear_color: color,
             identifier: Vec::new(),
             v_buffers: Vec::new(),
             mesh_materials: Vec::new(),
@@ -360,12 +387,7 @@ impl RenderingExtension for Base {
                 view: &attachments.color,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
-                    }),
+                    load: wgpu::LoadOp::Clear(self.clear_color),
                     store: wgpu::StoreOp::Store,
                 },
             })],

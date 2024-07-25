@@ -63,6 +63,16 @@ impl Component for Spiny {
 fn init(state: &mut MyState) {
     log::info!("Initializing scene");
 
+    state.extension = Base::new_with_color(
+        0,
+        wgpu::Color {
+            r: 0.96,
+            g: 0.65,
+            b: 0.72,
+            a: 1.0,
+        },
+    );
+
     state.frame = 0;
     let mesh = state
         .assset_store
