@@ -106,14 +106,14 @@ pub(crate) fn update() {
 }
 
 ///Sets the cursor grab mode
-pub fn set_cursor_grab_mode(mode: CursorState) {
+pub fn set_cursor_grab_mode(mode: CursorLock) {
     let mut state = CURSOR_STATE.write().unwrap();
     state.grab_mode = mode;
     state.modified = true;
 }
 
 ///Sets the cursor grab mode
-pub fn set_cursor_visible(mode: bool) {
+pub fn set_cursor_visible(mode: CursorVisibily) {
     let mut state = CURSOR_STATE.write().unwrap();
     state.visible = mode;
     state.modified = true;
@@ -121,7 +121,7 @@ pub fn set_cursor_visible(mode: bool) {
 
 ///Defines behaviour of the cursor inside the window
 #[derive(Clone, Copy, Default)]
-pub enum CursorState {
+pub enum CursorLock {
     ///Cursor is locked in place
     Locked,
     ///Cursor is free
@@ -129,16 +129,26 @@ pub enum CursorState {
     Free,
 }
 
+///Defines the visibility of the cursor
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub enum CursorVisibily {
+    #[default]
+    ///Cursor is visible
+    Visible,
+    ///Cursor is hidden
+    Hidden,
+}
+
 struct CursorStateInternal {
-    grab_mode: CursorState,
+    grab_mode: CursorLock,
     lock_failed: bool,
-    visible: bool,
+    visible: CursorVisibily,
     modified: bool,
 }
 static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateInternal {
-    grab_mode: CursorState::Free,
+    grab_mode: CursorLock::Free,
     lock_failed: false,
-    visible: true,
+    visible: CursorVisibily::Visible,
     modified: false,
 });
 
@@ -157,7 +167,7 @@ fn reset_cursor() {
 pub(crate) fn process_cursor() {
     let mut state = CURSOR_STATE.write().unwrap();
 
-    if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
+    if matches!(state.grab_mode, CursorLock::Locked) && state.lock_failed {
         reset_cursor();
     }
 
@@ -167,12 +177,15 @@ pub(crate) fn process_cursor() {
     state.modified = false;
     let window = WINDOW.get().unwrap();
 
-    window.set_cursor_visible(state.visible);
+    window.set_cursor_visible(match state.visible {
+        CursorVisibily::Visible => true,
+        CursorVisibily::Hidden => false,
+    });
 
     let g_mode = state.grab_mode;
     let res = window.set_cursor_grab(match g_mode {
-        CursorState::Locked => CursorGrabMode::Locked,
-        CursorState::Free => CursorGrabMode::None,
+        CursorLock::Locked => CursorGrabMode::Locked,
+        CursorLock::Free => CursorGrabMode::None,
     });
     if let Err(e) = res {
         match e {
@@ -198,4 +211,14 @@ pub(crate) fn process_cursor() {
             winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
         }
     }
+}
+
+///Returns the current lock state of the cursor
+pub fn get_cursor_grab_mode() -> CursorLock {
+    CURSOR_STATE.read().unwrap().grab_mode
+}
+
+///Returns the current visibility state of the cursor
+pub fn get_cursor_visibility() -> CursorVisibily {
+    CURSOR_STATE.read().unwrap().visible
 }
