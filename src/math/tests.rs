@@ -206,3 +206,42 @@ fn test_vec4_length() {
     assert_eq!(a.square_length(), 9.0);
     assert_eq!(a.length(), 3.0);
 }
+
+#[test]
+fn test_lerp() {
+    let a = 0.0;
+    let b = 1.0;
+    let t = 0.5;
+    let expected = 0.5;
+
+    let o = lerp(a, b, t);
+
+    assert_eq!(o, expected);
+
+    let a = Vec2::new(0.0, 1.0);
+    let b = Vec2::new(1.0, 0.0);
+    let t = 0.5;
+    let expected = Vec2::new(0.5, 0.5);
+
+    let o = lerp(a, b, t);
+
+    assert_eq!(o, expected);
+
+    let a = Vec3::new(0.0, 1.0, 0.0);
+    let b = Vec3::new(1.0, 0.0, 1.0);
+    let t = 0.5;
+    let expected = Vec3::new(0.5, 0.5, 0.5);
+
+    let o = lerp(a, b, t);
+
+    assert_eq!(o, expected);
+
+    let a = Vec4::new(0.0, 1.0, 0.0, 1.0);
+    let b = Vec4::new(1.0, 0.0, 1.0, 0.0);
+    let t = 0.5;
+    let expected = Vec4::new(0.5, 0.5, 0.5, 0.5);
+
+    let o = lerp(a, b, t);
+
+    assert_eq!(o, expected);
+}

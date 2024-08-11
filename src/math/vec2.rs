@@ -19,20 +19,6 @@ impl Vec2 {
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
-
-    ///Perform linear interpolation between a and b, using t
-    ///
-    ///t MUST be a value between 0 and 1
-    ///
-    /// # Panics
-    ///
-    ///The function will panic if t is not in the [0, 1] range
-    pub fn lerp(a: Self, b: Self, t: f32) -> Self {
-        //Check if the value is within bounds
-        assert!(t >= 0.0);
-        assert!(t <= 1.0);
-        b - (a * t)
-    }
 }
 
 impl Vector for Vec2 {
