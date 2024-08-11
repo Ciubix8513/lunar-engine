@@ -26,6 +26,9 @@ pub(crate) struct InputState {
     pub(crate) cursor_position: RwLock<Vec2>,
     pub(crate) previous_cursor_position: RwLock<Vec2>,
     pub(crate) cursor_delta: RwLock<Vec2>,
+    //Cursor delta stuff
+    pub(crate) raw_curosor_delta: RwLock<Vec2>,
+    pub(crate) delta_changed: RwLock<bool>,
 }
 
 pub(crate) static INPUT: OnceLock<InputState> = OnceLock::new();
@@ -65,13 +68,15 @@ pub fn mouse_btn(btn: MouseButton) -> KeyState {
     *i.entry(btn).or_insert(KeyState::Neutral)
 }
 
-// pub fn cursor_position() -> Vec2 {
-//     *INPUT.get().unwrap().cursor_position.read().unwrap()
-// }
+///Returns the cursor position inside the window
+pub fn cursor_position() -> Vec2 {
+    *INPUT.get().unwrap().cursor_position.read().unwrap()
+}
 
-// pub fn cursor_delta() -> Vec2 {
-//     *INPUT.get().unwrap().cursor_delta.read().unwrap()
-// }
+///Returns the cursor movement delta
+pub fn cursor_delta() -> Vec2 {
+    *INPUT.get().unwrap().cursor_delta.read().unwrap()
+}
 
 ///Updates the states, downgrading Down and Up into Pressed and Neutral respectively
 pub(crate) fn update() {
@@ -101,7 +106,18 @@ pub(crate) fn update() {
 
     let cur = input.cursor_position.read().unwrap();
     let mut last = input.previous_cursor_position.write().unwrap();
-    *input.cursor_delta.write().unwrap() = *cur - *last;
+
+    let mut changed = input.delta_changed.write().unwrap();
+
+    let d = if *changed {
+        *changed = false;
+        *input.raw_curosor_delta.read().unwrap()
+    } else {
+        Vec2::default()
+    };
+
+    *input.cursor_delta.write().unwrap() = d;
+
     *last = *cur;
 }
 
@@ -177,7 +193,7 @@ pub(crate) fn process_cursor() {
     state.modified = false;
     let window = WINDOW.get().unwrap();
 
-    window.set_cursor_visible(match state.visible {
+    window.set_cursor_visible(match state.visible.clone() {
         CursorVisibily::Visible => true,
         CursorVisibily::Hidden => false,
     });
