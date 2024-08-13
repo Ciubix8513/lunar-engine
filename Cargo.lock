@@ -911,9 +911,9 @@ version = "0.1.0"
 
 [[package]]
 name = "lunar-logger"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f03345dea12c20ef0fcfceb867d88b64a2938c032edabdc057eda6ed6b6a3376"
+checksum = "707df99a330e1a365c3d0ac87e8348a21841b92bd95ff68153bea0e4d11feed5"
 dependencies = [
  "chrono",
  "log",

@@ -1,12 +1,16 @@
 #![allow(clippy::too_many_lines)]
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
+use wgpu::util::DeviceExt;
+use wgpu::BufferUsages;
 
-use super::{material::MaterialTrait, BindgroupState, Texture};
+use crate::{grimoire, DEVICE, FORMAT};
+
+use crate::{assets::material::MaterialTrait, assets::BindgroupState, assets::Texture};
 
 ///Basic material that renders an object with a given texture, without lighting
-pub struct TextureUnlit {
+pub struct ColorUnlit {
     #[cfg(target_arch = "wasm32")]
     pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -19,29 +23,32 @@ pub struct TextureUnlit {
     bind_group_layout_f: Option<crate::wrappers::WgpuWrapper<wgpu::BindGroupLayout>>,
     #[cfg(not(target_arch = "wasm32"))]
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
-    texture_id: UUID,
+    uniform: Option<wgpu::Buffer>,
+    color: wgpu::Color,
     bindgroup_sate: BindgroupState,
 }
 
-impl TextureUnlit {
+impl ColorUnlit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
     ///Creates a new material with a give texture id
-    pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
+    pub fn new(color: wgpu::Color) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
         Box::new(Self {
+            color,
             pipeline: None,
             bind_group: None,
             bind_group_layout_f: None,
-            texture_id,
             bindgroup_sate: BindgroupState::Uninitialized,
+            uniform: None,
         }) as Box<dyn MaterialTrait + 'static + Send + Sync>
     }
 }
 
-impl MaterialTrait for TextureUnlit {
+impl MaterialTrait for ColorUnlit {
     fn render(&self, render_pass: &mut wgpu::RenderPass) {
         //SHOULD BE FINE
         //TODO: FIND A BETTER SOLUTION
+        //This is a big FUCK OFF to the borrow checker
         let pipeline = unsafe {
             Arc::as_ptr(self.pipeline.as_ref().unwrap())
                 .as_ref()
@@ -60,31 +67,24 @@ impl MaterialTrait for TextureUnlit {
     fn intialize(&mut self) {
         let device = DEVICE.get().unwrap();
 
-        let v_shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/vertex.wgsl"));
+        let v_shader =
+            device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
         let f_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../shaders/texture_unlit.wgsl"));
+            device.create_shader_module(wgpu::include_wgsl!("../../shaders/color_unlit.wgsl"));
 
         let bind_group_layout_f =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Fragment binding"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4 * 4).unwrap()),
                     },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
+                    count: None,
+                }],
             });
 
         let cam_bind_group_layout =
@@ -105,6 +105,14 @@ impl MaterialTrait for TextureUnlit {
         {
             self.bind_group_layout_f = Some(bind_group_layout_f);
         }
+
+        self.uniform = Some(
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::bytes_of(&self.color),
+                usage: BufferUsages::UNIFORM,
+            }),
+        );
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -257,7 +265,7 @@ impl MaterialTrait for TextureUnlit {
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 
-    fn bindgroup_sate(&self) -> super::BindgroupState {
+    fn bindgroup_sate(&self) -> crate::assets::BindgroupState {
         self.bindgroup_sate
     }
 }

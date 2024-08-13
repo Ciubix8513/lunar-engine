@@ -1,13 +1,16 @@
 use lunar_engine::{
     asset_managment::AssetStore,
-    components::{camera::MainCamera, transform::Transform},
-    ecs::{Component, EntityBuilder, World},
+    components::{camera::MainCamera, mesh::Mesh, transform::Transform},
+    ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, KeyState},
+    math::{lerp, Vector},
     rendering::{extensions::Base, render},
 };
 use lunar_engine_derive::as_any;
 
-struct CameraControls {}
+struct CameraControls {
+    transform: Option<ComponentReference<Transform>>,
+}
 
 impl Component for CameraControls {
     #[as_any]
@@ -16,7 +19,7 @@ impl Component for CameraControls {
     where
         Self: Sized,
     {
-        Self {}
+        Self { transform: None }
     }
 
     fn update(&mut self) {
@@ -26,6 +29,29 @@ impl Component for CameraControls {
                 CursorLock::Free => CursorLock::Locked,
             });
         }
+
+        if input::key(winit::keyboard::KeyCode::KeyH) == KeyState::Down {
+            input::set_cursor_visible(match input::get_cursor_visibility() {
+                input::CursorVisibily::Visible => input::CursorVisibily::Hidden,
+                input::CursorVisibily::Hidden => input::CursorVisibily::Visible,
+            });
+        }
+
+        let delta = input::cursor_delta();
+
+        let mut trans = self.transform.as_ref().unwrap().borrow_mut();
+
+        let rot = trans.rotation;
+
+        let rot_y = lerp(rot.y, rot.y + delta.x, 0.1);
+        let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
+
+        trans.rotation.y = rot_y;
+        trans.rotation.x = rot_x;
+    }
+
+    fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
+        self.transform = reference.get_component::<Transform>().ok();
     }
 }
 
@@ -39,16 +65,29 @@ struct State {
 fn end(state: &mut State) {}
 
 fn init(state: &mut State) {
+    let assets = &mut state.asset_store;
+
+    // assets.register()
+
     let world = &mut state.world;
 
     world.add_entity(
         EntityBuilder::new()
-            .add_component::<Transform>()
+            .create_component(|| Transform {
+                position: (0.0, 2.0, 0.0).into(),
+                ..Default::default()
+            })
             .add_component::<MainCamera>()
             .add_component::<CameraControls>()
             .create()
             .unwrap(),
     );
+
+    // world.add_entity(
+    // EntityBuilder::new().add_component::<Transform>().create_component(
+    // ||Mesh::new()
+    // ),
+    // )
 }
 
 fn run(state: &mut State) {
