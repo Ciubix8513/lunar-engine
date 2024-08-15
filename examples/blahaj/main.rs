@@ -9,6 +9,7 @@ use lunar_engine::{
     input,
     math::Vec3,
     rendering::{self, extensions::Base},
+    structures::Color,
     State,
 };
 use lunar_engine_derive::{as_any, dependencies, marker_component};
@@ -61,7 +62,7 @@ fn init(state: &mut MyState) {
 
     state.extension = Base::new_with_color(
         0,
-        wgpu::Color {
+        Color {
             r: 0.96,
             g: 0.65,
             b: 0.72,
