@@ -77,9 +77,7 @@ fn init(state: &mut MyState) {
     let texture = state
         .assset_store
         .register(assets::Texture::new_png(Path::new("assets/blahaj.png")));
-    let material = state
-        .assset_store
-        .register::<Material>(TextureUnlit::new(texture).into());
+    let material = state.assset_store.register(TextureUnlit::new(texture));
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;

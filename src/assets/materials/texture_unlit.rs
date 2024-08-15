@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_lines)]
 use std::sync::Arc;
 
+use crate::assets::Material;
 use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
 
 use crate::{assets::material::MaterialTrait, assets::BindgroupState, assets::Texture};
@@ -27,14 +28,15 @@ impl TextureUnlit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
     ///Creates a new material with a give texture id
-    pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
-        Box::new(Self {
+    pub fn new(texture_id: UUID) -> Material {
+        Self {
             pipeline: None,
             bind_group: None,
             bind_group_layout_f: None,
             texture_id,
             bindgroup_sate: BindgroupState::Uninitialized,
-        }) as Box<dyn MaterialTrait + 'static + Send + Sync>
+        }
+        .into()
     }
 }
 

@@ -76,12 +76,15 @@ impl Material {
     }
 }
 
-impl From<Box<dyn MaterialTrait + 'static + Send + Sync>> for Material {
-    fn from(value: Box<dyn MaterialTrait + 'static + Send + Sync>) -> Self {
+impl<T> From<T> for Material
+where
+    T: MaterialTrait + Send + Sync + 'static,
+{
+    fn from(value: T) -> Self {
         Self {
             id: None,
             initialized: false,
-            material: value,
+            material: Box::new(value),
         }
     }
 }
