@@ -172,6 +172,7 @@ impl MaterialTrait for ColorUnlit {
         self.bind_group = None;
         self.pipeline = None;
         self.bindgroup_sate = BindgroupState::Uninitialized;
+        self.uniform = None;
     }
 
     fn set_bindgroups(&mut self, asset_store: &crate::asset_managment::AssetStore) {

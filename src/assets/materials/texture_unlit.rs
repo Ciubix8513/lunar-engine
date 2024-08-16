@@ -6,6 +6,8 @@ use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
 
 use crate::{assets::material::MaterialTrait, assets::BindgroupState, assets::Texture};
 
+use super::helpers;
+
 ///Basic material that renders an object with a given texture, without lighting
 pub struct TextureUnlit {
     #[cfg(target_arch = "wasm32")]
@@ -115,57 +117,7 @@ impl MaterialTrait for TextureUnlit {
             vertex: wgpu::VertexState {
                 module: &v_shader,
                 entry_point: "main",
-                buffers: &[
-                    //Vertex data
-                    wgpu::VertexBufferLayout {
-                        array_stride: 36,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 0,
-                                shader_location: 0,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 16,
-                                shader_location: 1,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x3,
-                                offset: 24,
-                                shader_location: 2,
-                            },
-                        ],
-                    },
-                    //Transform data
-                    wgpu::VertexBufferLayout {
-                        array_stride: 64,
-                        step_mode: wgpu::VertexStepMode::Instance,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 0,
-                                shader_location: 3,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 16,
-                                shader_location: 4,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 32,
-                                shader_location: 5,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 48,
-                                shader_location: 6,
-                            },
-                        ],
-                    },
-                ],
+                buffers: &helpers::vertex_binding(),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
