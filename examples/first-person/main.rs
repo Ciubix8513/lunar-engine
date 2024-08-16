@@ -1,10 +1,17 @@
 use lunar_engine::{
     asset_managment::AssetStore,
+    assets::{
+        self,
+        materials::{self, ColorUnlit},
+        Material,
+    },
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
     ecs::{Component, ComponentReference, EntityBuilder, World},
+    import,
     input::{self, CursorLock, KeyState},
     math::{lerp, Vector},
     rendering::{extensions::Base, render},
+    structures::Color,
 };
 use lunar_engine_derive::as_any;
 
@@ -43,8 +50,8 @@ impl Component for CameraControls {
 
         let rot = trans.rotation;
 
-        let rot_y = lerp(rot.y, rot.y + delta.x, 0.1);
-        let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
+        let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
+        let rot_x = lerp(rot.x, rot.x - delta.y, 0.1);
 
         trans.rotation.y = rot_y;
         trans.rotation.x = rot_x;
@@ -66,28 +73,34 @@ fn end(state: &mut State) {}
 
 fn init(state: &mut State) {
     let assets = &mut state.asset_store;
+    let white = assets.register(ColorUnlit::new(Color::white()));
+    let cube = assets.register(assets::Mesh::new_from_static_obj(include_str!(
+        "../../assets/cube_triangulated.obj"
+    )));
 
-    // assets.register()
-
+    let camera = MainCamera::mew();
     let world = &mut state.world;
 
     world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: (0.0, 2.0, 0.0).into(),
+                position: (0.0, 0.0, 10.0).into(),
+
                 ..Default::default()
             })
-            .add_component::<MainCamera>()
+            .add_existing_component(camera)
             .add_component::<CameraControls>()
             .create()
             .unwrap(),
     );
 
-    // world.add_entity(
-    // EntityBuilder::new().add_component::<Transform>().create_component(
-    // ||Mesh::new()
-    // ),
-    // )
+    world.add_entity(
+        EntityBuilder::new()
+            .add_component::<Transform>()
+            .create_component(|| Mesh::new(cube, white))
+            .create()
+            .unwrap(),
+    );
 }
 
 fn run(state: &mut State) {
