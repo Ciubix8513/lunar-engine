@@ -1,6 +1,7 @@
 use wgpu::VertexBufferLayout;
 
 ///Returns the default vertex buffer bindings
+#[must_use]
 pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
     [
         //Vertex data

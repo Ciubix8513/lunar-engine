@@ -174,7 +174,8 @@ impl Mesh {
     }
 
     ///Creates a new mesh that is a box with given dimensions
-    pub fn new_box(dimensions: Vec3) -> Self {
+    #[must_use]
+    pub const fn new_box(dimensions: Vec3) -> Self {
         Self {
             id: None,
             initialized: false,
@@ -188,7 +189,8 @@ impl Mesh {
     }
 
     ///TODO
-    pub fn new_sphere(desc: SphereData) -> Self {
+    #[must_use]
+    pub const fn new_sphere(desc: SphereData) -> Self {
         Self {
             id: None,
             initialized: false,

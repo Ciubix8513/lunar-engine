@@ -1,3 +1,5 @@
+#![allow(clippy::cast_lossless)]
+
 use bytemuck::{Pod, Zeroable};
 
 use crate::math::{Vec2, Vec3, Vec4};
@@ -66,16 +68,19 @@ pub struct Color {
 
 impl Color {
     ///Create new color from the 4 components
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+    #[must_use]
+    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
     ///Create new color from the 3 components, without the alpha channel
-    pub fn rgb(r: f32, g: f32, b: f32) -> Self {
+    #[must_use]
+    pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b, a: 1.0 }
     }
 
     ///Create new color from the 4 components, maps the values [0; 255] to [0; 1]
+    #[must_use]
     pub fn from_u8(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self {
             r: r as f32 / 256.0,
@@ -85,6 +90,7 @@ impl Color {
         }
     }
     ///Create new color from the 3 components, maps the values [0; 255] to [0; 1] without the alpha channel
+    #[must_use]
     pub fn from_u8_rgb(r: u8, g: u8, b: u8) -> Self {
         Self {
             r: r as f32 / 256.0,
@@ -95,6 +101,7 @@ impl Color {
     }
 
     ///Red color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+    #[must_use]
     pub const fn red() -> Self {
         Self {
             r: 1.0,
@@ -105,6 +112,7 @@ impl Color {
     }
 
     ///Green color: {r: 0.0, g: 1.0, b: 0.0, a: 1.0}
+    #[must_use]
     pub const fn green() -> Self {
         Self {
             r: 0.0,
@@ -115,6 +123,7 @@ impl Color {
     }
 
     ///Blue color: {r: 0.0, g: 0.0, b: 1.0, a: 1.0}
+    #[must_use]
     pub const fn blue() -> Self {
         Self {
             r: 0.0,
@@ -125,6 +134,7 @@ impl Color {
     }
 
     ///Black color: {r: 0.0, g: 0.0, b: 0.0, a: 1.0}
+    #[must_use]
     pub const fn black() -> Self {
         Self {
             r: 0.0,
@@ -135,6 +145,7 @@ impl Color {
     }
 
     ///White color: {r: 1.0, g: 1.0, b: 1.0, a: 1.0}
+    #[must_use]
     pub const fn white() -> Self {
         Self {
             r: 1.0,

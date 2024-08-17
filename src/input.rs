@@ -115,6 +115,7 @@ pub(crate) fn update() {
     } else {
         Vec2::default()
     };
+    drop(changed);
 
     *input.cursor_delta.write().unwrap() = d;
 
@@ -193,7 +194,9 @@ pub(crate) fn process_cursor() {
     state.modified = false;
     let window = WINDOW.get().unwrap();
 
-    window.set_cursor_visible(match state.visible.clone() {
+    let visible = state.visible;
+
+    window.set_cursor_visible(match visible {
         CursorVisibily::Visible => true,
         CursorVisibily::Hidden => false,
     });

@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 use std::f32::consts::PI;
 
 use crate::{
@@ -7,6 +9,7 @@ use crate::{
 
 use super::ModelType;
 
+#[must_use]
 pub fn generate_mesh(mesh_type: &ModelType) -> Mesh {
     match mesh_type {
         ModelType::Box(dimensions) => generate_box(*dimensions),
@@ -14,6 +17,7 @@ pub fn generate_mesh(mesh_type: &ModelType) -> Mesh {
     }
 }
 
+#[must_use]
 fn generate_box(dimensions: Vec3) -> Mesh {
     let mut o = Mesh::default();
 
@@ -162,6 +166,7 @@ fn generate_box(dimensions: Vec3) -> Mesh {
     o
 }
 
+#[must_use]
 fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
     assert!(rings >= 1, "A sphere must have at least one ring");
     assert!(segments >= 3, "A sphere must have at least 3 segments");
@@ -181,7 +186,8 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
 
     for i in 0..rings {
         //Y value for the current ring
-        let theta = PI - ring_step * (i as f32 + 1.0);
+        let theta = ring_step.mul_add(-(i as f32 + 1.0), PI);
+
         let y = f32::cos(theta);
         let sin_theta = f32::sin(theta);
         //iterate over segments
@@ -195,7 +201,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
                 //This should work since the length is 1
                 normal: Vec3 { x, y, z },
                 ..Default::default()
-            })
+            });
         }
     }
 
@@ -210,13 +216,13 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
 
     //top tris
     for i in 0..segments {
-        o.indices.push(0 as u32);
+        o.indices.push(0);
         for j in 1..3 {
             let mut value = (i + j) % (segments + 1);
             if value == 0 {
                 value = 1;
             }
-            o.indices.push(value as u32);
+            o.indices.push(value);
         }
     }
 

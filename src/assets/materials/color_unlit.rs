@@ -9,7 +9,7 @@ use crate::assets::Material;
 use crate::structures::Color;
 use crate::{grimoire, DEVICE, FORMAT};
 
-use crate::{assets::material::MaterialTrait, assets::BindgroupState, assets::Texture};
+use crate::{assets::material::MaterialTrait, assets::BindgroupState};
 
 use super::helpers::vertex_binding;
 
@@ -175,7 +175,7 @@ impl MaterialTrait for ColorUnlit {
         self.uniform = None;
     }
 
-    fn set_bindgroups(&mut self, asset_store: &crate::asset_managment::AssetStore) {
+    fn set_bindgroups(&mut self, _asset_store: &crate::asset_managment::AssetStore) {
         let device = DEVICE.get().unwrap();
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
