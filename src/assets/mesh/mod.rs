@@ -46,9 +46,9 @@ pub struct SphereData {
     ///TODO
     pub radius: f32,
     ///TODO
-    pub segments: i32,
+    pub segments: u32,
     ///TODO
-    pub rings: i32,
+    pub rings: u32,
 }
 
 ///Model types that a mesh generator can generate
