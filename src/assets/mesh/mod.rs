@@ -16,8 +16,11 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     asset_managment::{Asset, UUID},
+    math::Vec3,
     DEVICE,
 };
+
+mod mesh_generator;
 
 ///Asset that stores mesh data
 pub struct Mesh {
@@ -37,11 +40,20 @@ pub struct Mesh {
     index_count: Option<u32>,
 }
 
+///Model types that a mesh generator can generate
+enum ModelType {
+    ///Box, contains a vec3 defining the box dimensions
+    Box(Vec3),
+    ///Sphere, contains an f32 defining the sphere radius
+    Sphere(f32),
+}
+
 ///Ways the mesh can be loaded from file
 enum MeshMode {
     ///An obj file that contains a single mesh
     SingleObjectOBJ(PathBuf),
     StaticSingleObjectOBJ(&'static str),
+    GeneratedModel(ModelType),
 }
 
 impl Mesh {
@@ -149,6 +161,20 @@ impl Mesh {
     pub fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
     }
+
+    ///Creates a new mesh that is a box with given dimensions
+    pub fn new_box(dimensions: Vec3) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::GeneratedModel(ModelType::Box(dimensions)),
+            vertex_buffer: None,
+            index_buffer: None,
+            vert_count: None,
+            tris_count: None,
+            index_count: None,
+        }
+    }
 }
 
 impl Asset for Mesh {
@@ -194,6 +220,7 @@ impl Asset for Mesh {
                     }
                 }
             }
+            MeshMode::GeneratedModel(_) => todo!(),
         };
 
         let device = DEVICE.get().unwrap();
