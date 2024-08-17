@@ -3,13 +3,14 @@ use lunar_engine::{
     assets::{
         self,
         materials::{self, ColorUnlit},
+        mesh::SphereData,
         Material,
     },
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
     ecs::{Component, ComponentReference, EntityBuilder, World},
     import,
     input::{self, CursorLock, KeyState},
-    math::{lerp, Vector},
+    math::{lerp, Vec3, Vector},
     rendering::{extensions::Base, render},
     structures::Color,
 };
@@ -74,9 +75,16 @@ fn end(state: &mut State) {}
 fn init(state: &mut State) {
     let assets = &mut state.asset_store;
     let white = assets.register(ColorUnlit::new(Color::white()));
-    let cube = assets.register(assets::Mesh::new_from_static_obj(include_str!(
-        "../../assets/cube_triangulated.obj"
-    )));
+    // let cube = assets.register(assets::Mesh::new_from_static_obj(include_str!(
+    //     "../../assets/cube_triangulated.obj"
+    // )));
+    //
+    // let cube = assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0)));
+    let cube = assets.register(assets::Mesh::new_sphere(SphereData {
+        radius: 0.5,
+        rings: 7,
+        segments: 7,
+    }));
 
     let camera = MainCamera::mew();
     let world = &mut state.world;
@@ -84,8 +92,8 @@ fn init(state: &mut State) {
     world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: (0.0, 0.0, 10.0).into(),
-
+                position: (0.0, 0.0, 2.0).into(),
+                rotation: (0.0, 0.0, 0.0).into(),
                 ..Default::default()
             })
             .add_existing_component(camera)

@@ -81,7 +81,10 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
                 continue;
             }
             //Insert into the out vector
-            meshes.push(Mesh { vertices, indecies });
+            meshes.push(Mesh {
+                vertices,
+                indices: indecies,
+            });
 
             //Clear data
             vertices = Vec::new();
@@ -136,14 +139,17 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
         }
     }
 
-    meshes.push(Mesh { vertices, indecies });
+    meshes.push(Mesh {
+        vertices,
+        indices: indecies,
+    });
 
     log::info!("Read {} meshes", meshes.len());
     for i in &meshes {
         log::info!(
             "verex len = {}, ind len = {}",
             i.vertices.len(),
-            i.indecies.len()
+            i.indices.len()
         );
     }
 

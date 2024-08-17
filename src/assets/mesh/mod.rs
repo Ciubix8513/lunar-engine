@@ -12,6 +12,7 @@ use std::{
 };
 
 use lunar_engine_derive::as_any;
+use mesh_generator::generate_mesh;
 use wgpu::util::DeviceExt;
 
 use crate::{
@@ -40,12 +41,22 @@ pub struct Mesh {
     index_count: Option<u32>,
 }
 
+///Description of a uv sphere
+pub struct SphereData {
+    ///TODO
+    pub radius: f32,
+    ///TODO
+    pub segments: i32,
+    ///TODO
+    pub rings: i32,
+}
+
 ///Model types that a mesh generator can generate
 enum ModelType {
     ///Box, contains a vec3 defining the box dimensions
     Box(Vec3),
     ///Sphere, contains an f32 defining the sphere radius
-    Sphere(f32),
+    Sphere(SphereData),
 }
 
 ///Ways the mesh can be loaded from file
@@ -175,6 +186,20 @@ impl Mesh {
             index_count: None,
         }
     }
+
+    ///TODO
+    pub fn new_sphere(desc: SphereData) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::GeneratedModel(ModelType::Sphere(desc)),
+            vertex_buffer: None,
+            index_count: None,
+            vert_count: None,
+            tris_count: None,
+            index_buffer: None,
+        }
+    }
 }
 
 impl Asset for Mesh {
@@ -220,7 +245,7 @@ impl Asset for Mesh {
                     }
                 }
             }
-            MeshMode::GeneratedModel(_) => todo!(),
+            MeshMode::GeneratedModel(mdl_type) => generate_mesh(mdl_type),
         };
 
         let device = DEVICE.get().unwrap();
@@ -234,7 +259,7 @@ impl Asset for Mesh {
 
         let ib = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&name),
-            contents: bytemuck::cast_slice(mesh.indecies.as_slice()),
+            contents: bytemuck::cast_slice(mesh.indices.as_slice()),
             usage: wgpu::BufferUsages::INDEX,
         });
 
@@ -249,8 +274,8 @@ impl Asset for Mesh {
             self.index_buffer = Some(Arc::new(ib));
         }
         self.vert_count = Some(mesh.vertices.len() as u32);
-        self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
-        self.index_count = Some(mesh.indecies.len() as u32);
+        self.tris_count = Some((mesh.indices.len() as u32) / 3u32);
+        self.index_count = Some(mesh.indices.len() as u32);
 
         self.initialized = true;
         Ok(())

@@ -23,7 +23,7 @@ pub struct Mesh {
     ///Vertices of the mesh
     pub vertices: Vec<Vertex>,
     ///Indecies of the mesh
-    pub indecies: Vec<Index>,
+    pub indices: Vec<Index>,
 }
 
 #[repr(C)]
