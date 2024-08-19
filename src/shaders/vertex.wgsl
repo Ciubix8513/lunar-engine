@@ -6,6 +6,7 @@
 
 struct ColorOutput {
   @location(0) tex_coord: vec2<f32>,
+  @location(1) normal: vec3<f32>,
   @builtin(position) position: vec4<f32>
 }
 
@@ -35,5 +36,7 @@ fn main(
     var res: ColorOutput;
     res.position = o;
     res.tex_coord = uvs;
+    res.normal = normal;
+
     return res;
 }

@@ -176,7 +176,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
     //Add top vertex
     o.vertices.push(Vertex {
         coords: Vec4::new(0.0, -radius, 0.0, 1.0),
-        normal: Vec3::new(0.0, 1.0, 0.0),
+        normal: Vec3::new(0.0, -1.0, 0.0),
         ..Default::default()
     });
 
@@ -208,7 +208,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
     //Add bottom vertex
     o.vertices.push(Vertex {
         coords: Vec4::new(0.0, radius, 0.0, 1.0),
-        normal: Vec3::new(0.0, -1.0, 0.0),
+        normal: Vec3::new(0.0, 1.0, 0.0),
         ..Default::default()
     });
 
