@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 use bytemuck::{Pod, Zeroable};
 
@@ -89,6 +89,24 @@ impl Add<Self> for Vec4 {
             self.z + rhs.z,
             self.w + rhs.w,
         )
+    }
+}
+
+impl AddAssign<Self> for Vec4 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self.w += rhs.w;
+    }
+}
+
+impl SubAssign<Self> for Vec4 {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
+        self.w -= rhs.w;
     }
 }
 
