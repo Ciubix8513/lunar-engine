@@ -49,22 +49,22 @@ fn generate_box(dimensions: Vec3) -> Mesh {
         },
         //bottom
         Vertex {
-            coords: Vec4::new(hx, -hy, hz, 1.0),
-            normal: Vec3::new(0.0, -1.0, 0.0),
-            ..Default::default()
-        },
-        Vertex {
             coords: Vec4::new(hx, -hy, -hz, 1.0),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, hz, 1.0),
+            coords: Vec4::new(hx, -hy, hz, 1.0),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         Vertex {
             coords: Vec4::new(-hx, -hy, -hz, 1.0),
+            normal: Vec3::new(0.0, -1.0, 0.0),
+            ..Default::default()
+        },
+        Vertex {
+            coords: Vec4::new(-hx, -hy, hz, 1.0),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
@@ -101,12 +101,12 @@ fn generate_box(dimensions: Vec3) -> Mesh {
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, -hz, 1.0),
+            coords: Vec4::new(-hx, hy, -hz, 1.0),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, -hz, 1.0),
+            coords: Vec4::new(hx, -hy, -hz, 1.0),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
@@ -122,12 +122,12 @@ fn generate_box(dimensions: Vec3) -> Mesh {
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, hz, 1.0),
+            coords: Vec4::new(hx, hy, -hz, 1.0),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, hy, -hz, 1.0),
+            coords: Vec4::new(hx, -hy, hz, 1.0),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
