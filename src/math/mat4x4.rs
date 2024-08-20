@@ -156,29 +156,7 @@ pub const fn identity() -> Self {
     ///Transforms `other` using `self` matrix
     #[must_use]
     pub fn transform3(&self, other: Vec3) -> Vec3 {
-        let other : Vec4= (other, 1.0).into();
-        Vec4 {
-            x: self.m03.mul_add(
-                other.w,
-                self.m02
-                    .mul_add(other.z, self.m00.mul_add(other.x, self.m01 * other.y)),
-            ),
-            y: self.m13.mul_add(
-                other.w,
-                self.m12
-                    .mul_add(other.z, self.m10.mul_add(other.x, self.m11 * other.y)),
-            ),
-            z: self.m23.mul_add(
-                other.w,
-                self.m22
-                    .mul_add(other.z, self.m20.mul_add(other.x, self.m21 * other.y)),
-            ),
-            w: self.m33.mul_add(
-                other.w,
-                self.m32
-                    .mul_add(other.z, self.m30.mul_add(other.x, self.m31 * other.y)),
-            ),
-        }.xyz()
+        self.transform((other,1.0).into()).xyz()
     }
 
     //[1 , 2] . [1 , 2] _ [1 * 1 +  3 * 2,  1 * 2 + 4*2]

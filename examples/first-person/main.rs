@@ -4,7 +4,7 @@ use lunar_engine::{
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
-    math::{lerp, Mat4x4, Vec3, Vec4, Vector},
+    math::{lerp, Mat4x4, Vec3, Vector},
     rendering::{extensions::Base, render},
     structures::Color,
 };
@@ -52,16 +52,16 @@ impl Component for CameraControls {
 
         //Movement
         let mut movement_vec = Vec3::default();
-        if input::key(KeyCode::KeyS) == KeyState::Pressed {
+        if input::key(KeyCode::KeyW) == KeyState::Pressed {
             movement_vec.z += 1.0;
         }
-        if input::key(KeyCode::KeyW) == KeyState::Pressed {
+        if input::key(KeyCode::KeyS) == KeyState::Pressed {
             movement_vec.z -= 1.0;
         }
-        if input::key(KeyCode::KeyD) == KeyState::Pressed {
+        if input::key(KeyCode::KeyA) == KeyState::Pressed {
             movement_vec.x += 1.0;
         }
-        if input::key(KeyCode::KeyA) == KeyState::Pressed {
+        if input::key(KeyCode::KeyD) == KeyState::Pressed {
             movement_vec.x -= 1.0;
         }
         if input::key(KeyCode::KeyE) == KeyState::Pressed {
@@ -123,7 +123,7 @@ fn init(state: &mut State) {
     world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: (0.0, 0.0, 4.0).into(),
+                position: (0.0, 0.0, -4.0).into(),
                 rotation: (0.0, 0.0, 0.0).into(),
                 ..Default::default()
             })

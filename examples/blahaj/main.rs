@@ -84,8 +84,8 @@ fn init(state: &mut MyState) {
     let _e = state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: Vec3::new(0.0, 2.0, 10.0),
-                rotation: Vec3::new(-15.0, 0.0, 0.0),
+                position: Vec3::new(0.0, 2.0, -10.0),
+                rotation: Vec3::new(15.0, 0.0, 0.0),
                 ..Default::default()
             })
             .create_component(|| {
