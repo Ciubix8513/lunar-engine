@@ -128,6 +128,30 @@ impl DivAssign<f32> for Vec4 {
     }
 }
 
+impl Add<f32> for Vec4 {
+    type Output = Self;
+    fn add(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x + rhs,
+            y: self.y + rhs,
+            z: self.z + rhs,
+            w: self.w + rhs,
+        }
+    }
+}
+
+impl Sub<f32> for Vec4 {
+    type Output = Self;
+    fn sub(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x - rhs,
+            y: self.y - rhs,
+            z: self.z - rhs,
+            w: self.w + rhs,
+        }
+    }
+}
+
 impl From<(f32, f32, f32, f32)> for Vec4 {
     fn from(value: (f32, f32, f32, f32)) -> Self {
         Self {

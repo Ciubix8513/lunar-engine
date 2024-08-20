@@ -115,6 +115,28 @@ impl DivAssign<f32> for Vec3 {
     }
 }
 
+impl Add<f32> for Vec3 {
+    type Output = Self;
+    fn add(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x + rhs,
+            y: self.y + rhs,
+            z: self.z + rhs,
+        }
+    }
+}
+
+impl Sub<f32> for Vec3 {
+    type Output = Self;
+    fn sub(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x - rhs,
+            y: self.y - rhs,
+            z: self.z - rhs,
+        }
+    }
+}
+
 impl From<(f32, f32, f32)> for Vec3 {
     fn from(a: (f32, f32, f32)) -> Self {
         Self {

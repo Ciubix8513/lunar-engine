@@ -100,6 +100,43 @@ impl Color {
         }
     }
 
+    ///Creates a new color from hsl values
+    #[must_use]
+    pub fn from_hsl(h: f32, s: f32, l: f32) -> Self {
+        //Hue : [0, 360)
+        //Saturation: [0; 1]
+        //Lightness: [0; 1]
+        let h = h % 360.0;
+
+        let c = (1.0 - f32::abs(2.0 * l - 1.0)) * s;
+
+        let h_tick = h / 60.0;
+
+        let x = c * (1.0 - f32::abs(h_tick % 2.0 - 1.0));
+
+        let a = if 0.0 <= h_tick && h_tick < 1.0 {
+            (c, x, 0.0)
+        } else if 1.0 <= h_tick && h_tick < 2.0 {
+            (x, c, 0.0)
+        } else if 2.0 <= h_tick && h_tick < 3.0 {
+            (0.0, c, x)
+        } else if 3.0 <= h_tick && h_tick < 4.0 {
+            (0.0, x, c)
+        } else if 4.0 <= h_tick && h_tick < 5.0 {
+            (x, 0.0, c)
+        } else if 5.0 <= h_tick && h_tick < 6.0 {
+            (c, 0.0, x)
+        } else {
+            unreachable!()
+        };
+
+        let a: Vec3 = a.into();
+
+        let m = l - c / 2.0;
+
+        (a + m).into()
+    }
+
     ///Red color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
     #[must_use]
     pub const fn red() -> Self {
@@ -196,6 +233,27 @@ impl From<Color> for wgpu::Color {
             g: value.g as f64,
             b: value.b as f64,
             a: value.a as f64,
+        }
+    }
+}
+
+impl From<Color> for Vec3 {
+    fn from(value: Color) -> Self {
+        Self {
+            x: value.r,
+            y: value.g,
+            z: value.b,
+        }
+    }
+}
+
+impl From<Color> for Vec4 {
+    fn from(value: Color) -> Self {
+        Self {
+            x: value.r,
+            y: value.g,
+            z: value.b,
+            w: value.a,
         }
     }
 }
