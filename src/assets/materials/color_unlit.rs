@@ -1,12 +1,20 @@
 #![allow(clippy::too_many_lines)]
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
+use wgpu::util::DeviceExt;
+use wgpu::BufferUsages;
 
-use super::{material::MaterialTrait, BindgroupState, Texture};
+use crate::assets::Material;
+use crate::structures::Color;
+use crate::{grimoire, DEVICE, FORMAT};
+
+use crate::{assets::material::MaterialTrait, assets::BindgroupState};
+
+use super::helpers::vertex_binding;
 
 ///Basic material that renders an object with a given texture, without lighting
-pub struct TextureUnlit {
+pub struct ColorUnlit {
     #[cfg(target_arch = "wasm32")]
     pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -19,29 +27,36 @@ pub struct TextureUnlit {
     bind_group_layout_f: Option<crate::wrappers::WgpuWrapper<wgpu::BindGroupLayout>>,
     #[cfg(not(target_arch = "wasm32"))]
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
-    texture_id: UUID,
+    #[cfg(target_arch = "wasm32")]
+    uniform: Option<crate::wrappers::WgpuWrapper<wgpu::Buffer>>,
+    #[cfg(not(target_arch = "wasm32"))]
+    uniform: Option<wgpu::Buffer>,
+    color: Color,
     bindgroup_sate: BindgroupState,
 }
 
-impl TextureUnlit {
+impl ColorUnlit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
     ///Creates a new material with a give texture id
-    pub fn new(texture_id: UUID) -> Box<dyn MaterialTrait + 'static + Sync + Send> {
-        Box::new(Self {
+    pub fn new(color: Color) -> Material {
+        Self {
+            color,
             pipeline: None,
             bind_group: None,
             bind_group_layout_f: None,
-            texture_id,
             bindgroup_sate: BindgroupState::Uninitialized,
-        }) as Box<dyn MaterialTrait + 'static + Send + Sync>
+            uniform: None,
+        }
+        .into()
     }
 }
 
-impl MaterialTrait for TextureUnlit {
+impl MaterialTrait for ColorUnlit {
     fn render(&self, render_pass: &mut wgpu::RenderPass) {
         //SHOULD BE FINE
         //TODO: FIND A BETTER SOLUTION
+        //This is a big FUCK OFF to the borrow checker
         let pipeline = unsafe {
             Arc::as_ptr(self.pipeline.as_ref().unwrap())
                 .as_ref()
@@ -60,31 +75,24 @@ impl MaterialTrait for TextureUnlit {
     fn intialize(&mut self) {
         let device = DEVICE.get().unwrap();
 
-        let v_shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/vertex.wgsl"));
+        let v_shader =
+            device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
         let f_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../shaders/texture_unlit.wgsl"));
+            device.create_shader_module(wgpu::include_wgsl!("../../shaders/color_unlit.wgsl"));
 
         let bind_group_layout_f =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Fragment binding"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: Some(NonZeroU64::new(4 * 4).unwrap()),
                     },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
+                    count: None,
+                }],
             });
 
         let cam_bind_group_layout =
@@ -106,63 +114,33 @@ impl MaterialTrait for TextureUnlit {
             self.bind_group_layout_f = Some(bind_group_layout_f);
         }
 
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.uniform = Some(crate::wrappers::WgpuWrapper::new(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: bytemuck::bytes_of(&self.color),
+                    usage: BufferUsages::UNIFORM,
+                }),
+            ));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.uniform = Some(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: bytemuck::bytes_of(&self.color),
+                    usage: BufferUsages::UNIFORM,
+                }),
+            );
+        }
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &v_shader,
                 entry_point: "main",
-                buffers: &[
-                    //Vertex data
-                    wgpu::VertexBufferLayout {
-                        array_stride: 36,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 0,
-                                shader_location: 0,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 16,
-                                shader_location: 1,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x3,
-                                offset: 24,
-                                shader_location: 2,
-                            },
-                        ],
-                    },
-                    //Transform data
-                    wgpu::VertexBufferLayout {
-                        array_stride: 64,
-                        step_mode: wgpu::VertexStepMode::Instance,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 0,
-                                shader_location: 3,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 16,
-                                shader_location: 4,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 32,
-                                shader_location: 5,
-                            },
-                            wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x4,
-                                offset: 48,
-                                shader_location: 6,
-                            },
-                        ],
-                    },
-                ],
+                buffers: &vertex_binding(),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             primitive: wgpu::PrimitiveState {
@@ -209,43 +187,22 @@ impl MaterialTrait for TextureUnlit {
         self.bind_group = None;
         self.pipeline = None;
         self.bindgroup_sate = BindgroupState::Uninitialized;
+        self.uniform = None;
     }
 
-    fn set_bindgroups(&mut self, asset_store: &crate::asset_managment::AssetStore) {
+    fn set_bindgroups(&mut self, _asset_store: &crate::asset_managment::AssetStore) {
         let device = DEVICE.get().unwrap();
-
-        let texture = asset_store.get_by_id::<Texture>(self.texture_id).unwrap();
-        let texture = texture.borrow();
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fragment bind group"),
             layout: self.bind_group_layout_f.as_ref().unwrap(),
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(
-                        &texture.texture.as_ref().unwrap().create_view(
-                            &wgpu::TextureViewDescriptor {
-                                label: None,
-                                format: Some(wgpu::TextureFormat::Rgba8Unorm),
-                                dimension: None,
-                                aspect: wgpu::TextureAspect::All,
-                                base_mip_level: 0,
-                                mip_level_count: Some(1),
-                                base_array_layer: 0,
-                                array_layer_count: None,
-                            },
-                        ),
-                    ),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(texture.sampler.as_ref().unwrap()),
-                },
-            ],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(
+                    self.uniform.as_ref().unwrap().as_entire_buffer_binding(),
+                ),
+            }],
         });
-        drop(texture);
-
         #[cfg(target_arch = "wasm32")]
         {
             self.bind_group = Some(Arc::new(crate::wrappers::WgpuWrapper::new(bind_group_f)));
@@ -257,7 +214,7 @@ impl MaterialTrait for TextureUnlit {
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 
-    fn bindgroup_sate(&self) -> super::BindgroupState {
+    fn bindgroup_sate(&self) -> crate::assets::BindgroupState {
         self.bindgroup_sate
     }
 }

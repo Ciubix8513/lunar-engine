@@ -9,12 +9,11 @@ use lunar_engine::{
     input,
     math::Vec3,
     rendering::{self, extensions::Base},
+    structures::Color,
     State,
 };
 use lunar_engine_derive::{as_any, dependencies, marker_component};
 use winit::keyboard::KeyCode;
-
-use crate::camera_movement::FreeCam;
 
 #[derive(Default)]
 struct MyState {
@@ -25,8 +24,6 @@ struct MyState {
     blahaj_mesh: u128,
     blahaj_mat: u128,
 }
-
-mod camera_movement;
 
 #[marker_component]
 struct Blahaj;
@@ -65,7 +62,7 @@ fn init(state: &mut MyState) {
 
     state.extension = Base::new_with_color(
         0,
-        wgpu::Color {
+        Color {
             r: 0.96,
             g: 0.65,
             b: 0.72,
@@ -80,17 +77,15 @@ fn init(state: &mut MyState) {
     let texture = state
         .assset_store
         .register(assets::Texture::new_png(Path::new("assets/blahaj.png")));
-    let material = state
-        .assset_store
-        .register::<Material>(TextureUnlit::new(texture).into());
+    let material = state.assset_store.register(TextureUnlit::new(texture));
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
     let _e = state.world.add_entity(
         EntityBuilder::new()
             .create_component(|| Transform {
-                position: Vec3::new(0.0, 2.0, 10.0),
-                rotation: Vec3::new(-15.0, 0.0, 0.0),
+                position: Vec3::new(0.0, 2.0, -10.0),
+                rotation: Vec3::new(15.0, 0.0, 0.0),
                 ..Default::default()
             })
             .create_component(|| {
@@ -101,7 +96,6 @@ fn init(state: &mut MyState) {
                 c.far = 100.0;
                 c
             })
-            .create_component(|| FreeCam::new(10.0))
             .create()
             .unwrap(),
     );

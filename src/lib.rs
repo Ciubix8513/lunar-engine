@@ -50,6 +50,7 @@ use std::{
 };
 
 use chrono::DateTime;
+use input::INPUT;
 #[allow(clippy::wildcard_imports)]
 use internal::*;
 use wgpu::SurfaceConfiguration;
@@ -324,6 +325,25 @@ impl<T> ApplicationHandler for State<T> {
             return;
         }
         self.initialize(event_loop);
+    }
+
+    fn device_event(
+        &mut self,
+        _: &winit::event_loop::ActiveEventLoop,
+        _: event::DeviceId,
+        event: event::DeviceEvent,
+    ) {
+        #[allow(clippy::single_match)]
+        match event {
+            event::DeviceEvent::MouseMotion { delta } => {
+                let d = math::Vec2::new(delta.0 as f32, delta.1 as f32);
+
+                let i = INPUT.get().unwrap();
+                *i.raw_curosor_delta.write().unwrap() = d;
+                *i.delta_changed.write().unwrap() = true;
+            }
+            _ => {}
+        }
     }
 
     fn window_event(

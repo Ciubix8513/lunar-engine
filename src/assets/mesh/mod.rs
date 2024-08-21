@@ -12,12 +12,16 @@ use std::{
 };
 
 use lunar_engine_derive::as_any;
+use mesh_generator::generate_mesh;
 use wgpu::util::DeviceExt;
 
 use crate::{
     asset_managment::{Asset, UUID},
+    math::Vec3,
     DEVICE,
 };
+
+mod mesh_generator;
 
 ///Asset that stores mesh data
 pub struct Mesh {
@@ -37,11 +41,30 @@ pub struct Mesh {
     index_count: Option<u32>,
 }
 
+///Description of a uv sphere
+pub struct SphereData {
+    ///TODO
+    pub radius: f32,
+    ///TODO
+    pub segments: u32,
+    ///TODO
+    pub rings: u32,
+}
+
+///Model types that a mesh generator can generate
+enum ModelType {
+    ///Box, contains a vec3 defining the box dimensions
+    Box(Vec3),
+    ///Sphere, contains an f32 defining the sphere radius
+    Sphere(SphereData),
+}
+
 ///Ways the mesh can be loaded from file
 enum MeshMode {
     ///An obj file that contains a single mesh
     SingleObjectOBJ(PathBuf),
     StaticSingleObjectOBJ(&'static str),
+    GeneratedModel(ModelType),
 }
 
 impl Mesh {
@@ -149,6 +172,36 @@ impl Mesh {
     pub fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
     }
+
+    ///Creates a new mesh that is a box with given dimensions
+    #[must_use]
+    pub const fn new_box(dimensions: Vec3) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::GeneratedModel(ModelType::Box(dimensions)),
+            vertex_buffer: None,
+            index_buffer: None,
+            vert_count: None,
+            tris_count: None,
+            index_count: None,
+        }
+    }
+
+    ///TODO
+    #[must_use]
+    pub const fn new_sphere(desc: SphereData) -> Self {
+        Self {
+            id: None,
+            initialized: false,
+            mode: MeshMode::GeneratedModel(ModelType::Sphere(desc)),
+            vertex_buffer: None,
+            index_count: None,
+            vert_count: None,
+            tris_count: None,
+            index_buffer: None,
+        }
+    }
 }
 
 impl Asset for Mesh {
@@ -194,6 +247,7 @@ impl Asset for Mesh {
                     }
                 }
             }
+            MeshMode::GeneratedModel(mdl_type) => generate_mesh(mdl_type),
         };
 
         let device = DEVICE.get().unwrap();
@@ -207,7 +261,7 @@ impl Asset for Mesh {
 
         let ib = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&name),
-            contents: bytemuck::cast_slice(mesh.indecies.as_slice()),
+            contents: bytemuck::cast_slice(mesh.indices.as_slice()),
             usage: wgpu::BufferUsages::INDEX,
         });
 
@@ -222,8 +276,8 @@ impl Asset for Mesh {
             self.index_buffer = Some(Arc::new(ib));
         }
         self.vert_count = Some(mesh.vertices.len() as u32);
-        self.tris_count = Some((mesh.indecies.len() as u32) / 3u32);
-        self.index_count = Some(mesh.indecies.len() as u32);
+        self.tris_count = Some((mesh.indices.len() as u32) / 3u32);
+        self.index_count = Some(mesh.indices.len() as u32);
 
         self.initialized = true;
         Ok(())

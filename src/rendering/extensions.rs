@@ -11,6 +11,7 @@ use crate::{
     assets::{BindgroupState, Material, Mesh},
     components,
     ecs::{ComponentReference, World},
+    structures::Color,
     DEVICE, STAGING_BELT,
 };
 
@@ -84,7 +85,7 @@ pub struct Base {
     ///Priority of the extension
     pub priority: u32,
     ///Clear color used for rendering
-    pub clear_color: wgpu::Color,
+    pub clear_color: Color,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
@@ -99,7 +100,7 @@ impl Base {
     pub const fn new(order: u32) -> Self {
         Self {
             priority: order,
-            clear_color: wgpu::Color {
+            clear_color: Color {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
@@ -181,7 +182,7 @@ impl RenderingExtension for Base {
 
         //List of materials used for rendering
         let mut materials = VecSet::new();
-        //List of (mesh_ID, (transformation matrix, material_id));
+        //List of (mesh_ID, (transformation matrix, material_id))
         let mut matrices = Vec::new();
 
         //Collect all the matrices
@@ -193,6 +194,8 @@ impl RenderingExtension for Base {
                 (m.get_matrix(), m.get_material_id().unwrap()),
             ));
         }
+
+        //What is even going on here?
 
         let mut matrices = matrices
             .iter()
@@ -221,6 +224,7 @@ impl RenderingExtension for Base {
             self.identifier = matrices.iter().map(|i| (i.0, i.1 .1)).collect::<Vec<_>>();
 
             //Sort meshes by mesh id for easier buffer creation
+            //NO Sort by material id?
             matrices.sort_unstable_by(|a, b| a.0.cmp(&b.0));
 
             //This is so jank omg
@@ -256,7 +260,7 @@ impl RenderingExtension for Base {
                 //Label for easier debugging
                 let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
 
-                //(Mesh, (Matrix, Material))
+                //(mesh_ID, (transformation matrix, material_id, mesh reference));
                 let mut current_window = matrices[points.0..points.1].iter().collect::<Vec<_>>();
 
                 //Split into vectors and sorted by material
@@ -281,7 +285,7 @@ impl RenderingExtension for Base {
                 };
 
                 //Need to iterate over it twice...
-                //Get indicators for every block of what mesh and material they are1
+                //Get indicators for every block of what mesh and material they are
                 for i in &material_split_points[..material_split_points.len() - 1] {
                     let curent = current_window[*i];
                     if last != (curent.0, curent.1 .1) {
@@ -290,13 +294,6 @@ impl RenderingExtension for Base {
                     }
                 }
 
-                mesh_refs.push(
-                    current_window
-                        .iter()
-                        .map(|i| i.1 .2.clone())
-                        .collect::<Vec<_>>(),
-                );
-
                 //AGAIN!?!?
                 //Create vertex buffers for matrices
                 for m in material_split_points.windows(2) {
@@ -304,6 +301,15 @@ impl RenderingExtension for Base {
                     let points = (*m.first().unwrap(), *m.last().unwrap());
 
                     num_instances.push(points.1 - points.0);
+                    let current_window = &current_window[points.0..points.1];
+
+                    //Copy mesh references
+                    mesh_refs.push(
+                        current_window
+                            .iter()
+                            .map(|i| i.1 .2.clone())
+                            .collect::<Vec<_>>(),
+                    );
 
                     let matrices = current_window
                         .iter()
@@ -387,7 +393,7 @@ impl RenderingExtension for Base {
                 view: &attachments.color,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(self.clear_color),
+                    load: wgpu::LoadOp::Clear(self.clear_color.into()),
                     store: wgpu::StoreOp::Store,
                 },
             })],

@@ -147,6 +147,8 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
             cursor_position: RwLock::new(Vec2::default()),
             previous_cursor_position: RwLock::new(Vec2::default()),
             cursor_delta: RwLock::new(Vec2::default()),
+            raw_curosor_delta: RwLock::new(Vec2::default()),
+            delta_changed: RwLock::new(false),
         })
         .unwrap();
 

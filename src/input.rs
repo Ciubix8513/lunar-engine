@@ -26,6 +26,9 @@ pub(crate) struct InputState {
     pub(crate) cursor_position: RwLock<Vec2>,
     pub(crate) previous_cursor_position: RwLock<Vec2>,
     pub(crate) cursor_delta: RwLock<Vec2>,
+    //Cursor delta stuff
+    pub(crate) raw_curosor_delta: RwLock<Vec2>,
+    pub(crate) delta_changed: RwLock<bool>,
 }
 
 pub(crate) static INPUT: OnceLock<InputState> = OnceLock::new();
@@ -65,13 +68,15 @@ pub fn mouse_btn(btn: MouseButton) -> KeyState {
     *i.entry(btn).or_insert(KeyState::Neutral)
 }
 
-// pub fn cursor_position() -> Vec2 {
-//     *INPUT.get().unwrap().cursor_position.read().unwrap()
-// }
+///Returns the cursor position inside the window
+pub fn cursor_position() -> Vec2 {
+    *INPUT.get().unwrap().cursor_position.read().unwrap()
+}
 
-// pub fn cursor_delta() -> Vec2 {
-//     *INPUT.get().unwrap().cursor_delta.read().unwrap()
-// }
+///Returns the cursor movement delta
+pub fn cursor_delta() -> Vec2 {
+    *INPUT.get().unwrap().cursor_delta.read().unwrap()
+}
 
 ///Updates the states, downgrading Down and Up into Pressed and Neutral respectively
 pub(crate) fn update() {
@@ -101,43 +106,66 @@ pub(crate) fn update() {
 
     let cur = input.cursor_position.read().unwrap();
     let mut last = input.previous_cursor_position.write().unwrap();
-    *input.cursor_delta.write().unwrap() = *cur - *last;
+
+    let mut changed = input.delta_changed.write().unwrap();
+
+    let d = if *changed {
+        *changed = false;
+        *input.raw_curosor_delta.read().unwrap()
+    } else {
+        Vec2::default()
+    };
+    drop(changed);
+
+    *input.cursor_delta.write().unwrap() = d;
+
     *last = *cur;
 }
 
-//Sets the cursor grab mode
-// pub fn set_cursor_grab_mode(mode: CursorState) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.grab_mode = mode;
-//     state.modified = true;
-// }
+///Sets the cursor grab mode
+pub fn set_cursor_grab_mode(mode: CursorLock) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.grab_mode = mode;
+    state.modified = true;
+}
 
-//Sets the cursor grab mode
-// pub fn set_cursor_visible(mode: bool) {
-//     let mut state = CURSOR_STATE.write().unwrap();
-//     state.visible = mode;
-//     state.modified = true;
-// }
+///Sets the cursor grab mode
+pub fn set_cursor_visible(mode: CursorVisibily) {
+    let mut state = CURSOR_STATE.write().unwrap();
+    state.visible = mode;
+    state.modified = true;
+}
 
 ///Defines behaviour of the cursor inside the window
-#[derive(Clone, Copy)]
-pub enum CursorState {
+#[derive(Clone, Copy, Default)]
+pub enum CursorLock {
     ///Cursor is locked in place
     Locked,
     ///Cursor is free
+    #[default]
     Free,
 }
 
+///Defines the visibility of the cursor
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub enum CursorVisibily {
+    #[default]
+    ///Cursor is visible
+    Visible,
+    ///Cursor is hidden
+    Hidden,
+}
+
 struct CursorStateInternal {
-    grab_mode: CursorState,
+    grab_mode: CursorLock,
     lock_failed: bool,
-    visible: bool,
+    visible: CursorVisibily,
     modified: bool,
 }
 static CURSOR_STATE: RwLock<CursorStateInternal> = RwLock::new(CursorStateInternal {
-    grab_mode: CursorState::Free,
+    grab_mode: CursorLock::Free,
     lock_failed: false,
-    visible: true,
+    visible: CursorVisibily::Visible,
     modified: false,
 });
 
@@ -156,7 +184,7 @@ fn reset_cursor() {
 pub(crate) fn process_cursor() {
     let mut state = CURSOR_STATE.write().unwrap();
 
-    if matches!(state.grab_mode, CursorState::Locked) && state.lock_failed {
+    if matches!(state.grab_mode, CursorLock::Locked) && state.lock_failed {
         reset_cursor();
     }
 
@@ -166,12 +194,17 @@ pub(crate) fn process_cursor() {
     state.modified = false;
     let window = WINDOW.get().unwrap();
 
-    window.set_cursor_visible(state.visible);
+    let visible = state.visible;
+
+    window.set_cursor_visible(match visible {
+        CursorVisibily::Visible => true,
+        CursorVisibily::Hidden => false,
+    });
 
     let g_mode = state.grab_mode;
     let res = window.set_cursor_grab(match g_mode {
-        CursorState::Locked => CursorGrabMode::Locked,
-        CursorState::Free => CursorGrabMode::None,
+        CursorLock::Locked => CursorGrabMode::Locked,
+        CursorLock::Free => CursorGrabMode::None,
     });
     if let Err(e) = res {
         match e {
@@ -197,4 +230,14 @@ pub(crate) fn process_cursor() {
             winit::error::ExternalError::Os(e) => log::error!("Cursor state change error: {e}"),
         }
     }
+}
+
+///Returns the current lock state of the cursor
+pub fn get_cursor_grab_mode() -> CursorLock {
+    CURSOR_STATE.read().unwrap().grab_mode
+}
+
+///Returns the current visibility state of the cursor
+pub fn get_cursor_visibility() -> CursorVisibily {
+    CURSOR_STATE.read().unwrap().visible
 }

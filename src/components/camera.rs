@@ -15,7 +15,7 @@ use crate::{
 
 use super::transform::Transform;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 ///Camera used for rendering of the objects
 pub struct Camera {
     ///Fov of the camera in radians
@@ -27,6 +27,23 @@ pub struct Camera {
     transorm_reference: Option<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
     bind_group: Option<wgpu::BindGroup>,
+}
+
+impl Default for Camera {
+    ///The default camera has the following settings:
+    /// - Fov: 60
+    /// - Near plane: 0.1
+    /// - Far plane: 100
+    fn default() -> Self {
+        Self {
+            fov: std::f32::consts::FRAC_PI_3,
+            near: 0.1,
+            far: 100.0,
+            transorm_reference: None,
+            buffer: None,
+            bind_group: None,
+        }
+    }
 }
 
 impl Component for Camera {
@@ -69,7 +86,7 @@ impl Camera {
         let rotation_matrix = Mat4x4::rotation_matrix_euler(&transform.rotation);
 
         let up = (rotation_matrix * Vec4::new(0.0, 1.0, 0.0, 1.0)).xyz();
-        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, -1.0, 1.0)).xyz() + transform.position;
+        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, 1.0, 1.0)).xyz() + transform.position;
 
         let camera_matrix = Mat4x4::look_at_matrix(transform.position, up, forward);
 

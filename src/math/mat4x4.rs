@@ -153,6 +153,12 @@ pub const fn identity() -> Self {
         }
     }
 
+    ///Transforms `other` using `self` matrix
+    #[must_use]
+    pub fn transform3(&self, other: Vec3) -> Vec3 {
+        self.transform((other,1.0).into()).xyz()
+    }
+
     //[1 , 2] . [1 , 2] _ [1 * 1 +  3 * 2,  1 * 2 + 4*2]
     //[3 , 4]   [3 , 4] -
     ///Performs matrix multiplication `self` * `other`
