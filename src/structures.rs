@@ -102,37 +102,37 @@ impl Color {
 
     ///Creates a new color from hsl values
     #[must_use]
-    pub fn from_hsl(h: f32, s: f32, l: f32) -> Self {
+    pub fn from_hsl(hue: f32, saturation: f32, lightness: f32) -> Self {
         //Hue : [0, 360)
         //Saturation: [0; 1]
         //Lightness: [0; 1]
-        let h = h % 360.0;
+        let hue = hue % 360.0;
 
-        let c = (1.0 - f32::abs(2.0 * l - 1.0)) * s;
+        let chroma = (1.0 - f32::abs(2.0f32.mul_add(lightness, -1.0))) * saturation;
 
-        let h_tick = h / 60.0;
+        let h_tick = hue / 60.0;
 
-        let x = c * (1.0 - f32::abs(h_tick % 2.0 - 1.0));
+        let x = chroma * (1.0 - f32::abs(h_tick % 2.0 - 1.0));
 
-        let a = if 0.0 <= h_tick && h_tick < 1.0 {
-            (c, x, 0.0)
-        } else if 1.0 <= h_tick && h_tick < 2.0 {
-            (x, c, 0.0)
-        } else if 2.0 <= h_tick && h_tick < 3.0 {
-            (0.0, c, x)
-        } else if 3.0 <= h_tick && h_tick < 4.0 {
-            (0.0, x, c)
-        } else if 4.0 <= h_tick && h_tick < 5.0 {
-            (x, 0.0, c)
-        } else if 5.0 <= h_tick && h_tick < 6.0 {
-            (c, 0.0, x)
+        let a = if (0.0..1.0).contains(&h_tick) {
+            (chroma, x, 0.0)
+        } else if (1.0..2.0).contains(&h_tick) {
+            (x, chroma, 0.0)
+        } else if (2.0..3.0).contains(&h_tick) {
+            (0.0, chroma, x)
+        } else if (3.0..4.0).contains(&h_tick) {
+            (0.0, x, chroma)
+        } else if (4.0..5.0).contains(&h_tick) {
+            (x, 0.0, chroma)
+        } else if (5.0..6.0).contains(&h_tick) {
+            (chroma, 0.0, x)
         } else {
             unreachable!()
         };
 
         let a: Vec3 = a.into();
 
-        let m = l - c / 2.0;
+        let m = lightness - chroma / 2.0;
 
         (a + m).into()
     }
