@@ -1,7 +1,9 @@
+use log::info;
 use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::ColorUnlit, mesh::SphereData},
     components::{camera::MainCamera, mesh::Mesh, transform::Transform},
+    delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{lerp, Mat4x4, Vec3, Vector},
@@ -9,6 +11,7 @@ use lunar_engine::{
     structures::Color,
 };
 use lunar_engine_derive::as_any;
+use rand::Rng;
 use winit::keyboard::KeyCode;
 
 struct CameraControls {
@@ -39,18 +42,25 @@ impl Component for CameraControls {
             input::set_cursor_visible(CursorVisibily::Hidden);
         }
 
-        //Rotation
-        let delta = input::cursor_delta();
+        let delta_time = delta_time();
 
+        //Rotation
+        let sensetivity = 300.0;
+        let delta = input::cursor_delta() * delta_time * sensetivity;
         let mut trans = self.transform.as_ref().unwrap().borrow_mut();
         let rot = trans.rotation;
 
         let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
-        let rot_x = lerp(rot.x, rot.x - delta.y, 0.1);
+        let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
         trans.rotation.y = rot_y;
-        trans.rotation.x = rot_x;
+        trans.rotation.x = rot_x; //* delta_time * sensetivity;
 
         //Movement
+        let mut speed = 400.0;
+        if input::key(KeyCode::ShiftLeft) == KeyState::Pressed {
+            speed *= 2.0;
+        }
+
         let mut movement_vec = Vec3::default();
         if input::key(KeyCode::KeyW) == KeyState::Pressed {
             movement_vec.z += 1.0;
@@ -75,7 +85,7 @@ impl Component for CameraControls {
             return;
         }
 
-        movement_vec *= 0.01;
+        movement_vec *= 0.01 * speed * delta_time;
 
         let mat = Mat4x4::rotation_matrix_euler(&trans.rotation);
         movement_vec = mat.transform3(movement_vec);
@@ -97,28 +107,65 @@ struct State {
 fn end(_: &mut State) {}
 
 fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, num_colors: u32) {
-    let white = assets.register(ColorUnlit::new(Color::white()));
-    let cube = assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0)));
-    let sphere = assets.register(assets::Mesh::new_sphere(SphereData {
-        radius: 0.5,
-        rings: 16,
-        segments: 32,
-    }));
+    let objects = vec![
+        assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0))),
+        assets.register(assets::Mesh::new_sphere(SphereData {
+            radius: 0.5,
+            rings: 16,
+            segments: 32,
+        })),
+    ];
 
-    world.add_entity(
-        EntityBuilder::new()
-            .add_component::<Transform>()
-            .create_component(|| Mesh::new(cube, white))
-            .create()
-            .unwrap(),
-    );
+    let mut colors = Vec::new();
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..num_colors {
+        // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
+        colors.push(assets.register(ColorUnlit::new(Color::from_hsl(
+            rng.gen_range(0.0..360.0),
+            rng.gen_range(0.5..1.0),
+            rng.gen_range(0.4..0.8),
+        ))));
+    }
+
+    for _ in 0..num_objects {
+        let obj_id = objects[rng.gen_range(0..objects.len())];
+        let mat_id = colors[rng.gen_range(0..colors.len())];
+
+        world.add_entity(
+            EntityBuilder::new()
+                .create_component(|| Transform {
+                    position: Vec3::random(-20.0, 20.0),
+                    rotation: Vec3::random(-180.0, 180.0),
+                    scale: Vec3::random(0.3, 1.5),
+                    ..Default::default()
+                })
+                .create_component(|| Mesh::new(obj_id, mat_id))
+                .create()
+                .unwrap(),
+        );
+    }
 }
 
 fn init(state: &mut State) {
     let assets = &mut state.asset_store;
     let world = &mut state.world;
 
-    generate_scene(world, assets, 10, 4);
+    let args = std::env::args().collect::<Vec<_>>();
+
+    let mut num_objects = 400;
+    let mut num_colors = 20;
+    if let Some(num_obj) = args.get(1) {
+        num_objects = num_obj.parse().unwrap_or(num_objects);
+    }
+    if let Some(num_col) = args.get(2) {
+        num_colors = num_col.parse().unwrap_or(num_colors)
+    }
+
+    info!("Num of objects: {num_objects}");
+    info!("Num of colors: {num_colors}");
+
+    generate_scene(world, assets, num_objects, num_colors);
 
     world.add_entity(
         EntityBuilder::new()
