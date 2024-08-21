@@ -127,7 +127,7 @@ impl Camera {
     }
 
     ///Updates the buffer of the camera with the new camera matrix
-    pub(crate) fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
         let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
 
         staging_belt

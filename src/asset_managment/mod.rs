@@ -233,7 +233,7 @@ impl AssetStore {
     ///
     ///# Errors
     ///Returns an error if one of the assets fails to initialize
-    pub fn intialize_all(&mut self) -> Result<(), Error> {
+    pub fn intialize_all(&self) -> Result<(), Error> {
         let binding = self.assets.values().collect::<Vec<_>>();
 
         #[cfg(not(target_arch = "wasm32"))]

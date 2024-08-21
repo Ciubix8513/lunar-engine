@@ -170,7 +170,7 @@ impl RenderingExtension for Base {
             .get_all_components::<components::camera::MainCamera>()
             .expect("Could not find the main camera");
 
-        let mut camera = binding.first().unwrap().borrow_mut();
+        let camera = binding.first().unwrap().borrow();
         camera.update_gpu(encoder);
         trace!("Accquired camera");
 

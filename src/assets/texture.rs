@@ -203,17 +203,17 @@ impl Texture {
     //     todo!("Not yet implemented")
     // }
 
-    ///Sets the filter of the texture
-    pub fn set_filter(&mut self, filter: wgpu::FilterMode) {
-        //Change the filter and recreate the sampler
-        todo!("Not yet implemented")
-    }
+    //Sets the filter of the texture
+    // pub fn set_filter(&mut self, filter: wgpu::FilterMode) {
+    //Change the filter and recreate the sampler
+    // todo!("Not yet implemented")
+    // }
 
-    ///Sets the address of the texture
-    pub fn set_adress_mode(&mut self, filter: wgpu::AddressMode) {
-        //Change the address mode and recreate the sampler
-        todo!("Not yet implemented")
-    }
+    //Sets the address of the texture
+    // pub fn set_adress_mode(&mut self, filter: wgpu::AddressMode) {
+    //Change the address mode and recreate the sampler
+    // todo!("Not yet implemented")
+    // }
 }
 
 impl Asset for Texture {
