@@ -27,6 +27,9 @@ pub struct ColorUnlit {
     bind_group_layout_f: Option<crate::wrappers::WgpuWrapper<wgpu::BindGroupLayout>>,
     #[cfg(not(target_arch = "wasm32"))]
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
+    #[cfg(target_arch = "wasm32")]
+    uniform: Option<crate::wrappers::WgpuWrapper<wgpu::Buffer>>,
+    #[cfg(not(target_arch = "wasm32"))]
     uniform: Option<wgpu::Buffer>,
     color: Color,
     bindgroup_sate: BindgroupState,
@@ -111,14 +114,26 @@ impl MaterialTrait for ColorUnlit {
             self.bind_group_layout_f = Some(bind_group_layout_f);
         }
 
-        self.uniform = Some(
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: bytemuck::bytes_of(&self.color),
-                usage: BufferUsages::UNIFORM,
-            }),
-        );
-
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.uniform = Some(crate::wrappers::WgpuWrapper::new(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: bytemuck::bytes_of(&self.color),
+                    usage: BufferUsages::UNIFORM,
+                }),
+            ));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.uniform = Some(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: bytemuck::bytes_of(&self.color),
+                    usage: BufferUsages::UNIFORM,
+                }),
+            );
+        }
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
