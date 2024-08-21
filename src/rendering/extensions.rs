@@ -120,7 +120,7 @@ impl Base {
     ///
     ///Everything rendered with this extension will have that color in the parts not occupied by a mesh.
     #[must_use]
-    pub const fn new_with_color(order: u32, color: wgpu::Color) -> Self {
+    pub const fn new_with_color(order: u32, color: Color) -> Self {
         Self {
             priority: order,
             clear_color: color,
