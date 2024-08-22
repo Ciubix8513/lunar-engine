@@ -13,12 +13,14 @@ My current streaming project, a lot of the code is writen live on my [twitch str
 - [x] Rendering abstraction
 - [x] Ecs, or at least ecs like
 - [x] png format loading
-- [ ] Better input
+- [x] Better input
 - [ ] OPTIMIZATION
 - [ ] PBR rendering 
 - [ ] post proccessing stuff
+- [ ] A physics engine?
 - [ ] gltf loading
 - [ ] Skeletal animations
+
 
 Note: This is just my personal project, some of these goals may never get accomplished or be rearranged, no guarantees. 
   
