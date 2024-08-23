@@ -1,10 +1,16 @@
 //============================================================
 //===========================Mesh=============================
 //============================================================
-//Yea this trash is not expandale later on, gltf may be a bit too complex for loading into
+//Yea this trash is not expandable later on, gltf may be a bit too complex for loading into
 //separate assets, who knows tho
 //
 //Actually, thinking about it, i think loading a gltf should produce an entire set of assets
+//Yea, maybe even an entire world and assetstore
+//
+//Loading a gltf could ask you to provide it with a world and an assetstore, to load all the
+//textures, materials and meshes into. And also to create a scene
+//
+//This sounds interesting
 
 use std::{
     path::{Path, PathBuf},
@@ -17,7 +23,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     asset_managment::{Asset, UUID},
-    math::Vec3,
+    math::{Vec3, Vector},
     DEVICE,
 };
 
@@ -39,15 +45,17 @@ pub struct Mesh {
     vert_count: Option<u32>,
     tris_count: Option<u32>,
     index_count: Option<u32>,
+    ///distance to the vertex furthest from the origin
+    extent: Option<f32>,
 }
 
 ///Description of a uv sphere
 pub struct SphereData {
-    ///TODO
+    ///Radius of the sphere
     pub radius: f32,
-    ///TODO
+    ///Number of segments used for constructing the sphere
     pub segments: u32,
-    ///TODO
+    ///Number of rings used for constructing the rings
     pub rings: u32,
 }
 
@@ -81,6 +89,7 @@ impl Mesh {
             vert_count: None,
             tris_count: None,
             index_count: None,
+            extent: None,
         }
     }
 
@@ -102,6 +111,7 @@ impl Mesh {
             tris_count: None,
             vert_count: None,
             index_count: None,
+            extent: None,
         })
     }
 
@@ -175,10 +185,13 @@ impl Mesh {
 
     ///Creates a new mesh that is a box with given dimensions
     #[must_use]
-    pub const fn new_box(dimensions: Vec3) -> Self {
+    pub fn new_box(dimensions: Vec3) -> Self {
         Self {
             id: None,
             initialized: false,
+            extent: Some(
+                (f32::abs(dimensions.x) + f32::abs(dimensions.y) + f32::abs(dimensions.z)) / 2.0,
+            ),
             mode: MeshMode::GeneratedModel(ModelType::Box(dimensions)),
             vertex_buffer: None,
             index_buffer: None,
@@ -188,12 +201,13 @@ impl Mesh {
         }
     }
 
-    ///TODO
+    ///Creates a new mesh that is a sphere with the given radius, number of sectors and rings
     #[must_use]
     pub const fn new_sphere(desc: SphereData) -> Self {
         Self {
             id: None,
             initialized: false,
+            extent: Some(desc.radius),
             mode: MeshMode::GeneratedModel(ModelType::Sphere(desc)),
             vertex_buffer: None,
             index_count: None,
@@ -249,6 +263,17 @@ impl Asset for Mesh {
             }
             MeshMode::GeneratedModel(mdl_type) => generate_mesh(mdl_type),
         };
+
+        if self.extent.is_none() {
+            let mut e = 0.0;
+            for i in &mesh.vertices {
+                let sqr_len = i.coords.square_length();
+                if sqr_len > e {
+                    e = sqr_len;
+                }
+            }
+            self.extent = Some(e.sqrt());
+        }
 
         let device = DEVICE.get().unwrap();
         let name = format!("Mesh {}", self.get_id());

@@ -15,6 +15,9 @@ use crate::{
     DEVICE, STAGING_BELT,
 };
 
+///Frustum culling experiment
+pub mod frustum_culling;
+
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
     ///Color buffer
