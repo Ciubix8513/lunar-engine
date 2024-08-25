@@ -147,7 +147,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Define all the needed blocks
 
-    let inner = format!("__inner: {base}").parse::<TokenStream>().unwrap();
+    let inner = format!("pub inner: {base}").parse::<TokenStream>().unwrap();
 
     let deref = format!(
         "
@@ -155,7 +155,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         type Target = {base}; 
 
         fn deref(&self) -> &Self::Target {{ 
-            &self.__inner 
+            &self.inner 
         }} 
     }}"
     )
@@ -166,7 +166,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         "
     impl std::ops::DerefMut for {name} {{ 
         fn deref_mut(&mut self) -> &mut Self::Target {{ 
-            &mut self.__inner 
+            &mut self.inner 
         }} 
     }}
     "
@@ -182,20 +182,20 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
             Self: Sized,
         {{
             Self {{
-                __inner: {base}::mew(),
+                inner: {base}::mew(),
             }}
         }}
         fn update(&mut self) {{
-            self.__inner.update();
+            self.inner.update();
         }}
         fn awawa(&mut self) {{
-            self.__inner.awawa();
+            self.inner.awawa();
         }}
         fn decatification(&mut self) {{
-            self.__inner.decatification();
+            self.inner.decatification();
         }}
         fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {{
-            self.__inner.set_self_reference(reference);
+            self.inner.set_self_reference(reference);
         }}
         fn as_any(&self) -> &dyn std::any::Any {{
             self as &dyn std::any::Any
