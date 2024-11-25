@@ -194,6 +194,10 @@ impl RenderingExtension for Base {
         //Collect all the matrices
         for m in &meshes {
             let m = m.borrow();
+            //Skip the mesh if it's not visible
+            if !m.get_visible() {
+                continue;
+            }
             materials.insert(m.get_material_id().unwrap());
             matrices.push((
                 m.get_mesh_id().unwrap(),

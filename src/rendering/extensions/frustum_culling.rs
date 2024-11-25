@@ -133,6 +133,11 @@ impl RenderingExtension for Base {
         //Collect all the matrices
         for m in &meshes {
             let m = m.borrow();
+
+            if !m.get_visible() {
+                continue;
+            }
+
             num_meshes += 1;
 
             if !check_frustum(
@@ -457,8 +462,8 @@ pub fn check_frustum(
     let h = dimensions.z;
 
     let scale = Mat4x4::scale_matrix(&(Vec3::new(dimensions.x, dimensions.y, 1.0)));
-    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, -h, h));
-    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(0.0, 0.0, 90.0));
+    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, -h, 0.0));
+    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(90.0, 0.0, 0.0));
 
     let inv_tr = translation.invert().unwrap();
 
