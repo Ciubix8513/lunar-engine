@@ -1,5 +1,5 @@
 use core::f32;
-use std::{borrow::Borrow, num::NonZeroU64, sync::Arc};
+use std::{num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
@@ -117,9 +117,14 @@ impl RenderingExtension for Base {
         let camera_tranform = camera.camera_transform();
 
         //This is cached, so should be reasonably fast
-        let meshes = world
+        let binding = world
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
+
+        let meshes = binding
+            .iter()
+            .filter(|i| i.borrow().get_visible())
+            .collect::<Vec<_>>();
         trace!("Got all the meshes");
 
         //List of materials used for rendering

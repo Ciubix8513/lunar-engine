@@ -1,9 +1,7 @@
 #![allow(clippy::too_many_lines)]
 
-use core::f32;
 use std::{num::NonZeroU64, sync::Arc};
 
-use frustum_culling::calculate_frustum;
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
 use wgpu::util::DeviceExt;
@@ -13,7 +11,6 @@ use crate::{
     assets::{BindgroupState, Material, Mesh},
     components,
     ecs::{ComponentReference, World},
-    math::{Mat4x4, Vec3},
     structures::Color,
     DEVICE, STAGING_BELT,
 };
@@ -181,9 +178,14 @@ impl RenderingExtension for Base {
         trace!("Accquired camera");
 
         //This is cached, so should be reasonably fast
-        let meshes = world
+        let binding = world
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
+
+        let meshes = binding
+            .iter()
+            .filter(|i| i.borrow().get_visible())
+            .collect::<Vec<_>>();
         trace!("Got all the meshes");
 
         //List of materials used for rendering
@@ -194,10 +196,6 @@ impl RenderingExtension for Base {
         //Collect all the matrices
         for m in &meshes {
             let m = m.borrow();
-            //Skip the mesh if it's not visible
-            if !m.get_visible() {
-                continue;
-            }
             materials.insert(m.get_material_id().unwrap());
             matrices.push((
                 m.get_mesh_id().unwrap(),
@@ -206,6 +204,7 @@ impl RenderingExtension for Base {
         }
 
         //What is even going on here?
+        //I... don't know...
 
         let mut matrices = matrices
             .iter()
@@ -326,6 +325,7 @@ impl RenderingExtension for Base {
                         .flat_map(|i| bytemuck::bytes_of(&i.1 .0))
                         .copied()
                         .collect::<Vec<u8>>();
+
                     v_buffers.push(
                         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                             label: Some(&label),
