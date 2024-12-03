@@ -371,6 +371,22 @@ pub const fn identity() -> Self {
         }
     }
 
+    ///TODO
+    #[must_use]
+    pub fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
+    )-> Self{
+        Self{
+            m00: 2.0 / (right - left),
+            m03: -(left + right) / (right - left),
+            m11: 2.0 / (top - bottom),
+            m13: -(top + bottom) / (top - bottom),
+            m22:  -2.0 / (far - near),
+            m23: -(far+near)/ (far -near),
+            ..Default::default()
+
+        }
+    }
+
     #[must_use]
     ///Creates a scale matrix for the given vector
     pub fn scale_matrix(scale: &Vec3) -> Self {
