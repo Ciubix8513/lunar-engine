@@ -373,15 +373,22 @@ pub const fn identity() -> Self {
 
     ///TODO
     #[must_use]
+    pub fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
+        let aspect = 1.0 / aspect;
+        Self::orth_projection(-size / 2.0, size /2.0, -size/aspect /2.0,size/aspect /2.0,near,far)
+    }
+
+    ///TODO
+    #[must_use]
     pub fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
     )-> Self{
         Self{
             m00: 2.0 / (right - left),
-            m03: -(left + right) / (right - left),
+            m03: -((left + right) / (right - left)),
             m11: 2.0 / (top - bottom),
-            m13: -(top + bottom) / (top - bottom),
+            m13: -((top + bottom) / (top - bottom)),
             m22:  -2.0 / (far - near),
-            m23: -(far+near)/ (far -near),
+            m32: ((far+near)/ (far -near)),
             ..Default::default()
 
         }

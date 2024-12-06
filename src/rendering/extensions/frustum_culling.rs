@@ -1,7 +1,7 @@
 use core::f32;
 use std::{num::NonZeroU64, sync::Arc};
 
-use log::{debug, trace};
+use log::{debug, info, trace};
 use vec_key_value_pair::set::VecSet;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
@@ -113,7 +113,11 @@ impl RenderingExtension for Base {
         camera.update_gpu(encoder);
         trace!("Accquired camera");
 
-        let frustum = calculate_frustum(camera.inner.near, camera.inner.far, camera.inner.fov);
+        let frustum = calculate_frustum(
+            camera.inner.near,
+            camera.inner.far,
+            camera.inner.projection_type.fov().unwrap_or_default(),
+        );
         let camera_tranform = camera.camera_transform();
 
         //This is cached, so should be reasonably fast
@@ -428,33 +432,16 @@ impl RenderingExtension for Base {
 
 ///TODO
 pub fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
-    //This all makes sense i swear
-    //180 - fov / 2
-    let beta = (f32::consts::FRAC_PI_2 - fov) / 2.0;
-
-    // let aspect = camera.aspect
-
-    //Front bottom of the frustum, coinsiding with the bottom edge of the screen
-    let front = near * f32::sin(fov) / f32::sin(beta);
-
-    //(180 - B) - 90
-    let gamma = (f32::consts::FRAC_PI_2 - beta) - f32::consts::FRAC_PI_4;
-
-    let length = far - near;
-    let z = length / f32::sin(gamma);
-
-    let f = f32::sqrt(z * z - length * length);
-
-    let front_bottom = 2.0 * f + front;
+    let beta = f32::consts::FRAC_PI_2 - (fov / 2.0);
+    let bottom = 2.0 * (((near + far) * f32::sin(fov / 2.0)) / f32::sin(beta));
 
     let resolution = RESOLUTION.read().unwrap();
     let aspect = resolution.width as f32 / resolution.height as f32;
     drop(resolution);
 
-    let front_side = front_bottom / aspect;
+    let side = bottom / aspect;
 
-    // if sdf - radius < 0 then sphere is inside the object!!!!!
-    (front_bottom, front_side, far).into()
+    (bottom, side, near + far).into()
 }
 
 ///TODO
@@ -466,15 +453,19 @@ pub fn check_frustum(
 ) -> (bool, f32) {
     let h = dimensions.z;
 
-    let scale = Mat4x4::scale_matrix(&(Vec3::new(dimensions.x, dimensions.y, 1.0)));
-    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, -h, 0.0));
-    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(90.0, 0.0, 0.0));
+    let scale = Mat4x4::scale_matrix(&(Vec3::new(dimensions.x, 1.0, dimensions.y)))
+        .invert()
+        .unwrap();
+    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, h, 0.0));
+    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(0.0, 0.0, 90.0))
+        .invert()
+        .unwrap();
 
-    let inv_tr = translation.invert().unwrap();
+    // let inv_tr = translation.invert().unwrap();
 
     let p: Vec4 = (point, 1.0).into();
 
-    let p = p * scale * translation * camera_transform * rotation * inv_tr;
+    let p = p * rotation * scale * translation; //* rotation * translation; //* camera_transform * rotation * inv_tr;
     let p = p.xyz();
 
     let distance = sdf(p, h);
