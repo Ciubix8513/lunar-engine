@@ -3,8 +3,12 @@ use std::path::Path;
 use log::{debug, info};
 use lunar_engine::{
     asset_managment::AssetStore,
-    assets::{self, materials::TextureUnlit, Material},
-    components::{camera::MainCamera, mesh::Mesh, transform::Transform},
+    assets::{self, materials::TextureUnlit},
+    components::{
+        camera::{MainCamera, ProjectionType},
+        mesh::Mesh,
+        transform::Transform,
+    },
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input,
     math::Vec3,
@@ -89,9 +93,11 @@ fn init(state: &mut MyState) {
                 ..Default::default()
             })
             .create_component(|| {
-                let mut c = MainCamera::default();
+                let mut c = MainCamera::mew();
                 //60 degree FOV
-                c.fov = std::f32::consts::FRAC_PI_3;
+                c.projection_type = ProjectionType::Perspective {
+                    fov: std::f32::consts::FRAC_PI_3,
+                };
                 c.near = 0.1;
                 c.far = 100.0;
                 c
@@ -102,7 +108,7 @@ fn init(state: &mut MyState) {
 
     state.world.add_entity(
         EntityBuilder::new()
-            .create_component(|| Transform::default())
+            .create_component(Transform::default)
             .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
             .add_component::<Blahaj>()
             .add_component::<Spiny>()
