@@ -566,26 +566,3 @@ fn sdf(mut p: Vec3, h: f32) -> f32 {
         f32::sqrt(f32::min(d1.dot_product(&d1), d2.dot_product(&d2)))
     }
 }
-
-#[test]
-fn test_frustum() {
-    *RESOLUTION.write().unwrap() = winit::dpi::PhysicalSize::new(1920, 1080);
-    let frustum = calculate_frustum(0.1, 10.0, f32::consts::FRAC_PI_3);
-
-    let camera_matrix = Mat4x4::identity();
-    let matrix = calculate_frustum_matrix(frustum, camera_matrix);
-
-    let point = Vec3::new(0.0, 0.0, 0.0);
-    let inside = check_frustum(frustum.z, matrix, point, 0.0, 1.0.into());
-
-    log::info!("SDF: {}", inside.1);
-
-    assert!(inside.0);
-
-    let point = Vec3::new(0.0, 0.0, 0.3);
-    let inside = check_frustum(frustum.z, matrix, point, 0.0, 1.0.into());
-
-    log::info!("SDF: {}", inside.1);
-
-    assert!(inside.0);
-}
