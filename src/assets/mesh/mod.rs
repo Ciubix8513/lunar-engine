@@ -210,11 +210,11 @@ impl Mesh {
 
     ///Creates a new mesh that is a sphere with the given radius, number of sectors and rings
     #[must_use]
-    pub const fn new_sphere(desc: SphereData) -> Self {
+    pub fn new_sphere(desc: SphereData) -> Self {
         Self {
             id: None,
             initialized: false,
-            extent: Some(desc.radius),
+            extent: Some(desc.radius * 2.0),
             mode: MeshMode::GeneratedModel(ModelType::Sphere(desc)),
             vertex_buffer: None,
             index_count: None,

@@ -95,9 +95,9 @@ impl Mesh {
         self.material_id
     }
 
-    #[must_use]
-    pub(crate) fn get_position(&self) -> Vec3 {
-        self.transform_reference.as_ref().unwrap().borrow().position
+    ///Returns a reference to the transform component
+    pub fn get_transform(&self) -> ComponentReference<Transform> {
+        self.transform_reference.clone().unwrap()
     }
 
     #[must_use]

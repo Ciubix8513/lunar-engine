@@ -1,17 +1,16 @@
 use core::f32;
 use std::{num::NonZeroU64, sync::Arc};
 
-use log::{debug, info, trace};
+use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
 use wgpu::util::DeviceExt;
-use winit::dpi::PhysicalSize;
 
 use crate::{
     asset_managment::AssetStore,
     assets::{BindgroupState, Material, Mesh},
-    components::{self, camera::Camera},
+    components,
     ecs::{ComponentReference, World},
-    math::{Mat4x4, Vec2, Vec3, Vec4},
+    math::{Mat4x4, Vec2, Vec3, Vec4, Vector},
     structures::Color,
     DEVICE, RESOLUTION, STAGING_BELT,
 };
@@ -30,7 +29,7 @@ pub struct Base {
     v_buffers: Vec<wgpu::Buffer>,
     mesh_materials: Vec<MeshMaterial>,
     num_instances: Vec<usize>,
-    mesh_refs: Vec<Vec<ComponentReference<crate::components::mesh::Mesh>>>,
+    mesh_refs: Vec<Vec<ComponentReference<components::mesh::Mesh>>>,
 }
 
 impl Base {
@@ -118,16 +117,37 @@ impl RenderingExtension for Base {
             camera.inner.far,
             camera.inner.projection_type.fov().unwrap_or_default(),
         );
-        let camera_tranform = camera.camera_transform();
+        let camera_transform = camera.camera_transform();
 
         //This is cached, so should be reasonably fast
         let binding = world
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
 
+        //Precompute the transformation matrix, since it's the same for all the objects
+        let matrix = calculate_frustum_matrix(frustum, camera_transform);
+
         let meshes = binding
             .iter()
-            .filter(|i| i.borrow().get_visible())
+            .filter(|i| {
+                let m = i.borrow();
+                let binding = m.get_transform();
+                let t = binding.borrow();
+
+                m.get_visible()
+                    && check_frustum(
+                        frustum.z,
+                        matrix,
+                        t.position,
+                        assets
+                            .get_by_id::<Mesh>(m.get_mesh_id().unwrap())
+                            .unwrap()
+                            .borrow()
+                            .get_extent(),
+                        t.scale,
+                    )
+                    .0
+            })
             .collect::<Vec<_>>();
         trace!("Got all the meshes");
 
@@ -136,44 +156,15 @@ impl RenderingExtension for Base {
         //List of (mesh_ID, (transformation matrix, material_id))
         let mut matrices = Vec::new();
 
-        let mut num_meshes = 0;
-        let mut num_culled = 0;
-
         //Collect all the matrices
         for m in &meshes {
             let m = m.borrow();
-
-            if !m.get_visible() {
-                continue;
-            }
-
-            num_meshes += 1;
-
-            if !check_frustum(
-                frustum,
-                camera_tranform,
-                m.get_position(),
-                assets
-                    .get_by_id::<Mesh>(m.get_mesh_id().unwrap())
-                    .unwrap()
-                    .borrow()
-                    .get_extent(),
-            )
-            .0
-            {
-                num_culled += 1;
-                continue;
-            }
-
             materials.insert(m.get_material_id().unwrap());
             matrices.push((
                 m.get_mesh_id().unwrap(),
                 (m.get_matrix(), m.get_material_id().unwrap()),
             ));
         }
-
-        log::info!("Got {num_meshes} meshes");
-        log::info!("Culled {num_culled}");
 
         //What is even going on here?
 
@@ -430,8 +421,7 @@ impl RenderingExtension for Base {
     }
 }
 
-///TODO
-pub fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
+fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
     let beta = f32::consts::FRAC_PI_2 - (fov / 2.0);
     let bottom = 2.0 * (((near + far) * f32::sin(fov / 2.0)) / f32::sin(beta));
 
@@ -439,102 +429,162 @@ pub fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
     let aspect = resolution.width as f32 / resolution.height as f32;
     drop(resolution);
 
+    // let aspect = 1.3333333334;
+
     let side = bottom / aspect;
 
     (bottom, side, near + far).into()
 }
 
-///TODO
-pub fn check_frustum(
-    dimensions: Vec3,
-    camera_transform: Mat4x4,
-    point: Vec3,
-    radius: f32,
-) -> (bool, f32) {
-    let h = dimensions.z;
+fn calculate_frustum_matrix(frustum: Vec3, camera_transform: Mat4x4) -> Mat4x4 {
+    let h = frustum.z;
 
-    let scale = Mat4x4::scale_matrix(&(Vec3::new(dimensions.x, 1.0, dimensions.y)))
+    let scale = Mat4x4::scale_matrix(&(Vec3::new(frustum.x, 1.0, frustum.y)))
         .invert()
         .unwrap();
     let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, h, 0.0));
-    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(0.0, 0.0, 90.0))
+    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(-90.0, 0.0, 90.0))
         .invert()
         .unwrap();
 
-    // let inv_tr = translation.invert().unwrap();
+    translation * scale * rotation * camera_transform.inverted().unwrap()
+}
 
+fn check_frustum(
+    h: f32,
+    frustum_matrix: Mat4x4,
+    point: Vec3,
+    radius: f32,
+    scale: Vec3,
+) -> (bool, f32) {
     let p: Vec4 = (point, 1.0).into();
 
-    let p = p * rotation * scale * translation; //* rotation * translation; //* camera_transform * rotation * inv_tr;
+    let p = p * frustum_matrix;
     let p = p.xyz();
 
     let distance = sdf(p, h);
 
-    (distance - radius <= 0.0, distance)
+    if distance <= 0.0 {
+        return (true, distance);
+    }
+
+    //Factor in scale
+    (
+        distance - radius * f32::max(scale.x, f32::max(scale.y, scale.z)) <= 0.001,
+        distance,
+    )
 }
 
+// fn sdf(mut p: Vec3, h: f32) -> f32 {
+//     // Original SDF license:
+//     // The MIT License
+//     // Copyright © 2019 Inigo Quilez
+//     // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+//     if p.y <= 0.0 {
+//         let p = p.abs() - Vec3::new(0.5, 0.0, 0.5);
+
+//         return if p > Vec3::new(0.0, 0.0, 0.0) {
+//             p.length()
+//         } else {
+//             0.0
+//         };
+//     }
+
+//     //Symmetry
+//     p.x = f32::abs(p.x);
+//     p.z = f32::abs(p.z);
+
+//     if p.z > p.x {
+//         p.x = p.z;
+//         p.z = p.x;
+//     }
+//     p.x -= 0.5;
+//     p.z -= 0.5;
+
+//     //project into face plane (2d)
+
+//     let m2 = h * h + 0.25;
+
+//     let q = Vec3::new(p.z, h * p.y - 0.5 * p.x, h * p.x + 0.5 * p.y);
+
+//     let sign = f32::signum(f32::max(q.z, -p.y));
+
+//     // if sign <= 0.0 {
+//     //     return (true, -1.0);
+//     // }
+
+//     let s = f32::max(-q.x, 0.0);
+
+//     let t = f32::clamp((q.y - 0.5 * q.x) / (m2 + 0.25), 0.0, 1.0);
+
+//     let a = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
+
+//     let b = m2 * (q.x + 0.5 * t) * (q.x + 0.5 * t) + (q.y - m2 * t) * (q.y - m2 * t);
+
+//     let d2 = if f32::max(-q.y, q.x * m2 + q.y * 0.5) < 0.0 {
+//         0.0
+//     } else {
+//         f32::min(a, b)
+//     };
+
+//     f32::sqrt((d2 + q.z * q.z) / m2) * sign
+// }
+
 fn sdf(mut p: Vec3, h: f32) -> f32 {
-    // Original SDF license:
-    // The MIT License
-    // Copyright © 2019 Inigo Quilez
-    // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    let half_h = h / 2.0;
 
-    //Symmetry
-    p.x = f32::abs(p.x);
-    p.z = f32::abs(p.z);
+    p.x = p.x.abs();
+    p.z = p.z.abs();
 
-    if p.z > p.x {
+    if p.x > p.z {
         p.x = p.z;
         p.z = p.x;
     }
-    p.x -= 0.5;
-    p.z -= 0.5;
 
-    //project into face plane (2d)
+    let d1 = Vec3::new(f32::max(p.x - 0.5, 0.0), p.y, f32::max(p.z - 0.5, 0.0));
 
-    let m2 = h * h + 0.25;
+    let mut q = p;
 
-    let q = Vec3::new(p.z, h * p.y - 0.5 * p.x, h * p.x + 0.5 * p.y);
+    let k = 0.25 + 4.0 * half_h * half_h;
 
-    let sign = f32::signum(f32::max(q.z, -p.y));
+    let h1 = Vec2::dot_product(
+        &(Vec2::new(q.y, q.z) - Vec2::new(0.0, 0.5)),
+        &Vec2::new(0.5, h),
+    ) / k;
 
-    // if sign <= 0.0 {
-    //     return (true, -1.0);
-    // }
-
-    let s = f32::max(-q.x, 0.0);
-
-    let t = f32::clamp((q.y - 0.5 * q.x) / (m2 + 0.25), 0.0, 1.0);
-
-    let a = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
-
-    let b = m2 * (q.x + 0.5 * t) * (q.x + 0.5 * t) + (q.y - m2 * t) * (q.y - m2 * t);
-
-    let d2 = if f32::max(-q.y, q.x * m2 + q.y * 0.5) < 0.0 {
-        0.0
+    //I don't really care about the insides, if it is inside, it IS inside, so i can computer the
+    //sqrt if it is outside
+    if f32::max(h1, -p.y) < 0.0 {
+        f32::NEG_INFINITY
     } else {
-        f32::min(a, b)
-    };
+        q.y -= 0.5 * h1;
+        q.z -= h * h1;
 
-    f32::sqrt((d2 + q.z * q.z) / m2) * sign
+        q -= Vec3::new(k, half_h, -0.25) * f32::max(q.x - q.z, 0.0) / (k + 0.25);
+
+        let d2 = p - q.clamp(0.0.into(), Vec3::new(0.5, h, 0.5));
+        f32::sqrt(f32::min(d1.dot_product(&d1), d2.dot_product(&d2)))
+    }
 }
 
 #[test]
 fn test_frustum() {
-    *RESOLUTION.write().unwrap() = PhysicalSize::new(1920, 1080);
+    *RESOLUTION.write().unwrap() = winit::dpi::PhysicalSize::new(1920, 1080);
     let frustum = calculate_frustum(0.1, 10.0, f32::consts::FRAC_PI_3);
 
     let camera_matrix = Mat4x4::identity();
+    let matrix = calculate_frustum_matrix(frustum, camera_matrix);
 
     let point = Vec3::new(0.0, 0.0, 0.0);
-    let inside = check_frustum(frustum, camera_matrix, point, 0.0);
+    let inside = check_frustum(frustum.z, matrix, point, 0.0, 1.0.into());
 
     log::info!("SDF: {}", inside.1);
 
     assert!(inside.0);
 
     let point = Vec3::new(0.0, 0.0, 0.3);
-    let inside = check_frustum(frustum, camera_matrix, point, 0.0);
+    let inside = check_frustum(frustum.z, matrix, point, 0.0, 1.0.into());
 
     log::info!("SDF: {}", inside.1);
 

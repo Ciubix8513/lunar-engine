@@ -1,7 +1,7 @@
 use std::ops::Div;
 
 ///Trait all vectors must implement
-pub trait Vector: Div<f32> + Sized + Copy {
+pub trait Vector: Div<f32> + Sized + Copy + PartialEq + PartialOrd {
     ///Returns squared length of the vector, much faster than `length()`
     fn square_length(&self) -> f32;
     ///Returns dot product between the `self` vector and the `other` vector
@@ -31,5 +31,18 @@ pub trait Vector: Div<f32> + Sized + Copy {
             return self;
         }
         (self / len).into()
+    }
+
+    ///Restricts the vector to a certain interval
+    ///
+    ///Returns max if self is greater than max, and min if self is less than min. Otherwise this returns self.
+    fn clamp(self, min: Self, max: Self) -> Self {
+        if self > max {
+            max
+        } else if self < min {
+            min
+        } else {
+            self
+        }
     }
 }
