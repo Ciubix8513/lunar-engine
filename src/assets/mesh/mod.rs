@@ -117,7 +117,7 @@ impl Mesh {
 
     ///Returns extent of the mesh
     #[must_use]
-    pub fn get_extent(&self) -> f32 {
+    pub const fn get_extent(&self) -> f32 {
         self.extent.unwrap()
     }
 
@@ -167,7 +167,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[must_use]
-    pub fn get_tris_count(&self) -> u32 {
+    pub const fn get_tris_count(&self) -> u32 {
         self.tris_count.unwrap()
     }
 
@@ -176,7 +176,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[must_use]
-    pub fn get_index_count(&self) -> u32 {
+    pub const fn get_index_count(&self) -> u32 {
         self.index_count.unwrap()
     }
 
@@ -185,7 +185,7 @@ impl Mesh {
     ///# Panics
     ///Panics if the asset was not initialized
     #[must_use]
-    pub fn get_vert_count(&self) -> u32 {
+    pub const fn get_vert_count(&self) -> u32 {
         self.vert_count.unwrap()
     }
 
@@ -209,7 +209,7 @@ impl Mesh {
 
     ///Creates a new mesh that is a sphere with the given radius, number of sectors and rings
     #[must_use]
-    pub fn new_sphere(desc: SphereData) -> Self {
+    pub const fn new_sphere(desc: SphereData) -> Self {
         Self {
             id: None,
             initialized: false,
