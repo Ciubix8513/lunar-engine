@@ -147,7 +147,13 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Define all the needed blocks
 
-    let inner = format!("pub inner: {base}").parse::<TokenStream>().unwrap();
+    let inner = format!(
+        "
+    ///The inner value
+    pub inner: {base}"
+    )
+    .parse::<TokenStream>()
+    .unwrap();
 
     let deref = format!(
         "

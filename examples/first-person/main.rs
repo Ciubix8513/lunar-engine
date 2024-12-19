@@ -7,7 +7,7 @@ use lunar_engine::{
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{lerp, Mat4x4, Vec3, Vector},
-    rendering::{extensions::Base, render},
+    rendering::{extensions::frustum_culling::Base, render},
     structures::Color,
 };
 use lunar_engine_derive::as_any;

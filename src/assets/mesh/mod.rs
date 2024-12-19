@@ -13,6 +13,7 @@
 //This sounds interesting
 
 use std::{
+    borrow::Borrow,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -113,6 +114,12 @@ impl Mesh {
             index_count: None,
             extent: None,
         })
+    }
+
+    ///Returns extent of the mesh
+    #[must_use]
+    pub fn get_extent(&self) -> f32 {
+        self.extent.unwrap()
     }
 
     ///Returns the vertex buffer of the mesh

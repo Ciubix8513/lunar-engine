@@ -550,3 +550,12 @@ impl Mul<Vec4> for Mat4x4 {
         self.transform(rhs)
     }
 }
+
+
+impl Mul<Mat4x4> for Vec4{
+    type Output = Vec4;
+
+    fn mul(self, rhs: Mat4x4) -> Self::Output {
+        rhs.transform(self)
+    }
+}

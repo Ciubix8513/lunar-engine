@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::num::NonZeroU64;
 
 use log::debug;
@@ -76,6 +77,12 @@ impl Camera {
             far,
             ..Default::default()
         }
+    }
+
+    #[must_use]
+    ///Returns the transformation matrix of the camera;
+    pub fn camera_transform(&self) -> Mat4x4 {
+        self.transorm_reference.as_ref().unwrap().borrow().matrix()
     }
 
     #[must_use]

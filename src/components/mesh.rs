@@ -5,7 +5,7 @@ use lunar_engine_derive::as_any;
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    math::Mat4x4,
+    math::{Mat4x4, Vec3},
 };
 
 use super::transform::Transform;
@@ -70,6 +70,11 @@ impl Mesh {
     #[must_use]
     pub const fn get_material_id(&self) -> Option<UUID> {
         self.material_id
+    }
+
+    #[must_use]
+    pub(crate) fn get_position(&self) -> Vec3 {
+        self.transform_reference.as_ref().unwrap().borrow().position
     }
 
     #[must_use]
