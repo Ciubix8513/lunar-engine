@@ -13,7 +13,6 @@
 //This sounds interesting
 
 use std::{
-    borrow::Borrow,
     path::{Path, PathBuf},
     sync::Arc,
 };

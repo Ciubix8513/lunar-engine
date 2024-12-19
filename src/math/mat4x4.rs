@@ -576,7 +576,7 @@ impl Mul<Vec4> for Mat4x4 {
 
 
 impl Mul<Mat4x4> for Vec4{
-    type Output = Vec4;
+    type Output = Self;
 
     fn mul(self, rhs: Mat4x4) -> Self::Output {
         rhs.transform(self)

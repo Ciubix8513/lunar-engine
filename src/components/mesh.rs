@@ -5,7 +5,7 @@ use lunar_engine_derive::as_any;
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
-    math::{Mat4x4, Vec3},
+    math::Mat4x4,
 };
 
 use super::transform::Transform;
@@ -24,9 +24,9 @@ impl Default for Mesh {
     fn default() -> Self {
         Self {
             visible: true,
-            mesh_id: Default::default(),
-            material_id: Default::default(),
-            transform_reference: Default::default(),
+            mesh_id: None,
+            material_id: None,
+            transform_reference: None,
         }
     }
 }
@@ -59,7 +59,8 @@ impl Mesh {
         }
     }
     ///Whether or not this mesh is rendered
-    pub fn get_visible(&self) -> bool {
+    #[must_use]
+    pub const fn get_visible(&self) -> bool {
         self.visible
     }
     ///Sets whether or not this mesh is rendered
@@ -96,6 +97,7 @@ impl Mesh {
     }
 
     ///Returns a reference to the transform component
+    #[must_use]
     pub fn get_transform(&self) -> ComponentReference<Transform> {
         self.transform_reference.clone().unwrap()
     }

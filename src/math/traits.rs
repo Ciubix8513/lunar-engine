@@ -36,6 +36,7 @@ pub trait Vector: Div<f32> + Sized + Copy + PartialEq + PartialOrd {
     ///Restricts the vector to a certain interval
     ///
     ///Returns max if self is greater than max, and min if self is less than min. Otherwise this returns self.
+    #[must_use]
     fn clamp(self, min: Self, max: Self) -> Self {
         if self > max {
             max

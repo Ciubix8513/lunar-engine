@@ -21,6 +21,7 @@ impl Vec2 {
     }
 
     ///Returns the absolute vector
+    #[must_use]
     pub fn abs(self) -> Self {
         Self {
             x: self.x.abs(),

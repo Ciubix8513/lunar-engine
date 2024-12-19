@@ -1,11 +1,8 @@
-use std::borrow::Borrow;
 use std::num::NonZeroU64;
 
-use log::{debug, info};
 use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
-// use lunar_engine::ecs;
 
 use crate::{
     ecs::{Component, ComponentReference},
@@ -33,18 +30,20 @@ pub enum ProjectionType {
 
 impl ProjectionType {
     ///Returns the FOV if the type is perspective, returns `None` otherwise
-    pub fn fov(&self) -> Option<f32> {
+    #[must_use]
+    pub const fn fov(&self) -> Option<f32> {
         match self {
-            ProjectionType::Perspective { fov } => Some(*fov),
-            ProjectionType::Orthographic { size: _ } => None,
+            Self::Perspective { fov } => Some(*fov),
+            Self::Orthographic { size: _ } => None,
         }
     }
 
     ///Returns the size of the viewing volume if the type is orthographic, returns `None` otherwise
-    pub fn size(&self) -> Option<f32> {
+    #[must_use]
+    pub const fn size(&self) -> Option<f32> {
         match self {
-            ProjectionType::Perspective { fov: _ } => None,
-            ProjectionType::Orthographic { size } => Some(*size),
+            Self::Perspective { fov: _ } => None,
+            Self::Orthographic { size } => Some(*size),
         }
     }
 }
@@ -97,7 +96,6 @@ impl Component for Camera {
     }
 
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        debug!("set self reference called");
         self.transorm_reference = Some(reference.get_component().unwrap());
     }
 }

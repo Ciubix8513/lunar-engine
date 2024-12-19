@@ -1,5 +1,5 @@
 use core::f32;
-use std::{num::NonZeroU64, sync::Arc};
+use std::{mem, num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
@@ -470,7 +470,7 @@ fn check_frustum(
 
     //Factor in scale
     (
-        distance - radius * f32::max(scale.x, f32::max(scale.y, scale.z)) <= 0.001,
+        radius.mul_add(-f32::max(scale.x, f32::max(scale.y, scale.z)), distance) <= 0.001,
         distance,
     )
 }
@@ -538,15 +538,14 @@ fn sdf(mut p: Vec3, h: f32) -> f32 {
     p.z = p.z.abs();
 
     if p.x > p.z {
-        p.x = p.z;
-        p.z = p.x;
+        mem::swap(&mut p.x, &mut p.z);
     }
 
     let d1 = Vec3::new(f32::max(p.x - 0.5, 0.0), p.y, f32::max(p.z - 0.5, 0.0));
 
     let mut q = p;
 
-    let k = 0.25 + 4.0 * half_h * half_h;
+    let k = (4.0 * half_h).mul_add(half_h, 0.25);
 
     let h1 = Vec2::dot_product(
         &(Vec2::new(q.y, q.z) - Vec2::new(0.0, 0.5)),
