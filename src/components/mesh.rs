@@ -10,12 +10,25 @@ use crate::{
 
 use super::transform::Transform;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 ///Mesh component used for rendering
 pub struct Mesh {
+    visible: bool,
     mesh_id: Option<UUID>,
+
     material_id: Option<UUID>,
     transform_reference: Option<ComponentReference<Transform>>,
+}
+
+impl Default for Mesh {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            mesh_id: None,
+            material_id: None,
+            transform_reference: None,
+        }
+    }
 }
 
 impl Component for Mesh {
@@ -39,11 +52,22 @@ impl Mesh {
     ///Creates a new mesh with the given mesh and material ids
     pub const fn new(mesh: UUID, material: UUID) -> Self {
         Self {
+            visible: true,
             mesh_id: Some(mesh),
             material_id: Some(material),
             transform_reference: None,
         }
     }
+    ///Whether or not this mesh is rendered
+    #[must_use]
+    pub const fn get_visible(&self) -> bool {
+        self.visible
+    }
+    ///Sets whether or not this mesh is rendered
+    pub fn set_visible(&mut self, value: bool) {
+        self.visible = value;
+    }
+
     ///Changes the asset used by the component
     ///Does not chedk if the provided id is valid
     pub fn set_mesh(&mut self, id: UUID) {
@@ -70,6 +94,12 @@ impl Mesh {
     #[must_use]
     pub const fn get_material_id(&self) -> Option<UUID> {
         self.material_id
+    }
+
+    ///Returns a reference to the transform component
+    #[must_use]
+    pub fn get_transform(&self) -> ComponentReference<Transform> {
+        self.transform_reference.clone().unwrap()
     }
 
     #[must_use]

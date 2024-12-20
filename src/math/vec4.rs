@@ -33,6 +33,17 @@ impl Vec4 {
             z: self.z,
         }
     }
+
+    ///Returns the absolute vector
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self {
+            x: self.x.abs(),
+            y: self.y.abs(),
+            z: self.z.abs(),
+            w: self.w.abs(),
+        }
+    }
 }
 
 impl Vector for Vec4 {

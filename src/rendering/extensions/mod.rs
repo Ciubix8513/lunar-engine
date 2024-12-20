@@ -15,6 +15,9 @@ use crate::{
     DEVICE, STAGING_BELT,
 };
 
+///Frustum culling experiment
+pub mod frustum_culling;
+
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
     ///Color buffer
@@ -175,9 +178,14 @@ impl RenderingExtension for Base {
         trace!("Accquired camera");
 
         //This is cached, so should be reasonably fast
-        let meshes = world
+        let binding = world
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
+
+        let meshes = binding
+            .iter()
+            .filter(|i| i.borrow().get_visible())
+            .collect::<Vec<_>>();
         trace!("Got all the meshes");
 
         //List of materials used for rendering
@@ -196,6 +204,7 @@ impl RenderingExtension for Base {
         }
 
         //What is even going on here?
+        //I... don't know...
 
         let mut matrices = matrices
             .iter()
@@ -316,6 +325,7 @@ impl RenderingExtension for Base {
                         .flat_map(|i| bytemuck::bytes_of(&i.1 .0))
                         .copied()
                         .collect::<Vec<u8>>();
+
                     v_buffers.push(
                         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                             label: Some(&label),

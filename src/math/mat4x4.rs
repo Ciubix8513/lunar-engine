@@ -371,6 +371,29 @@ pub const fn identity() -> Self {
         }
     }
 
+    ///TODO
+    #[must_use]
+    pub fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
+        let aspect = 1.0 / aspect;
+        Self::orth_projection(-size / 2.0, size /2.0, -size/aspect /2.0,size/aspect /2.0,near,far)
+    }
+
+    ///TODO
+    #[must_use]
+    pub fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
+    )-> Self{
+        Self{
+            m00: 2.0 / (right - left),
+            m03: -((left + right) / (right - left)),
+            m11: 2.0 / (top - bottom),
+            m13: -((top + bottom) / (top - bottom)),
+            m22:  -2.0 / (far - near),
+            m32: ((far+near)/ (far -near)),
+            ..Default::default()
+
+        }
+    }
+
     #[must_use]
     ///Creates a scale matrix for the given vector
     pub fn scale_matrix(scale: &Vec3) -> Self {
@@ -548,5 +571,14 @@ impl Mul<Vec4> for Mat4x4 {
 
     fn mul(self, rhs: Vec4) -> Self::Output {
         self.transform(rhs)
+    }
+}
+
+
+impl Mul<Mat4x4> for Vec4{
+    type Output = Self;
+
+    fn mul(self, rhs: Mat4x4) -> Self::Output {
+        rhs.transform(self)
     }
 }

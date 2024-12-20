@@ -40,6 +40,16 @@ impl Vec3 {
             z: random.gen_range(min..max),
         }
     }
+
+    ///Returns the absolute vector
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self {
+            x: self.x.abs(),
+            y: self.y.abs(),
+            z: self.z.abs(),
+        }
+    }
 }
 
 impl Vector for Vec3 {

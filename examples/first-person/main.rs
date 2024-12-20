@@ -7,7 +7,7 @@ use lunar_engine::{
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{lerp, Mat4x4, Vec3, Vector},
-    rendering::{extensions::Base, render},
+    rendering::{extensions::frustum_culling::Base, render},
     structures::Color,
 };
 use lunar_engine_derive::as_any;
@@ -107,7 +107,7 @@ struct State {
 fn end(_: &mut State) {}
 
 fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, num_colors: u32) {
-    let objects = vec![
+    let objects = [
         assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0))),
         assets.register(assets::Mesh::new_sphere(SphereData {
             radius: 0.5,
@@ -159,7 +159,7 @@ fn init(state: &mut State) {
         num_objects = num_obj.parse().unwrap_or(num_objects);
     }
     if let Some(num_col) = args.get(2) {
-        num_colors = num_col.parse().unwrap_or(num_colors)
+        num_colors = num_col.parse().unwrap_or(num_colors);
     }
 
     info!("Num of objects: {num_objects}");
@@ -187,7 +187,7 @@ fn run(state: &mut State) {
         &state.world,
         &state.asset_store,
         &mut [&mut state.extension],
-    )
+    );
 }
 
 fn main() {

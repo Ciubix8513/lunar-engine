@@ -1,10 +1,8 @@
 use std::num::NonZeroU64;
 
-use log::debug;
 use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
-// use lunar_engine::ecs;
 
 use crate::{
     ecs::{Component, ComponentReference},
@@ -16,10 +14,45 @@ use crate::{
 use super::transform::Transform;
 
 #[derive(Debug)]
+///Type of the camera projection
+pub enum ProjectionType {
+    ///Perspective projection
+    Perspective {
+        ///Fov of the camera
+        fov: f32,
+    },
+    ///Orthographic projection
+    Orthographic {
+        ///Half size of the viewing volume
+        size: f32,
+    },
+}
+
+impl ProjectionType {
+    ///Returns the FOV if the type is perspective, returns `None` otherwise
+    #[must_use]
+    pub const fn fov(&self) -> Option<f32> {
+        match self {
+            Self::Perspective { fov } => Some(*fov),
+            Self::Orthographic { size: _ } => None,
+        }
+    }
+
+    ///Returns the size of the viewing volume if the type is orthographic, returns `None` otherwise
+    #[must_use]
+    pub const fn size(&self) -> Option<f32> {
+        match self {
+            Self::Perspective { fov: _ } => None,
+            Self::Orthographic { size } => Some(*size),
+        }
+    }
+}
+
+#[derive(Debug)]
 ///Camera used for rendering of the objects
 pub struct Camera {
-    ///Fov of the camera in radians
-    pub fov: f32,
+    ///Projection type of the camera
+    pub projection_type: ProjectionType,
     ///Near plane of the camera
     pub near: f32,
     ///Far plane of the camera
@@ -36,7 +69,9 @@ impl Default for Camera {
     /// - Far plane: 100
     fn default() -> Self {
         Self {
-            fov: std::f32::consts::FRAC_PI_3,
+            projection_type: ProjectionType::Perspective {
+                fov: std::f32::consts::FRAC_PI_3,
+            },
             near: 0.1,
             far: 100.0,
             transorm_reference: None,
@@ -61,7 +96,6 @@ impl Component for Camera {
     }
 
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        debug!("set self reference called");
         self.transorm_reference = Some(reference.get_component().unwrap());
     }
 }
@@ -69,13 +103,19 @@ impl Component for Camera {
 impl Camera {
     #[must_use]
     ///Creates a new Camera
-    pub fn new(fov: f32, near: f32, far: f32) -> Self {
+    pub fn new(projection_type: ProjectionType, near: f32, far: f32) -> Self {
         Self {
-            fov,
+            projection_type,
             near,
             far,
             ..Default::default()
         }
+    }
+
+    #[must_use]
+    ///Returns the transformation matrix of the camera;
+    pub fn camera_transform(&self) -> Mat4x4 {
+        self.transorm_reference.as_ref().unwrap().borrow().matrix()
     }
 
     #[must_use]
@@ -95,8 +135,14 @@ impl Camera {
 
         drop(resolution);
 
-        let projection_matrix =
-            Mat4x4::perspercive_projection(self.fov, aspect, self.near, self.far);
+        let projection_matrix = match self.projection_type {
+            ProjectionType::Perspective { fov } => {
+                Mat4x4::perspercive_projection(fov, aspect, self.near, self.far)
+            }
+            ProjectionType::Orthographic { size } => {
+                Mat4x4::orth_aspect_projection(size, aspect, self.near, self.far)
+            }
+        };
 
         camera_matrix * projection_matrix
     }
@@ -154,6 +200,6 @@ impl Camera {
     }
 }
 
+// #[derive(Debug, Default)]
 #[alias(Camera)]
-#[derive(Debug, Default)]
 pub struct MainCamera;
