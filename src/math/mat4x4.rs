@@ -291,7 +291,7 @@ pub const fn identity() -> Self {
 
     ///Returns the trace of the matrix
     #[must_use]
-    pub fn trace(&self) -> f32 {
+    pub const fn trace(&self) -> f32 {
         self.m00 + self.m11 + self.m22 + self.m33
     }
 
@@ -367,20 +367,20 @@ pub const fn identity() -> Self {
             m23: -1.0,
             m32: r * screen_near,
             m33: 0.0,
-            ..Default::default()
+            ..Mat4x4::identity()
         }
     }
 
-    ///TODO
+    ///Creates an orthographic projection matrix from a half size and the aspect ratio
     #[must_use]
-    pub fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
+    pub const fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
         let aspect = 1.0 / aspect;
         Self::orth_projection(-size / 2.0, size /2.0, -size/aspect /2.0,size/aspect /2.0,near,far)
     }
 
-    ///TODO
+    ///Creates an orthographic projection matrix from the dimensions of the view port
     #[must_use]
-    pub fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
+    pub const fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
     )-> Self{
         Self{
             m00: 2.0 / (right - left),
@@ -389,30 +389,30 @@ pub const fn identity() -> Self {
             m13: -((top + bottom) / (top - bottom)),
             m22:  -2.0 / (far - near),
             m32: ((far+near)/ (far -near)),
-            ..Default::default()
+            ..Mat4x4::identity()
 
         }
     }
 
     #[must_use]
     ///Creates a scale matrix for the given vector
-    pub fn scale_matrix(scale: &Vec3) -> Self {
+    pub const fn scale_matrix(scale: &Vec3) -> Self {
         Self {
             m00: scale.x,
             m11: scale.y,
             m22: scale.z,
-            ..Default::default()
+            ..Mat4x4::identity()
         }
     }
 
     #[must_use]
     ///Creates a translation matrix for the given vector
-    pub fn translation_matrix(translation: &Vec3) -> Self {
+    pub const fn translation_matrix(translation: &Vec3) -> Self {
         Self {
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
-            ..Default::default()
+            ..Mat4x4::identity()
         }
     }
 
