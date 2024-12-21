@@ -367,7 +367,7 @@ pub const fn identity() -> Self {
             m23: -1.0,
             m32: r * screen_near,
             m33: 0.0,
-            ..Mat4x4::identity()
+           ..Self::identity()
         }
     }
 
@@ -389,7 +389,7 @@ pub const fn identity() -> Self {
             m13: -((top + bottom) / (top - bottom)),
             m22:  -2.0 / (far - near),
             m32: ((far+near)/ (far -near)),
-            ..Mat4x4::identity()
+            ..Self::identity()
 
         }
     }
@@ -401,7 +401,7 @@ pub const fn identity() -> Self {
             m00: scale.x,
             m11: scale.y,
             m22: scale.z,
-            ..Mat4x4::identity()
+            ..Self::identity()
         }
     }
 
@@ -412,7 +412,7 @@ pub const fn identity() -> Self {
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
-            ..Mat4x4::identity()
+            ..Self::identity()
         }
     }
 

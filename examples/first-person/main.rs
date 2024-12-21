@@ -179,6 +179,8 @@ fn init(state: &mut State) {
             .create()
             .unwrap(),
     );
+
+    assets.intialize_all().unwrap();
 }
 
 fn run(state: &mut State) {
