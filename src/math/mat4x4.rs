@@ -423,14 +423,9 @@ pub const fn identity() -> Self {
             return Self::identity();
         }
 
-        let sin_x = rotation.x.to_radians().sin();
-        let cos_x = rotation.x.to_radians().cos();
-
-        let sin_y = rotation.y.to_radians().sin();
-        let cos_y = rotation.y.to_radians().cos();
-
-        let sin_z = rotation.z.to_radians().sin();
-        let cos_z = rotation.z.to_radians().cos();
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
 
         Self {
             m00: cos_y * cos_z,
@@ -452,9 +447,30 @@ pub const fn identity() -> Self {
     ///2. Rotation 
     ///3. Translation
     pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        Self::translation_matrix(translation)
-            * Self::rotation_matrix_euler(rotation)
-            * Self::scale_matrix(scale)
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+
+        let x = scale.x;
+        let y = scale.y;
+        let z = scale.z;
+
+        Self {
+            m00: cos_y * cos_z *x,
+            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
+            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m10: cos_y * sin_z * x,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
+            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
+            m20: -sin_y *x,
+            m21: sin_x * cos_y*y,
+            m22: cos_x * cos_y * z,
+            m03: translation.x,
+            m13: translation.y,
+            m23: translation.z,
+            ..Default::default()
+        } 
+
     }
 
     #[must_use]
