@@ -2,4 +2,4 @@
 /recording
 /screenshots
 perf.*
-flamegraph.*
+flamegraph*
