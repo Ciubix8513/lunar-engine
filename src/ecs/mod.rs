@@ -454,6 +454,12 @@ pub struct World {
     entity_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
 }
 
+impl Drop for World {
+    fn drop(&mut self) {
+        self.destroy_all();
+    }
+}
+
 impl Default for World {
     fn default() -> Self {
         Self {
@@ -470,6 +476,13 @@ impl World {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    ///Destroys all entities in the world
+    pub fn destroy_all(&mut self) {
+        for e in &self.entities {
+            e.take().decatify();
+        }
     }
 
     ///Adds entity to the world, consuming it in the process
