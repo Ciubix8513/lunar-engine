@@ -103,10 +103,11 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
         format,
         width: size.width,
         height: size.height,
-        present_mode: wgpu::PresentMode::AutoNoVsync,
         view_formats: vec![format],
-        alpha_mode: wgpu::CompositeAlphaMode::Auto,
         desired_maximum_frame_latency: 2,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
+
+        present_mode: wgpu::PresentMode::AutoNoVsync,
     };
     surface.configure(device, &surface_config);
 

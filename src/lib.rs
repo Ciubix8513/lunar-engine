@@ -94,6 +94,7 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
+static VSYNC_CHANGE: RwLock<Option<Vsync>> = RwLock::new(None);
 
 ///Exits the application and closes the window
 pub fn quit() {
@@ -105,11 +106,26 @@ pub fn delta_time() -> f32 {
     *DELTA_TIME.read().unwrap()
 }
 
+///Vsync state
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Vsync {
+    ///vsync enabled
+    Vsync,
+    ///vsync disabled
+    NoVsync,
+}
+
+///Sets the vsync of the game
+pub fn set_vsync(vsync: Vsync) {
+    *VSYNC_CHANGE.write().unwrap() = Some(vsync);
+}
+
 ///Contains main state of the app
 #[allow(clippy::type_complexity)]
 pub struct State<T> {
     first_resume: bool,
     surface_config: OnceCell<SurfaceConfiguration>,
+    vsync: Vsync,
     contents: T,
     closed: bool,
     frame_start: Option<DateTime<chrono::Local>>,
@@ -121,6 +137,7 @@ pub struct State<T> {
 impl<T: Default> Default for State<T> {
     fn default() -> Self {
         Self {
+            vsync: Vsync::NoVsync,
             first_resume: false,
             surface_config: OnceCell::default(),
             contents: Default::default(),
@@ -137,6 +154,7 @@ impl<T: 'static> State<T> {
     ///Creates a new state with the given custom state
     pub fn new(contents: T) -> Self {
         Self {
+            vsync: Vsync::NoVsync,
             first_resume: false,
             surface_config: OnceCell::new(),
             contents,
@@ -194,6 +212,17 @@ impl<T: 'static> State<T> {
     }
 }
 impl<T> State<T> {
+    fn configure_surface(&self) {
+        let device = DEVICE.get().unwrap();
+
+        SURFACE
+            .get()
+            .unwrap()
+            .write()
+            .unwrap()
+            .configure(device, self.surface_config.get().unwrap());
+    }
+
     fn initialize(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         #[cfg(not(target_arch = "wasm32"))]
         let attributes = winit::window::Window::default_attributes();
@@ -272,15 +301,11 @@ impl<T> State<T> {
         RESOLUTION.write().unwrap().height = size.height;
         self.surface_config.get_mut().unwrap().width = size.width;
         self.surface_config.get_mut().unwrap().height = size.height;
-        let device = DEVICE.get().unwrap();
-
-        SURFACE
-            .get()
-            .unwrap()
-            .write()
-            .unwrap()
-            .configure(device, self.surface_config.get().unwrap());
         let desc = windowing::get_depth_descriptor(size.width, size.height);
+
+        self.configure_surface();
+
+        let device = DEVICE.get().unwrap();
 
         #[cfg(target_arch = "wasm32")]
         {
@@ -302,6 +327,24 @@ impl<T> State<T> {
 
             *DELTA_TIME.write().unwrap() = delta;
         }
+
+        //Check if vsync changed
+        if VSYNC_CHANGE.read().unwrap().is_some() {
+            let mut v = VSYNC_CHANGE.write().unwrap();
+            if self.vsync != v.unwrap() {
+                let conf = self.surface_config.get_mut().unwrap();
+                self.vsync = v.unwrap();
+                conf.present_mode = match v.unwrap() {
+                    Vsync::Vsync => wgpu::PresentMode::AutoVsync,
+                    Vsync::NoVsync => wgpu::PresentMode::AutoNoVsync,
+                };
+                self.configure_surface();
+                log::info!("Changing vsync mode");
+            }
+
+            *v = None;
+        }
+
         self.frame_start = Some(chrono::Local::now());
 
         input::process_cursor();
