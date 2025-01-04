@@ -103,6 +103,7 @@ struct State {
     asset_store: AssetStore,
     world: World,
     frames: u64,
+    delta: f32,
 }
 
 fn end(state: &mut State) {
@@ -195,13 +196,16 @@ fn run(state: &mut State) {
         &mut [&mut state.extension],
     );
     state.frames += 1;
+    state.delta += delta_time();
 
-    if state.frames == 60 * 5 {
+    if state.delta >= 5.0 {
+        log::info!("Delta = {}", state.delta);
         lunar_engine::quit();
     }
 }
 
 fn main() {
     let state = lunar_engine::State::new(State::default());
+    // lunar_engine::set_vsync(lunar_engine::Vsync::Vsync);
     state.run(init, run, end);
 }
