@@ -106,7 +106,7 @@ struct State {
     delta: f32,
 }
 
-fn end(state: &mut State) {
+fn end(_state: &mut State) {
     // state.world.
 }
 
@@ -206,6 +206,6 @@ fn run(state: &mut State) {
 
 fn main() {
     let state = lunar_engine::State::new(State::default());
-    // lunar_engine::set_vsync(lunar_engine::Vsync::Vsync);
+
     state.run(init, run, end);
 }
