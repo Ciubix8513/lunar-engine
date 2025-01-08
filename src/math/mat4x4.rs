@@ -441,6 +441,7 @@ pub const fn identity() -> Self {
         }
     }
 
+
     #[must_use]
     ///Crates a transformation matrix with the following order of operations:
     ///1. Scale
@@ -470,6 +471,40 @@ pub const fn identity() -> Self {
             m23: translation.z,
             ..Default::default()
         } 
+
+    }
+
+    #[must_use]
+    ///Crates a transformation matrix with the following order of operations:
+    ///1. Scale
+    ///2. Rotation
+    ///3. Translation
+    ///
+    ///This matrix is transposed
+    pub fn transform_matrix_euler_transposed(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+
+        let x = scale.x;
+        let y = scale.y;
+        let z = scale.z;
+
+        Self {
+            m00: cos_y * cos_z *x,
+            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
+            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m30: translation.x,
+            m01: cos_y * sin_z * x,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
+            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
+            m31: translation.y,
+            m02: -sin_y *x,
+            m12: sin_x * cos_y*y,
+            m22: cos_x * cos_y * z,
+            m32: translation.z,
+            ..Default::default()
+        }
 
     }
 
