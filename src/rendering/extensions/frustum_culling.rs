@@ -101,6 +101,8 @@ impl RenderingExtension for Base {
         assets: &AssetStore,
         attachments: &AttachmentData,
     ) {
+        #[cfg(feature = "tracy")]
+        let _span = tracy_client::span!("Frustum culling render");
         trace!("Started frame");
 
         //Update camera first
@@ -127,6 +129,9 @@ impl RenderingExtension for Base {
         //Precompute the transformation matrix, since it's the same for all the objects
         let matrix = calculate_frustum_matrix(frustum, camera_transform);
 
+        #[cfg(feature = "tracy")]
+        let _frustum_span = tracy_client::span!("Frustum checking");
+
         let meshes = binding
             .iter()
             .filter(|i| {
@@ -149,6 +154,9 @@ impl RenderingExtension for Base {
                     .0
             })
             .collect::<Vec<_>>();
+
+        #[cfg(feature = "tracy")]
+        drop(_frustum_span);
         trace!("Got all the meshes");
 
         //List of materials used for rendering
@@ -174,6 +182,8 @@ impl RenderingExtension for Base {
         //determine if can re use cache
         let mut identical = true;
 
+        #[cfg(feature = "tracy")]
+        let _cache_check_span = tracy_client::span!("Cache reuse check");
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
                 if data.0 == matrices[index].0 && data.1 == matrices[index].1 .0 {
@@ -186,8 +196,13 @@ impl RenderingExtension for Base {
             identical = false;
         }
 
+        #[cfg(feature = "tracy")]
+        drop(_cache_check_span);
+
         #[allow(clippy::if_not_else)]
         if !identical {
+            #[cfg(feature = "tracy")]
+            let _span = tracy_client::span!("Cache generation");
             debug!("Generating new cache data");
             self.identifier = matrices.iter().map(|i| (i.0, i.1 .0)).collect::<Vec<_>>();
 
@@ -229,7 +244,7 @@ impl RenderingExtension for Base {
                 let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
 
                 //(mesh_ID, (transformation matrix, material_id, mesh reference));
-                let mut current_window = matrices[points.0..points.1].iter().collect::<Vec<_>>();
+                let mut current_window = matrices[points.0..points.1].to_vec(); //.iter().collect::<Vec<_>>();
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
@@ -299,17 +314,17 @@ impl RenderingExtension for Base {
                 }
             }
             //Check if they're the same length
-            assert_eq!(
+            debug_assert_eq!(
                 v_buffers.len(),
                 mesh_materials.len(),
                 "You are a moron, they're not the same"
             );
-            assert_eq!(
+            debug_assert_eq!(
                 v_buffers.len(),
                 mesh_refs.len(),
                 "You are stupid, they're not the same"
             );
-            assert_eq!(
+            debug_assert_eq!(
                 num_instances.len(),
                 mesh_materials.len(),
                 "You are an idiot, they're not the same"
@@ -320,6 +335,8 @@ impl RenderingExtension for Base {
             self.num_instances = num_instances;
             self.mesh_refs = mesh_refs;
         } else {
+            #[cfg(feature = "tracy")]
+            let _span = tracy_client::span!("Cache reuse");
             //Reusing data
             trace!("Cache exists, updating v buffers");
             let mut belt = STAGING_BELT.get().unwrap().write().unwrap();

@@ -22,6 +22,9 @@ pub mod extensions;
 
 ///Renders all the entities in the world
 pub fn render(world: &World, assets: &AssetStore, extensions: &mut [&mut dyn RenderingExtension]) {
+    #[cfg(feature = "tracy")]
+    let _span = tracy_client::span!("render", 1000);
+
     trace!("Beginning of the render function");
 
     let device = DEVICE.get().unwrap();
@@ -71,6 +74,9 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &mut [&mut dyn Ren
 
     trace!("Created attachment data");
 
+    #[cfg(feature = "tracy")]
+    let _span = tracy_client::span!("Rendering extensions");
+
     for e in extensions {
         trace!("Calling render on an extension");
         e.render(&mut encoder, world, assets, &attachments);
@@ -89,4 +95,7 @@ pub fn render(world: &World, assets: &AssetStore, extensions: &mut [&mut dyn Ren
     drop(belt);
 
     color.present();
+
+    #[cfg(feature = "tracy")]
+    tracy_client::frame_mark();
 }

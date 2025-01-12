@@ -198,6 +198,12 @@ impl<T: 'static> State<T> {
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
         log::debug!("Created event loop");
 
+        //Start tracy
+        //
+        //I don't trust it so i'm only gonna start it if the tracy feature is on
+        #[cfg(feature = "tracy")]
+        tracy_client::Client::start();
+
         #[cfg(not(target_arch = "wasm32"))]
         {
             event_loop
@@ -319,6 +325,9 @@ impl<T> State<T> {
     }
 
     fn redraw(&mut self) {
+        #[cfg(feature = "tracy")]
+        let _span = tracy_client::span!("Redraw call");
+
         //Frame time includes the wait between frames
         if let Some(start) = self.frame_start {
             let finish = chrono::Local::now();
