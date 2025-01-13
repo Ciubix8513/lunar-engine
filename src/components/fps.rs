@@ -6,6 +6,7 @@ use crate::{delta_time, ecs::Component};
 ///
 ///Logs  average fps at the end of the program
 #[derive(Debug, Default)]
+#[allow(clippy::module_name_repetitions)]
 pub struct FpsRecorder {
     frames: u64,
     delta: f64,
@@ -14,11 +15,11 @@ pub struct FpsRecorder {
 impl Component for FpsRecorder {
     #[as_any]
     fn mew() -> Self {
-        FpsRecorder::default()
+        Self::default()
     }
 
     fn update(&mut self) {
-        self.delta += delta_time() as f64;
+        self.delta += f64::from(delta_time());
         self.frames += 1;
     }
 

@@ -488,6 +488,7 @@ fn check_frustum(
     )
 }
 
+#[allow(clippy::many_single_char_names)]
 fn sdf(mut p: Vec3, h: f32) -> f32 {
     // Original SDF license:
     // The MIT License
@@ -516,9 +517,9 @@ fn sdf(mut p: Vec3, h: f32) -> f32 {
 
     //project into face plane (2d)
 
-    let m2 = h * h + 0.25;
+    let m2 = h.mul_add(h, 0.25);
 
-    let q = Vec3::new(p.z, h * p.y - 0.5 * p.x, h * p.x + 0.5 * p.y);
+    let q = Vec3::new(p.z, h.mul_add(p.y, -(0.5 * p.x)), h.mul_add(p.x, 0.5 * p.y));
 
     let sign = f32::signum(f32::max(q.z, -p.y));
 
@@ -528,17 +529,17 @@ fn sdf(mut p: Vec3, h: f32) -> f32 {
 
     let s = f32::max(-q.x, 0.0);
 
-    let t = f32::clamp((q.y - 0.5 * q.x) / (m2 + 0.25), 0.0, 1.0);
+    let t = f32::clamp(0.5f32.mul_add(-q.x, q.y) / (m2 + 0.25), 0.0, 1.0);
 
-    let a = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
+    let a = (m2 * (q.x + s)).mul_add(q.x + s, q.y * q.y);
 
-    let b = m2 * (q.x + 0.5 * t) * (q.x + 0.5 * t) + (q.y - m2 * t) * (q.y - m2 * t);
+    let b = (m2 * 0.5f32.mul_add(t, q.x)).mul_add(0.5f32.mul_add(t, q.x), (m2.mul_add(-t, q.y)) * (m2.mul_add(-t, q.y)));
 
-    let d2 = if f32::max(-q.y, q.x * m2 + q.y * 0.5) < 0.0 {
+    let d2 = if f32::max(-q.y, q.x.mul_add(m2, q.y * 0.5)) < 0.0 {
         0.0
     } else {
         f32::min(a, b)
     };
 
-    f32::sqrt((d2 + q.z * q.z) / m2)
+    f32::sqrt(q.z.mul_add(q.z, d2) / m2)
 }

@@ -8,8 +8,8 @@ struct TestAsset {
     data: i32,
 }
 impl TestAsset {
-    fn new() -> Self {
-        TestAsset {
+    const fn new() -> Self {
+        Self {
             id: None,
             initialized: false,
             data: 0,

@@ -181,6 +181,7 @@ impl<T: 'static> ComponentReference<T> {
     ///# Panics
     ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
+    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     pub fn borrow(&self) -> Ref<'_, T> {
         Ref::map(
             unsafe { self.cell.as_ptr().as_ref().unwrap().borrow() },
@@ -193,6 +194,7 @@ impl<T: 'static> ComponentReference<T> {
     ///# Panics
     ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
+    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
         RefMut::map(
             unsafe { self.cell.as_ptr().as_ref().unwrap().borrow_mut() },

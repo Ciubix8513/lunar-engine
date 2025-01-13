@@ -166,6 +166,7 @@ pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot
 
 impl<T> AssetReference<T> {
     ///Borrows the asset immutably
+    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
@@ -175,6 +176,7 @@ impl<T> AssetReference<T> {
     }
 
     ///Borrows the asset mutably
+    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
