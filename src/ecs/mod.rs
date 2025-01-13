@@ -95,6 +95,7 @@ pub trait Component: std::any::Any {
 }
 
 use rand::Rng;
+use std::any::Any;
 use std::cell::{Ref, RefMut};
 
 ///Id type [Entity] uses
@@ -111,6 +112,8 @@ pub struct Entity {
     id: UUID,
     //Store type ids separately to allow for working with components while a component is borrowed
     comoponent_types: Vec<std::any::TypeId>,
+    //It makes total sense i swear, you need an RC to share the refcell and a refcell to borrow the
+    //stuff, I SWEAR IT MAKES SENSE
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
     self_reference: Option<Weak<RefCell<Self>>>,
     pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
@@ -179,22 +182,21 @@ impl<T: 'static> ComponentReference<T> {
     ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
     pub fn borrow(&self) -> Ref<'_, T> {
-        let upgrade = self.cell.upgrade().unwrap();
         Ref::map(
-            unsafe { Rc::as_ptr(&upgrade).as_ref().unwrap().borrow() },
-            |c| c.as_any().downcast_ref::<T>().unwrap(),
+            unsafe { self.cell.as_ptr().as_ref().unwrap().borrow() },
+            |c| unsafe { &*(c.as_any() as *const dyn Any as *const T) },
         )
     }
+
     ///Mutably borrows the underlying component
     ///
     ///# Panics
     ///Will panic if the referenced component, or its entity has been dropped
     #[must_use]
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
-        let upgrade = self.cell.upgrade().unwrap();
         RefMut::map(
-            unsafe { Rc::as_ptr(&upgrade).as_ref().unwrap().borrow_mut() },
-            |c| unsafe { c.as_any_mut().downcast_mut::<T>().unwrap_unchecked() },
+            unsafe { self.cell.as_ptr().as_ref().unwrap().borrow_mut() },
+            |c| unsafe { &mut *(c.as_any_mut() as *mut dyn Any as *mut T) },
         )
     }
 }

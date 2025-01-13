@@ -15,7 +15,10 @@
 //! Assets are only initialized when first needed (or perhaps on "scene load"?)
 // Oh god, is this just the entity system but with assets!?!?
 
-use std::sync::Arc;
+use std::{
+    any::Any,
+    sync::{Arc, Weak},
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
@@ -152,7 +155,7 @@ pub trait Asset: Send + Sync + std::any::Any {
 
 ///Reference to an asset inside [`AssetStore`]
 pub struct AssetReference<T: 'static> {
-    refernce: Arc<RwLock<Box<dyn Asset + 'static>>>,
+    refernce: Weak<RwLock<Box<dyn Asset + 'static>>>,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -164,19 +167,18 @@ pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot
 impl<T> AssetReference<T> {
     ///Borrows the asset immutably
     pub fn borrow(&self) -> AssetGuard<'_, T> {
-        let read = self.refernce.read();
+        // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
-            read,
-            |i| unsafe { i.as_any().downcast_ref::<T>().unwrap_unchecked() },
+            unsafe { self.refernce.as_ptr().as_ref().unwrap().read() },
+            |i| unsafe { &*(i.as_any() as *const dyn Any as *const T) },
         )
     }
 
     ///Borrows the asset mutably
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
-        let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
-            write,
-            |i| unsafe { i.as_any_mut().downcast_mut::<T>().unwrap_unchecked() },
+            unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
+            |i| unsafe { &mut *(i.as_any_mut() as *mut dyn Any as *mut T) },
         )
     }
 }
@@ -300,7 +302,7 @@ impl AssetStore {
                     }
                 }
                 Ok(AssetReference {
-                    refernce: x.0.clone(),
+                    refernce: Arc::downgrade(&x.0),
                     phantom: std::marker::PhantomData,
                 })
             }
@@ -326,7 +328,7 @@ impl AssetStore {
                     }
                 }
                 return Ok(AssetReference {
-                    refernce: i.0.clone(),
+                    refernce: Arc::downgrade(&i.0),
                     phantom: std::marker::PhantomData,
                 });
             }

@@ -203,9 +203,11 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {{
             self.inner.set_self_reference(reference);
         }}
+        #[inline]
         fn as_any(&self) -> &dyn std::any::Any {{
             self as &dyn std::any::Any
         }}
+        #[inline]
         fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
             self as &mut dyn std::any::Any
         }}
@@ -297,9 +299,11 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
         {{
             Self  
         }}
+        #[inline]
         fn as_any(&self) -> &dyn std::any::Any {{
             self as &dyn std::any::Any
         }}
+        #[inline]
         fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
             self as &mut dyn std::any::Any
         }}
@@ -415,9 +419,10 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///```
 pub fn as_any(_: TokenStream, item: TokenStream) -> TokenStream {
     let as_any =
-        " fn as_any(&self) -> &dyn std::any::Any { self as &dyn std::any::Any } ".to_string();
+        " #[inline] fn as_any(&self) -> &dyn std::any::Any { self as &dyn std::any::Any } "
+            .to_string();
     let as_any_mut =
-        " fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self as &mut dyn std::any::Any } ";
+        " #[inline] fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self as &mut dyn std::any::Any } ";
 
     (as_any + as_any_mut)
         .parse::<TokenStream>()
