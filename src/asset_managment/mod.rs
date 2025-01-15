@@ -358,3 +358,11 @@ impl AssetStore {
         }
     }
 }
+
+impl Drop for AssetStore {
+    // I don't think this is particularly necessary, BUT there may be some custom code in there to
+    // ensure something, so i want to call it anyways
+    fn drop(&mut self) {
+        self.dispose_all();
+    }
+}
