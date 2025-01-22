@@ -17,6 +17,7 @@
 
 use std::{
     any::Any,
+    collections::HashMap,
     sync::{Arc, Weak},
 };
 
@@ -306,6 +307,66 @@ impl AssetStore {
                 Ok(AssetReference {
                     refernce: Arc::downgrade(&x.0),
                     phantom: std::marker::PhantomData,
+                })
+            }
+            None => Err(Error::DoesNotExist),
+        }
+    }
+
+    ///Borrows an asset by its id, same as `get_by_id`, but with the borrow call is already made
+    pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<T>, Error> {
+        #[cfg(feature = "tracy")]
+        tracy_client::span!("borrow_by_id");
+        let this = self.assets.get(&id);
+        match this {
+            Some(x) => {
+                {
+                    let mut x = x.0.write();
+                    if !x.is_initialized() {
+                        let r = x.initialize();
+                        drop(x);
+                        if let Err(r) = r {
+                            return Err(Error::InitializationError(r));
+                        }
+                    }
+                }
+                Ok({
+                    lock_api::RwLockReadGuard::<
+                        '_,
+                        parking_lot::RawRwLock,
+                        Box<(dyn Asset + 'static)>,
+                    >::map(x.0.read(), |i| unsafe {
+                        &*(i.as_any() as *const dyn Any as *const T)
+                    })
+                })
+            }
+            None => Err(Error::DoesNotExist),
+        }
+    }
+
+    ///Borrows an asset by its id, same as `get_by_id`, but with the borrow_mut call is already made
+    pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<T>, Error> {
+        let this = self.assets.get(&id);
+        match this {
+            Some(x) => {
+                {
+                    let mut x = x.0.write();
+                    if !x.is_initialized() {
+                        let r = x.initialize();
+                        drop(x);
+                        if let Err(r) = r {
+                            return Err(Error::InitializationError(r));
+                        }
+                    }
+                }
+                Ok({
+                    lock_api::RwLockWriteGuard::<
+                        '_,
+                        parking_lot::RawRwLock,
+                        Box<(dyn Asset + 'static)>,
+                    >::map(x.0.write(), |i| unsafe {
+                        &mut *(i.as_any_mut() as *mut dyn Any as *mut T)
+                    })
                 })
             }
             None => Err(Error::DoesNotExist),

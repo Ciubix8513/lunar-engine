@@ -388,8 +388,7 @@ impl RenderingExtension for Base {
 
         //Initialize bindgroups for all needed materials
         for m in materials {
-            let m = assets.get_by_id::<Material>(m).unwrap();
-            let mut m = m.borrow_mut();
+            let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
@@ -429,15 +428,12 @@ impl RenderingExtension for Base {
             let mat = m.material_id;
 
             if mat != previous_mat {
-                let mat = assets.get_by_id::<Material>(mat).unwrap();
-                let mat = mat.borrow();
-
+                let mat = assets.borrow_by_id::<Material>(mat).unwrap();
                 mat.render(&mut render_pass);
             }
             previous_mat = mat;
 
-            let mesh = assets.get_by_id::<Mesh>(m.mesh_id).unwrap();
-            let mesh = mesh.borrow();
+            let mesh = assets.borrow_by_id::<Mesh>(m.mesh_id).unwrap();
 
             let vert = unsafe { Arc::as_ptr(&mesh.get_vertex_buffer()).as_ref().unwrap() };
             let ind = unsafe { Arc::as_ptr(&mesh.get_index_buffer()).as_ref().unwrap() };

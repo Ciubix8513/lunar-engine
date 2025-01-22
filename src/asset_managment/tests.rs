@@ -68,8 +68,9 @@ fn test_asset_borrowing() {
     let id = store.register(a);
     store.intialize_all().unwrap();
 
-    let a = store.get_by_id::<TestAsset>(id).unwrap();
-    assert_eq!(a.borrow().data, 20);
+    let a = store.borrow_by_id::<TestAsset>(id).unwrap();
+    assert_eq!(a.data, 20);
+    drop(a);
 
     let a = store.get_by_type::<TestAsset>().unwrap();
     assert_eq!(a.borrow().data, 20);

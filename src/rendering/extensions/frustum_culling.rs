@@ -145,9 +145,8 @@ impl RenderingExtension for Base {
                         matrix,
                         t.position,
                         assets
-                            .get_by_id::<Mesh>(m.get_mesh_id().unwrap())
+                            .borrow_by_id::<Mesh>(m.get_mesh_id().unwrap())
                             .unwrap()
-                            .borrow()
                             .get_extent(),
                         t.scale,
                     )
@@ -370,8 +369,7 @@ impl RenderingExtension for Base {
 
         //Initialize bindgroups for all needed materials
         for m in materials {
-            let m = assets.get_by_id::<Material>(m).unwrap();
-            let mut m = m.borrow_mut();
+            let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
@@ -411,15 +409,12 @@ impl RenderingExtension for Base {
             let mat = m.material_id;
 
             if mat != previous_mat {
-                let mat = assets.get_by_id::<Material>(mat).unwrap();
-                let mat = mat.borrow();
-
+                let mat = assets.borrow_by_id::<Material>(mat).unwrap();
                 mat.render(&mut render_pass);
             }
             previous_mat = mat;
 
-            let mesh = assets.get_by_id::<Mesh>(m.mesh_id).unwrap();
-            let mesh = mesh.borrow();
+            let mesh = assets.borrow_by_id::<Mesh>(m.mesh_id).unwrap();
 
             let vert = unsafe { Arc::as_ptr(&mesh.get_vertex_buffer()).as_ref().unwrap() };
             let ind = unsafe { Arc::as_ptr(&mesh.get_index_buffer()).as_ref().unwrap() };
@@ -533,7 +528,10 @@ fn sdf(mut p: Vec3, h: f32) -> f32 {
 
     let a = (m2 * (q.x + s)).mul_add(q.x + s, q.y * q.y);
 
-    let b = (m2 * 0.5f32.mul_add(t, q.x)).mul_add(0.5f32.mul_add(t, q.x), (m2.mul_add(-t, q.y)) * (m2.mul_add(-t, q.y)));
+    let b = (m2 * 0.5f32.mul_add(t, q.x)).mul_add(
+        0.5f32.mul_add(t, q.x),
+        (m2.mul_add(-t, q.y)) * (m2.mul_add(-t, q.y)),
+    );
 
     let d2 = if f32::max(-q.y, q.x.mul_add(m2, q.y * 0.5)) < 0.0 {
         0.0

@@ -169,8 +169,9 @@ impl MaterialTrait for TextureUnlit {
     fn set_bindgroups(&mut self, asset_store: &crate::asset_managment::AssetStore) {
         let device = DEVICE.get().unwrap();
 
-        let texture = asset_store.get_by_id::<Texture>(self.texture_id).unwrap();
-        let texture = texture.borrow();
+        let texture = asset_store
+            .borrow_by_id::<Texture>(self.texture_id)
+            .unwrap();
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fragment bind group"),
