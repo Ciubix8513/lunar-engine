@@ -167,6 +167,7 @@ pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot
 
 impl<T> AssetReference<T> {
     ///Borrows the asset immutably
+    #[inline(always)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
@@ -177,6 +178,7 @@ impl<T> AssetReference<T> {
 
     ///Borrows the asset mutably
     #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
+    #[inline(always)]
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
@@ -317,9 +319,8 @@ impl AssetStore {
     ///
     ///# Errors
     ///Returns an error if the object with the given id doesn't exist
+    #[inline(always)]
     pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<T>, Error> {
-        #[cfg(feature = "tracy")]
-        tracy_client::span!("borrow_by_id");
         let this = self.assets.get(&id);
         match this {
             Some(x) => {
@@ -351,6 +352,7 @@ impl AssetStore {
     ///
     ///# Errors
     ///Returns an error if the object with the given id doesn't exist
+    #[inline(always)]
     pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<T>, Error> {
         let this = self.assets.get(&id);
         match this {
