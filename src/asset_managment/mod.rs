@@ -1,3 +1,4 @@
+#![allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
 // Jesus Christ what am i getting myself into
 //! The system for managing assets such as textures, meshes and materials
 //!
@@ -17,7 +18,6 @@
 
 use std::{
     any::Any,
-    collections::HashMap,
     sync::{Arc, Weak},
 };
 
@@ -167,7 +167,6 @@ pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot
 
 impl<T> AssetReference<T> {
     ///Borrows the asset immutably
-    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
@@ -313,7 +312,11 @@ impl AssetStore {
         }
     }
 
-    ///Borrows an asset by its id, same as `get_by_id`, but with the borrow call is already made
+    #[allow(clippy::ptr_as_ptr, clippy::ref_as_ptr)]
+    ///Borrows an asset by its id, same as `get_by_id`, but with the `borrow` call is already made
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
     pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<T>, Error> {
         #[cfg(feature = "tracy")]
         tracy_client::span!("borrow_by_id");
@@ -344,7 +347,10 @@ impl AssetStore {
         }
     }
 
-    ///Borrows an asset by its id, same as `get_by_id`, but with the borrow_mut call is already made
+    ///Borrows an asset by its id, same as `get_by_id`, but with the `borrow_mut` call is already made
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
     pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<T>, Error> {
         let this = self.assets.get(&id);
         match this {
