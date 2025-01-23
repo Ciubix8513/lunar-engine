@@ -183,6 +183,7 @@ impl RenderingExtension for Base {
 
         #[cfg(feature = "tracy")]
         let _cache_check_span = tracy_client::span!("Cache reuse check");
+
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
                 if data.0 == matrices[index].0 && data.1 == matrices[index].1 .0 {
@@ -202,6 +203,7 @@ impl RenderingExtension for Base {
         if !identical {
             #[cfg(feature = "tracy")]
             let _span = tracy_client::span!("Cache generation");
+
             debug!("Generating new cache data");
             self.identifier = matrices.iter().map(|i| (i.0, i.1 .0)).collect::<Vec<_>>();
 
@@ -336,6 +338,7 @@ impl RenderingExtension for Base {
         } else {
             #[cfg(feature = "tracy")]
             let _span = tracy_client::span!("Cache reuse");
+
             //Reusing data
             trace!("Cache exists, updating v buffers");
             let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
