@@ -157,17 +157,17 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
 }
 
 #[allow(clippy::future_not_send)]
-async fn req_adapter<'a, 'b>(
+async fn req_adapter(
     instance: wgpu::Instance,
-    options: &wgpu::RequestAdapterOptions<'a, 'b>,
+    options: &wgpu::RequestAdapterOptions<'_, '_>,
 ) -> Option<wgpu::Adapter> {
     instance.request_adapter(options).await
 }
 
 #[allow(clippy::future_not_send)]
-async fn req_device<'a>(
+async fn req_device(
     adapter: &wgpu::Adapter,
-    descriptor: &wgpu::DeviceDescriptor<'a>,
+    descriptor: &wgpu::DeviceDescriptor<'_>,
 ) -> Result<(wgpu::Device, wgpu::Queue), wgpu::RequestDeviceError> {
     adapter.request_device(descriptor, None).await
 }

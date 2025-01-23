@@ -248,10 +248,7 @@ impl Asset for Texture {
         };
 
         let image = match self.image_format {
-            ImageFormat::Bmp => match crate::import::bmp::parse(&image) {
-                Ok(it) => it,
-                Err(err) => return Err(err),
-            },
+            ImageFormat::Bmp => crate::import::bmp::parse(&image)?,
             ImageFormat::Png => match lunar_png::read_png(&mut image.into_iter()) {
                 Ok(mut img) => {
                     flip_texture(&mut img);

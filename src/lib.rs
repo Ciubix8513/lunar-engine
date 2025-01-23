@@ -42,7 +42,8 @@
     clippy::needless_doctest_main,
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
-    clippy::missing_panics_doc
+    clippy::missing_panics_doc,
+    clippy::inline_always
 )]
 use std::{
     cell::OnceCell,
