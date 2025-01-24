@@ -11,6 +11,7 @@ path="./src/lib.rs"
 
 [features]
 webgl = ["wgpu/webgl"]
+tracy = ["tracy-client/default"]
 
 [dependencies]
 lunar-engine-derive= {path = "./lunar-engine-derive", version="0.1.0"}
@@ -26,6 +27,8 @@ wgpu = { version = "0.20.1"}
 winit = { version = "0.30.1" }
 lunar-logger= "0.2.0"
 lunar-png = "0.1.2"
+tracy-client={version = "0.18.0", default-features=false}
+
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 getrandom = {version = "0.2.15", features = ["js"]}
@@ -38,3 +41,6 @@ wasm-bindgen = "0.2.92"
 members = [
   "lunar-engine-derive",
 ]
+
+[profile.release]
+debug=true

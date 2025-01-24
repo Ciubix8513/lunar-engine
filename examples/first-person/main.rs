@@ -1,8 +1,10 @@
+use core::f32;
+
 use log::info;
 use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::ColorUnlit, mesh::SphereData},
-    components::{camera::MainCamera, mesh::Mesh, transform::Transform},
+    components::{camera::MainCamera, fps::FpsRecorder, mesh::Mesh, transform::Transform},
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
@@ -11,7 +13,7 @@ use lunar_engine::{
     structures::Color,
 };
 use lunar_engine_derive::as_any;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
 use winit::keyboard::KeyCode;
 
 struct CameraControls {
@@ -102,9 +104,13 @@ struct State {
     extension: Base,
     asset_store: AssetStore,
     world: World,
+    frames: u64,
+    delta: f32,
 }
 
-fn end(_: &mut State) {}
+fn end(_state: &mut State) {
+    // state.world.
+}
 
 fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, num_colors: u32) {
     let objects = [
@@ -117,7 +123,7 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
     ];
 
     let mut colors = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::from_seed(Default::default());
 
     for _ in 0..num_colors {
         // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
@@ -135,9 +141,9 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
         world.add_entity(
             EntityBuilder::new()
                 .create_component(|| Transform {
-                    position: Vec3::random(-20.0, 20.0),
-                    rotation: Vec3::random(-180.0, 180.0),
-                    scale: Vec3::random(0.3, 1.5),
+                    position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
+                    rotation: Vec3::random_with_rng(-180.0, 180.0, &mut rng),
+                    scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
                     ..Default::default()
                 })
                 .create_component(|| Mesh::new(obj_id, mat_id))
@@ -176,9 +182,12 @@ fn init(state: &mut State) {
             })
             .add_component::<MainCamera>()
             .add_component::<CameraControls>()
+            .add_component::<FpsRecorder>()
             .create()
             .unwrap(),
     );
+
+    assets.intialize_all().unwrap();
 }
 
 fn run(state: &mut State) {
@@ -188,9 +197,17 @@ fn run(state: &mut State) {
         &state.asset_store,
         &mut [&mut state.extension],
     );
+    state.frames += 1;
+    state.delta += delta_time();
+
+    if state.delta >= 5.0 {
+        log::info!("Delta = {}", state.delta);
+        lunar_engine::quit();
+    }
 }
 
 fn main() {
     let state = lunar_engine::State::new(State::default());
+
     state.run(init, run, end);
 }

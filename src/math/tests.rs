@@ -245,3 +245,14 @@ fn test_lerp() {
 
     assert_eq!(o, expected);
 }
+
+#[test]
+fn test_transform_speed() {
+    for _ in 0..10000000 {
+        let _ = Mat4x4::transform_matrix_euler(
+            &Vec3::new(1.0, 2.0, 3.0),
+            &Vec3::new(2.0, 3.0, 5.0),
+            &Vec3::new(90.0, 10.0, 52.0),
+        );
+    }
+}

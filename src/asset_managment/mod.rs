@@ -1,3 +1,4 @@
+#![allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
 // Jesus Christ what am i getting myself into
 //! The system for managing assets such as textures, meshes and materials
 //!
@@ -15,7 +16,10 @@
 //! Assets are only initialized when first needed (or perhaps on "scene load"?)
 // Oh god, is this just the entity system but with assets!?!?
 
-use std::sync::Arc;
+use std::{
+    any::Any,
+    sync::{Arc, Weak},
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::thread;
@@ -152,7 +156,7 @@ pub trait Asset: Send + Sync + std::any::Any {
 
 ///Reference to an asset inside [`AssetStore`]
 pub struct AssetReference<T: 'static> {
-    refernce: Arc<RwLock<Box<dyn Asset + 'static>>>,
+    refernce: Weak<RwLock<Box<dyn Asset + 'static>>>,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -163,20 +167,22 @@ pub type AssetGuardMut<'a, T> = lock_api::MappedRwLockWriteGuard<'a, parking_lot
 
 impl<T> AssetReference<T> {
     ///Borrows the asset immutably
+    #[inline(always)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
-        let read = self.refernce.read();
+        // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
-            read,
-            |i| unsafe { i.as_any().downcast_ref::<T>().unwrap_unchecked() },
+            unsafe { self.refernce.as_ptr().as_ref().unwrap().read() },
+            |i| unsafe { &*(i.as_any() as *const dyn Any as *const T) },
         )
     }
 
     ///Borrows the asset mutably
+    #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
+    #[inline(always)]
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
-        let write = self.refernce.write();
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
-            write,
-            |i| unsafe { i.as_any_mut().downcast_mut::<T>().unwrap_unchecked() },
+            unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
+            |i| unsafe { &mut *(i.as_any_mut() as *mut dyn Any as *mut T) },
         )
     }
 }
@@ -300,8 +306,75 @@ impl AssetStore {
                     }
                 }
                 Ok(AssetReference {
-                    refernce: x.0.clone(),
+                    refernce: Arc::downgrade(&x.0),
                     phantom: std::marker::PhantomData,
+                })
+            }
+            None => Err(Error::DoesNotExist),
+        }
+    }
+
+    #[allow(clippy::ptr_as_ptr, clippy::ref_as_ptr)]
+    ///Borrows an asset by its id, same as `get_by_id`, but with the `borrow` call is already made
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
+    #[inline(always)]
+    pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<T>, Error> {
+        let this = self.assets.get(&id);
+        match this {
+            Some(x) => {
+                {
+                    let mut x = x.0.write();
+                    if !x.is_initialized() {
+                        let r = x.initialize();
+                        drop(x);
+                        if let Err(r) = r {
+                            return Err(Error::InitializationError(r));
+                        }
+                    }
+                }
+                Ok({
+                    lock_api::RwLockReadGuard::<
+                        '_,
+                        parking_lot::RawRwLock,
+                        Box<(dyn Asset + 'static)>,
+                    >::map(x.0.read(), |i| unsafe {
+                        &*(i.as_any() as *const dyn Any as *const T)
+                    })
+                })
+            }
+            None => Err(Error::DoesNotExist),
+        }
+    }
+
+    ///Borrows an asset by its id, same as `get_by_id`, but with the `borrow_mut` call is already made
+    ///
+    ///# Errors
+    ///Returns an error if the object with the given id doesn't exist
+    #[inline(always)]
+    pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<T>, Error> {
+        let this = self.assets.get(&id);
+        match this {
+            Some(x) => {
+                {
+                    let mut x = x.0.write();
+                    if !x.is_initialized() {
+                        let r = x.initialize();
+                        drop(x);
+                        if let Err(r) = r {
+                            return Err(Error::InitializationError(r));
+                        }
+                    }
+                }
+                Ok({
+                    lock_api::RwLockWriteGuard::<
+                        '_,
+                        parking_lot::RawRwLock,
+                        Box<(dyn Asset + 'static)>,
+                    >::map(x.0.write(), |i| unsafe {
+                        &mut *(i.as_any_mut() as *mut dyn Any as *mut T)
+                    })
                 })
             }
             None => Err(Error::DoesNotExist),
@@ -326,7 +399,7 @@ impl AssetStore {
                     }
                 }
                 return Ok(AssetReference {
-                    refernce: i.0.clone(),
+                    refernce: Arc::downgrade(&i.0),
                     phantom: std::marker::PhantomData,
                 });
             }
@@ -352,5 +425,13 @@ impl AssetStore {
         for a in self.assets.values().map(|v| v.0.clone()) {
             a.write().dispose();
         }
+    }
+}
+
+impl Drop for AssetStore {
+    // I don't think this is particularly necessary, BUT there may be some custom code in there to
+    // ensure something, so i want to call it anyways
+    fn drop(&mut self) {
+        self.dispose_all();
     }
 }

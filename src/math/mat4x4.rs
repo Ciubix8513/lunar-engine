@@ -291,7 +291,7 @@ pub const fn identity() -> Self {
 
     ///Returns the trace of the matrix
     #[must_use]
-    pub fn trace(&self) -> f32 {
+    pub const fn trace(&self) -> f32 {
         self.m00 + self.m11 + self.m22 + self.m33
     }
 
@@ -367,20 +367,20 @@ pub const fn identity() -> Self {
             m23: -1.0,
             m32: r * screen_near,
             m33: 0.0,
-            ..Default::default()
+           ..Self::identity()
         }
     }
 
-    ///TODO
+    ///Creates an orthographic projection matrix from a half size and the aspect ratio
     #[must_use]
-    pub fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
+    pub const fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
         let aspect = 1.0 / aspect;
         Self::orth_projection(-size / 2.0, size /2.0, -size/aspect /2.0,size/aspect /2.0,near,far)
     }
 
-    ///TODO
+    ///Creates an orthographic projection matrix from the dimensions of the view port
     #[must_use]
-    pub fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
+    pub const fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
     )-> Self{
         Self{
             m00: 2.0 / (right - left),
@@ -389,30 +389,30 @@ pub const fn identity() -> Self {
             m13: -((top + bottom) / (top - bottom)),
             m22:  -2.0 / (far - near),
             m32: ((far+near)/ (far -near)),
-            ..Default::default()
+            ..Self::identity()
 
         }
     }
 
     #[must_use]
     ///Creates a scale matrix for the given vector
-    pub fn scale_matrix(scale: &Vec3) -> Self {
+    pub const fn scale_matrix(scale: &Vec3) -> Self {
         Self {
             m00: scale.x,
             m11: scale.y,
             m22: scale.z,
-            ..Default::default()
+            ..Self::identity()
         }
     }
 
     #[must_use]
     ///Creates a translation matrix for the given vector
-    pub fn translation_matrix(translation: &Vec3) -> Self {
+    pub const fn translation_matrix(translation: &Vec3) -> Self {
         Self {
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
-            ..Default::default()
+            ..Self::identity()
         }
     }
 
@@ -423,14 +423,9 @@ pub const fn identity() -> Self {
             return Self::identity();
         }
 
-        let sin_x = rotation.x.to_radians().sin();
-        let cos_x = rotation.x.to_radians().cos();
-
-        let sin_y = rotation.y.to_radians().sin();
-        let cos_y = rotation.y.to_radians().cos();
-
-        let sin_z = rotation.z.to_radians().sin();
-        let cos_z = rotation.z.to_radians().cos();
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
 
         Self {
             m00: cos_y * cos_z,
@@ -446,15 +441,71 @@ pub const fn identity() -> Self {
         }
     }
 
+
     #[must_use]
     ///Crates a transformation matrix with the following order of operations:
     ///1. Scale
     ///2. Rotation 
     ///3. Translation
     pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        Self::translation_matrix(translation)
-            * Self::rotation_matrix_euler(rotation)
-            * Self::scale_matrix(scale)
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+
+        let x = scale.x;
+        let y = scale.y;
+        let z = scale.z;
+
+        Self {
+            m00: cos_y * cos_z *x,
+            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
+            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m10: cos_y * sin_z * x,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
+            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
+            m20: -sin_y *x,
+            m21: sin_x * cos_y*y,
+            m22: cos_x * cos_y * z,
+            m03: translation.x,
+            m13: translation.y,
+            m23: translation.z,
+            ..Default::default()
+        } 
+
+    }
+
+    #[must_use]
+    ///Crates a transformation matrix with the following order of operations:
+    ///1. Scale
+    ///2. Rotation
+    ///3. Translation
+    ///
+    ///This matrix is transposed
+    pub fn transform_matrix_euler_transposed(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
+        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+
+        let x = scale.x;
+        let y = scale.y;
+        let z = scale.z;
+
+        Self {
+            m00: cos_y * cos_z *x,
+            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
+            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m30: translation.x,
+            m01: cos_y * sin_z * x,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
+            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
+            m31: translation.y,
+            m02: -sin_y *x,
+            m12: sin_x * cos_y*y,
+            m22: cos_x * cos_y * z,
+            m32: translation.z,
+            ..Default::default()
+        }
+
     }
 
     #[must_use]

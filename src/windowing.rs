@@ -103,10 +103,11 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
         format,
         width: size.width,
         height: size.height,
-        present_mode: wgpu::PresentMode::AutoNoVsync,
         view_formats: vec![format],
-        alpha_mode: wgpu::CompositeAlphaMode::Auto,
         desired_maximum_frame_latency: 2,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
+
+        present_mode: wgpu::PresentMode::AutoNoVsync,
     };
     surface.configure(device, &surface_config);
 
@@ -156,17 +157,17 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
 }
 
 #[allow(clippy::future_not_send)]
-async fn req_adapter<'a, 'b>(
+async fn req_adapter(
     instance: wgpu::Instance,
-    options: &wgpu::RequestAdapterOptions<'a, 'b>,
+    options: &wgpu::RequestAdapterOptions<'_, '_>,
 ) -> Option<wgpu::Adapter> {
     instance.request_adapter(options).await
 }
 
 #[allow(clippy::future_not_send)]
-async fn req_device<'a>(
+async fn req_device(
     adapter: &wgpu::Adapter,
-    descriptor: &wgpu::DeviceDescriptor<'a>,
+    descriptor: &wgpu::DeviceDescriptor<'_>,
 ) -> Result<(wgpu::Device, wgpu::Queue), wgpu::RequestDeviceError> {
     adapter.request_device(descriptor, None).await
 }

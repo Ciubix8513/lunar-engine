@@ -30,6 +30,7 @@ impl Vec3 {
             self.x.mul_add(other.y, -self.y * other.x),
         )
     }
+
     #[must_use]
     ///Creates a random vector with values being in the given range
     pub fn random(min: f32, max: f32) -> Self {
@@ -38,6 +39,16 @@ impl Vec3 {
             x: random.gen_range(min..max),
             y: random.gen_range(min..max),
             z: random.gen_range(min..max),
+        }
+    }
+
+    #[must_use]
+    ///Creates a random vector with values being in the given range
+    pub fn random_with_rng(min: f32, max: f32, rng: &mut impl rand::Rng) -> Self {
+        Self {
+            x: rng.gen_range(min..max),
+            y: rng.gen_range(min..max),
+            z: rng.gen_range(min..max),
         }
     }
 

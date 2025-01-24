@@ -108,7 +108,6 @@ impl Mesh {
             .as_ref()
             .unwrap()
             .borrow()
-            .matrix()
-            .transpose()
+            .matrix_transposed()
     }
 }

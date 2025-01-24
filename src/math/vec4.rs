@@ -78,6 +78,7 @@ impl Mul<f32> for Vec4 {
         Self::new(self.x * rhs, self.y * rhs, self.z * rhs, self.w * rhs)
     }
 }
+
 impl Sub<Self> for Vec4 {
     type Output = Self;
 

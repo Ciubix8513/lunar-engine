@@ -166,6 +166,9 @@ impl RenderingExtension for Base {
         assets: &AssetStore,
         attachments: &AttachmentData,
     ) {
+        #[cfg(feature = "tracy")]
+        let _span = tracy_client::span!("Base render");
+
         trace!("Started frame");
 
         //Update camera first
@@ -197,10 +200,7 @@ impl RenderingExtension for Base {
         for m in &meshes {
             let m = m.borrow();
             materials.insert(m.get_material_id().unwrap());
-            matrices.push((
-                m.get_mesh_id().unwrap(),
-                (m.get_matrix(), m.get_material_id().unwrap()),
-            ));
+            matrices.push((m.get_mesh_id().unwrap(), (m.get_material_id().unwrap())));
         }
 
         //What is even going on here?
@@ -209,7 +209,7 @@ impl RenderingExtension for Base {
         let mut matrices = matrices
             .iter()
             .zip(meshes)
-            .map(|i| (i.0 .0, (i.0 .1 .0, i.0 .1 .1, i.1)))
+            .map(|i| (i.0 .0, (i.0 .1, i.1)))
             .collect::<Vec<_>>();
 
         //determine if can re use cache
@@ -217,7 +217,7 @@ impl RenderingExtension for Base {
 
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
-                if data.0 == matrices[index].0 && data.1 == matrices[index].1 .1 {
+                if data.0 == matrices[index].0 && data.1 == matrices[index].1 .0 {
                     continue;
                 }
                 identical = false;
@@ -229,8 +229,11 @@ impl RenderingExtension for Base {
 
         #[allow(clippy::if_not_else)]
         if !identical {
+            #[cfg(feature = "tracy")]
+            let _span = tracy_client::span!("Cache generation");
+
             debug!("Generating new cache data");
-            self.identifier = matrices.iter().map(|i| (i.0, i.1 .1)).collect::<Vec<_>>();
+            self.identifier = matrices.iter().map(|i| (i.0, i.1 .0)).collect::<Vec<_>>();
 
             //Sort meshes by mesh id for easier buffer creation
             //NO Sort by material id?
@@ -274,15 +277,15 @@ impl RenderingExtension for Base {
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
-                current_window.sort_unstable_by(|s, o| s.1 .1.cmp(&o.1 .1));
+                current_window.sort_unstable_by(|s, o| s.1 .0.cmp(&o.1 .0));
 
                 //find where materials change, similar to how meshes were sorted
                 let mut material_split_points = Vec::new();
                 let mut old = 0;
                 for (i, m) in current_window.iter().enumerate() {
-                    if m.1 .1 != old {
+                    if m.1 .0 != old {
                         material_split_points.push(i);
-                        old = m.1 .1;
+                        old = m.1 .0;
                     }
                 }
                 //Again ensure there's at least one window
@@ -297,8 +300,8 @@ impl RenderingExtension for Base {
                 //Get indicators for every block of what mesh and material they are
                 for i in &material_split_points[..material_split_points.len() - 1] {
                     let curent = current_window[*i];
-                    if last != (curent.0, curent.1 .1) {
-                        last = MeshMaterial::new(curent.0, curent.1 .1);
+                    if last != (curent.0, curent.1 .0) {
+                        last = MeshMaterial::new(curent.0, curent.1 .0);
                         mesh_materials.push(last);
                     }
                 }
@@ -316,13 +319,18 @@ impl RenderingExtension for Base {
                     mesh_refs.push(
                         current_window
                             .iter()
-                            .map(|i| i.1 .2.clone())
+                            .map(|i| i.1 .1.clone())
                             .collect::<Vec<_>>(),
                     );
 
                     let matrices = current_window
                         .iter()
-                        .flat_map(|i| bytemuck::bytes_of(&i.1 .0))
+                        .map(|i| i.1 .1.borrow().get_matrix())
+                        .collect::<Vec<_>>();
+
+                    let matrices = matrices
+                        .iter()
+                        .flat_map(bytemuck::bytes_of)
                         .copied()
                         .collect::<Vec<u8>>();
 
@@ -336,17 +344,17 @@ impl RenderingExtension for Base {
                 }
             }
             //Check if they're the same length
-            assert_eq!(
+            debug_assert_eq!(
                 v_buffers.len(),
                 mesh_materials.len(),
                 "You are a moron, they're not the same"
             );
-            assert_eq!(
+            debug_assert_eq!(
                 v_buffers.len(),
                 mesh_refs.len(),
                 "You are stupid, they're not the same"
             );
-            assert_eq!(
+            debug_assert_eq!(
                 num_instances.len(),
                 mesh_materials.len(),
                 "You are an idiot, they're not the same"
@@ -357,6 +365,9 @@ impl RenderingExtension for Base {
             self.num_instances = num_instances;
             self.mesh_refs = mesh_refs;
         } else {
+            #[cfg(feature = "tracy")]
+            let _span = tracy_client::span!("Cache reuse");
+
             //Reusing data
             trace!("Cache exists, updating v buffers");
             let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
@@ -388,8 +399,7 @@ impl RenderingExtension for Base {
 
         //Initialize bindgroups for all needed materials
         for m in materials {
-            let m = assets.get_by_id::<Material>(m).unwrap();
-            let mut m = m.borrow_mut();
+            let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
@@ -429,15 +439,12 @@ impl RenderingExtension for Base {
             let mat = m.material_id;
 
             if mat != previous_mat {
-                let mat = assets.get_by_id::<Material>(mat).unwrap();
-                let mat = mat.borrow();
-
+                let mat = assets.borrow_by_id::<Material>(mat).unwrap();
                 mat.render(&mut render_pass);
             }
             previous_mat = mat;
 
-            let mesh = assets.get_by_id::<Mesh>(m.mesh_id).unwrap();
-            let mesh = mesh.borrow();
+            let mesh = assets.borrow_by_id::<Mesh>(m.mesh_id).unwrap();
 
             let vert = unsafe { Arc::as_ptr(&mesh.get_vertex_buffer()).as_ref().unwrap() };
             let ind = unsafe { Arc::as_ptr(&mesh.get_index_buffer()).as_ref().unwrap() };

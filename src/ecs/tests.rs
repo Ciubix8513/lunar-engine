@@ -191,7 +191,7 @@ fn get_all_componenents_test() {
     let o = o.unwrap();
     assert_eq!(o.len(), 201);
 
-    let mut e = o.get(0).unwrap().borrow_mut();
+    let mut e = o.first().unwrap().borrow_mut();
     e.remove_component::<TestComponent>().unwrap();
     drop(e);
 
@@ -265,7 +265,7 @@ fn entity_builder_test() {
     let e = EntityBuilder::new()
         .add_component::<TestComponent>()
         .add_existing_component(t)
-        .create_component(|| TestComponent::mew())
+        .create_component(TestComponent::mew)
         .create()
         .unwrap();
 
@@ -293,7 +293,7 @@ fn component_update_test() {
 
     let c = entity.get_component::<TestComponent>().unwrap();
     let c = c.borrow();
-    assert_eq!(c.value, 10)
+    assert_eq!(c.value, 10);
 }
 
 #[test]
