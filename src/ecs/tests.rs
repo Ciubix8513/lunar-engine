@@ -423,3 +423,43 @@ fn test_unique_component() {
 
     assert_eq!(res, Ok(()));
 }
+
+#[test]
+fn get_unique_component() {
+    let mut world = World::new();
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<TestComponent>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<TestComponent>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+
+    let c = world.get_unique_component::<TestComponent>();
+    assert!(c.is_none());
+
+    let c = world.get_unique_component::<UniqueComponent>();
+    assert!(c.is_none());
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<UniqueComponent>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+
+    let c = world.get_unique_component::<UniqueComponent>();
+    assert!(c.is_some());
+}
