@@ -92,11 +92,32 @@ pub trait Component: std::any::Any {
     fn check_dependencies_instanced(&self, entity: &Entity) -> Result<(), &'static str> {
         Ok(())
     }
+
+    ///Returns weather the component is unique or not, by default a component is not unique
+    ///
+    ///If a component is unique, then only one instance of that component can exist in a `World`.
+    ///
+    ///# Note
+    ///
+    ///This function is not meant to be implemented manually, use [`lunar_engine_derive::unique`]
+    ///macro instead
+    fn unique() -> bool
+    where
+        Self: Sized,
+    {
+        false
+    }
+
+    ///See [`Component::unique`]
+    fn unique_instanced(&self) -> bool {
+        false
+    }
 }
 
 use rand::Rng;
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::cell::{Ref, RefMut};
+use vec_key_value_pair::set::VecSet;
 
 ///Id type [Entity] uses
 pub type UUID = u64;
@@ -117,6 +138,7 @@ pub struct Entity {
     components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
     self_reference: Option<Weak<RefCell<Self>>>,
     pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
+    pub(crate) unique_components: Option<Rc<RefCell<VecSet<TypeId>>>>,
 }
 
 ///A guard around the reference to the entity that contains this component
@@ -155,6 +177,8 @@ pub enum Error {
     EntityDoesNotExist,
     ///Entity does not contain a dependency of a component
     MissingDependency(&'static str),
+    ///An instance of the component already exists
+    UniqueComponentExists,
 }
 
 ///A wrapper around the component structure of easier access
@@ -241,6 +265,21 @@ impl Entity {
         if self.has_component::<T>() {
             return Err(Error::ComponentAlreadyExists);
         }
+
+        //Check if component is unique
+        if T::unique() {
+            if let Some(u) = &self.unique_components {
+                let map = &mut u.borrow_mut();
+
+                //Returns an error if there already is a instance of a component
+                if map.contains(&TypeId::of::<T>()) {
+                    return Err(Error::UniqueComponentExists);
+                }
+
+                map.insert(TypeId::of::<T>());
+            }
+        }
+
         if let Err(e) = T::check_dependencies(self) {
             return Err(Error::MissingDependency(e));
         }
@@ -311,8 +350,19 @@ impl Entity {
 
     ///Destroys the entity and calls decatification on all of it components
     pub fn decatify(mut self) {
-        for c in &mut self.components {
-            c.borrow_mut().decatification();
+        for (i, c) in self.components.iter_mut().enumerate() {
+            let mut c = c.borrow_mut();
+
+            if c.unique_instanced() {
+                if let Some(u) = &self.unique_components {
+                    let u = &mut u.borrow_mut();
+                    let type_id = self.comoponent_types[i];
+
+                    u.remove(&type_id);
+                }
+            }
+
+            c.decatification();
         }
     }
 }
@@ -458,6 +508,7 @@ pub struct World {
     //Gotta box it, this is so stupid
     component_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
     entity_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
+    unique_components: Rc<RefCell<VecSet<std::any::TypeId>>>,
 }
 
 impl Drop for World {
@@ -473,6 +524,7 @@ impl Default for World {
             modified: Rc::new(RefCell::new(ComponentsModified::default())),
             component_cache: RefCell::new(VecMap::new()),
             entity_cache: RefCell::new(VecMap::new()),
+            unique_components: Rc::new(RefCell::new(VecSet::new())),
         }
     }
 }
@@ -492,26 +544,41 @@ impl World {
     }
 
     ///Adds entity to the world, consuming it in the process
-    pub fn add_entity(&mut self, entity: Entity) -> WeakEntityRefence {
+    pub fn add_entity(&mut self, entity: Entity) -> Result<WeakEntityRefence, Error> {
         let mut e = entity;
         e.world_modified = Some(self.modified.clone());
+        e.unique_components = Some(self.unique_components.clone());
+
+        //Check every component for weather or not it's unique
+        for (i, c) in e.components.iter().enumerate() {
+            if c.borrow().unique_instanced() {
+                let u = &mut self.unique_components.borrow_mut();
+
+                if u.contains(&e.comoponent_types[i]) {
+                    return Err(Error::UniqueComponentExists);
+                }
+
+                u.insert(e.comoponent_types[i]);
+            }
+        }
 
         let rc = Rc::new(RefCell::new(e));
         //Add a self reference
 
-        rc.borrow_mut().self_reference = Some(Rc::downgrade(&rc));
+        let weak = Rc::downgrade(&rc);
+
+        rc.borrow_mut().self_reference = Some(weak.clone());
 
         for c in &rc.borrow().components {
             c.borrow_mut().set_self_reference(SelfReferenceGuard {
                 weak: Rc::downgrade(&rc),
             });
         }
-        let weak = Rc::downgrade(&rc);
         self.entities.push(rc);
 
         (*self.modified).borrow_mut().entity_changed();
 
-        weak
+        Ok(weak)
     }
 
     ///Finds and removes the entity by its reference

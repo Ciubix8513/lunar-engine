@@ -431,3 +431,27 @@ pub fn as_any(_: TokenStream, item: TokenStream) -> TokenStream {
         .chain(item)
         .collect()
 }
+
+///Declares a component to be unique. Must be placed inside the `impl Component` block
+///
+///# Examples
+///```ignore
+///struct Test;
+///
+///impl Component for Test {
+/// #[unique]
+/// ...
+///}
+///```
+#[proc_macro_attribute]
+pub fn unique(_: TokenStream, item: TokenStream) -> TokenStream {
+    let unique = " fn unique() -> bool where Self: Sized, { true } ".to_string();
+    let unique_instanced = " fn unique_instanced(&self) -> bool { true } ";
+
+    (unique + unique_instanced)
+        .parse::<TokenStream>()
+        .unwrap()
+        .into_iter()
+        .chain(item)
+        .collect()
+}
