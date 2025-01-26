@@ -653,9 +653,10 @@ impl World {
             self.entity_cache.borrow_mut().clear();
             return;
         }
-        let mut c_cache = self.component_cache.borrow_mut();
-        let mut e_cache = self.entity_cache.borrow_mut();
+
         if !modified.modified_components.is_empty() {
+            let mut c_cache = self.component_cache.borrow_mut();
+            let mut e_cache = self.entity_cache.borrow_mut();
             //Remove caches for all modified components
             for i in &modified.modified_components {
                 c_cache.remove(i);
@@ -727,6 +728,36 @@ impl World {
         } else {
             Some(vec.clone())
         }
+    }
+
+    ///Returns a reference to the unique component
+    ///
+    ///Always returns none if the component is not unique
+    pub fn get_unique_component<T>(&self) -> Option<ComponentReference<T>>
+    where
+        T: 'static + Component,
+    {
+        if !T::unique() {
+            return None;
+        }
+
+        self.upate_caches();
+
+        let mut binding = self.component_cache.borrow_mut();
+        let entry = binding
+            .entry(std::any::TypeId::of::<T>())
+            .or_insert_with(|| {
+                Box::new(
+                    self.entities
+                        .iter()
+                        .filter_map(|e| e.borrow().get_component::<T>())
+                        .collect::<Vec<_>>(),
+                )
+            });
+
+        let vec = entry.downcast_ref::<Vec<ComponentReference<T>>>().unwrap();
+
+        vec.first().cloned()
     }
 
     ///Calls update on all containing entities
