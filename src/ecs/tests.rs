@@ -1,4 +1,4 @@
-use lunar_engine_derive::{alias, as_any, dependencies};
+use lunar_engine_derive::{alias, as_any, dependencies, unique};
 
 use crate as lunar_engine;
 
@@ -114,7 +114,7 @@ fn add_enitity_test() {
     let e = Entity::new();
     let mut w = World::new();
 
-    w.add_entity(e);
+    w.add_entity(e).unwrap();
 
     assert_eq!(w.get_entity_count(), 1);
 }
@@ -127,7 +127,7 @@ fn remove_enitity_test() {
 
     assert!(w.remove_entity_by_id(id).is_err());
 
-    w.add_entity(e);
+    w.add_entity(e).unwrap();
 
     w.remove_entity_by_id(id).unwrap();
 
@@ -140,7 +140,7 @@ fn get_entity_test() {
     e.add_component::<TestComponent>().unwrap();
     let id = e.get_id();
     let mut w = World::new();
-    w.add_entity(e);
+    w.add_entity(e).unwrap();
 
     let e = w.get_entity_by_id(id).unwrap();
 
@@ -161,7 +161,7 @@ fn get_all_componenents_test() {
     for _ in 0..200 {
         let mut e = Entity::new();
         e.add_component::<TestComponent>().unwrap();
-        w.add_entity(e);
+        w.add_entity(e).unwrap();
     }
 
     //To test speed
@@ -178,7 +178,7 @@ fn get_all_componenents_test() {
 
     let mut e = Entity::new();
     e.add_component::<TestComponent>().unwrap();
-    w.add_entity(e);
+    w.add_entity(e).unwrap();
 
     //Test cache invalidation for components
     let o = w.get_all_components::<TestComponent>();
@@ -313,13 +313,15 @@ fn component_decatification_test() {
 fn self_refernce_test() {
     let mut world = World::new();
 
-    world.add_entity(
-        EntityBuilder::new()
-            .add_component::<TestComponent1>()
-            .add_component::<TestComponent2>()
-            .create()
-            .unwrap(),
-    );
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<TestComponent1>()
+                .add_component::<TestComponent2>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
 
     let binding = world
         .get_all_entities_with_component::<TestComponent2>()
@@ -339,14 +341,85 @@ struct Alias;
 fn alias_test() {
     let mut world = World::new();
 
-    world.add_entity(
-        EntityBuilder::new()
-            .create_component(|| TestComponent1 { value: 0 })
-            .add_component::<Alias>()
-            .create()
-            .unwrap(),
-    );
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(|| TestComponent1 { value: 0 })
+                .add_component::<Alias>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
 
     let binding = world.get_all_components::<Alias>().unwrap();
     assert_eq!(binding.len(), 1);
+}
+
+struct UniqueComponent;
+
+impl Component for UniqueComponent {
+    #[as_any]
+    #[unique]
+
+    fn mew() -> Self {
+        Self
+    }
+}
+
+#[test]
+fn test_unique_component() {
+    let mut world = World::new();
+
+    //Add a unique component
+    let res = world.add_entity(
+        EntityBuilder::new()
+            .add_component::<UniqueComponent>()
+            .create()
+            .unwrap(),
+    );
+    //Succeed
+    assert!(res.is_ok());
+
+    let res = world.add_entity(
+        EntityBuilder::new()
+            .add_component::<UniqueComponent>()
+            .create()
+            .unwrap(),
+    );
+    //Try again and fail
+    assert_eq!(res.err(), Some(Error::UniqueComponentExists));
+
+    //Clear the world
+    world.destroy_all();
+
+    let e = world.add_entity(Entity::new()).unwrap();
+    let e1 = world.add_entity(Entity::new()).unwrap();
+
+    let res = e
+        .upgrade()
+        .unwrap()
+        .borrow_mut()
+        .add_component::<UniqueComponent>();
+
+    assert_eq!(res, Ok(()));
+
+    let res = e1
+        .upgrade()
+        .unwrap()
+        .borrow_mut()
+        .add_component::<UniqueComponent>();
+
+    assert_eq!(res, Err(Error::UniqueComponentExists));
+
+    let id = e.upgrade().unwrap().borrow().get_id();
+
+    world.remove_entity_by_id(id).unwrap();
+
+    let res = e1
+        .upgrade()
+        .unwrap()
+        .borrow_mut()
+        .add_component::<UniqueComponent>();
+
+    assert_eq!(res, Ok(()));
 }
