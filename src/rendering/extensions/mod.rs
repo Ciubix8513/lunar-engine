@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_lines)]
 
+use core::f32;
 use std::{num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
@@ -11,12 +12,10 @@ use crate::{
     assets::{BindgroupState, Material, Mesh},
     components,
     ecs::{ComponentReference, World},
+    math::{Mat4x4, Vec3, Vec4, Vector as _},
     structures::Color,
-    DEVICE, STAGING_BELT,
+    DEVICE, RESOLUTION, STAGING_BELT,
 };
-
-///Frustum culling experiment
-pub mod frustum_culling;
 
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
@@ -89,6 +88,8 @@ pub struct Base {
     pub priority: u32,
     ///Clear color used for rendering
     pub clear_color: Color,
+    ///Weather or not to use frustum culling
+    pub frustum_culling: bool,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
@@ -100,8 +101,9 @@ pub struct Base {
 impl Base {
     #[must_use]
     ///Creates a new [`Base`]
-    pub const fn new(order: u32) -> Self {
+    pub const fn new(order: u32, frustum_culling: bool) -> Self {
         Self {
+            frustum_culling,
             priority: order,
             clear_color: Color {
                 r: 0.0,
@@ -123,8 +125,9 @@ impl Base {
     ///
     ///Everything rendered with this extension will have that color in the parts not occupied by a mesh.
     #[must_use]
-    pub const fn new_with_color(order: u32, color: Color) -> Self {
+    pub const fn new_with_color(order: u32, frustum_culling: bool, color: Color) -> Self {
         Self {
+            frustum_culling,
             priority: order,
             clear_color: color,
             identifier: Vec::new(),
@@ -167,8 +170,7 @@ impl RenderingExtension for Base {
         attachments: &AttachmentData,
     ) {
         #[cfg(feature = "tracy")]
-        let _span = tracy_client::span!("Base render");
-
+        let _span = tracy_client::span!("Frustum culling render");
         trace!("Started frame");
 
         //Update camera first
@@ -185,10 +187,47 @@ impl RenderingExtension for Base {
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
 
-        let meshes = binding
-            .iter()
-            .filter(|i| i.borrow().get_visible())
-            .collect::<Vec<_>>();
+        #[cfg(feature = "tracy")]
+        let _frustum_span = tracy_client::span!("Frustum checking");
+
+        let meshes = if self.frustum_culling {
+            let frustum = calculate_frustum(
+                camera.inner.near,
+                camera.inner.far,
+                camera.inner.projection_type.fov().unwrap_or_default(),
+            );
+            let camera_transform = camera.camera_transform();
+            //Precompute the transformation matrix, since it's the same for all the objects
+            let matrix = calculate_frustum_matrix(frustum, camera_transform);
+            binding
+                .iter()
+                .filter(|i| {
+                    let m = i.borrow();
+                    let binding = m.get_transform();
+                    let t = binding.borrow();
+
+                    m.get_visible()
+                        && check_frustum(
+                            frustum.z,
+                            matrix,
+                            t.position,
+                            assets
+                                .borrow_by_id::<Mesh>(m.get_mesh_id().unwrap())
+                                .unwrap()
+                                .get_extent(),
+                            t.scale,
+                        )
+                        .0
+                })
+                .collect::<Vec<_>>()
+        } else {
+            binding
+                .iter()
+                .filter(|i| i.borrow().get_visible())
+                .collect::<Vec<_>>()
+        };
+        #[cfg(feature = "tracy")]
+        drop(_frustum_span);
         trace!("Got all the meshes");
 
         //List of materials used for rendering
@@ -204,7 +243,6 @@ impl RenderingExtension for Base {
         }
 
         //What is even going on here?
-        //I... don't know...
 
         let mut matrices = matrices
             .iter()
@@ -214,6 +252,9 @@ impl RenderingExtension for Base {
 
         //determine if can re use cache
         let mut identical = true;
+
+        #[cfg(feature = "tracy")]
+        let _cache_check_span = tracy_client::span!("Cache reuse check");
 
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
@@ -226,6 +267,9 @@ impl RenderingExtension for Base {
         } else {
             identical = false;
         }
+
+        #[cfg(feature = "tracy")]
+        drop(_cache_check_span);
 
         #[allow(clippy::if_not_else)]
         if !identical {
@@ -273,7 +317,7 @@ impl RenderingExtension for Base {
                 let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
 
                 //(mesh_ID, (transformation matrix, material_id, mesh reference));
-                let mut current_window = matrices[points.0..points.1].iter().collect::<Vec<_>>();
+                let mut current_window = matrices[points.0..points.1].to_vec(); //.iter().collect::<Vec<_>>();
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
@@ -333,7 +377,6 @@ impl RenderingExtension for Base {
                         .flat_map(bytemuck::bytes_of)
                         .copied()
                         .collect::<Vec<u8>>();
-
                     v_buffers.push(
                         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                             label: Some(&label),
@@ -375,6 +418,8 @@ impl RenderingExtension for Base {
 
             for (buffer, meshes) in self.v_buffers.iter().zip(self.mesh_refs.iter()) {
                 //I do have to collect here
+                // let matrices = matrices.iter().map(|i| i.1 .0).collect::<Vec<_>>();
+
                 let matrices = meshes
                     .iter()
                     .map(|m| m.borrow().get_matrix())
@@ -397,6 +442,8 @@ impl RenderingExtension for Base {
             }
         }
 
+        trace!("Initializing the bindgroups");
+
         //Initialize bindgroups for all needed materials
         for m in materials {
             let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
@@ -406,6 +453,7 @@ impl RenderingExtension for Base {
             }
             m.initialize_bindgroups(assets);
         }
+        trace!("Starting the render pass");
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("First pass"),
@@ -434,6 +482,7 @@ impl RenderingExtension for Base {
 
         let mut previous_mat = 0;
 
+        trace!("Rendering materials");
         //Iterate through the meshes and render them
         for (i, m) in self.mesh_materials.iter().enumerate() {
             let mat = m.material_id;
@@ -465,4 +514,109 @@ impl RenderingExtension for Base {
     fn get_priority(&self) -> u32 {
         self.priority
     }
+}
+
+fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
+    let beta = f32::consts::FRAC_PI_2 - (fov / 2.0);
+    let bottom = 2.0 * (((near + far) * f32::sin(fov / 2.0)) / f32::sin(beta));
+
+    let resolution = RESOLUTION.read().unwrap();
+    let aspect = resolution.width as f32 / resolution.height as f32;
+    drop(resolution);
+
+    let side = bottom / aspect;
+
+    (bottom, side, near + far).into()
+}
+
+fn calculate_frustum_matrix(frustum: Vec3, camera_transform: Mat4x4) -> Mat4x4 {
+    let scale = Mat4x4::scale_matrix(&(Vec3::new(1.0 / frustum.x, 1.0, 1.0 / frustum.y)));
+    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, frustum.z, 0.0));
+    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(90.0, 90.0, 0.0));
+
+    translation * scale * rotation * camera_transform.inverted().unwrap()
+}
+
+fn check_frustum(
+    h: f32,
+    frustum_matrix: Mat4x4,
+    point: Vec3,
+    radius: f32,
+    scale: Vec3,
+) -> (bool, f32) {
+    let p: Vec4 = (point, 1.0).into();
+
+    let p = p * frustum_matrix;
+    let p = p.xyz();
+
+    let distance = sdf(p, h);
+
+    if distance <= 0.0 {
+        return (true, distance);
+    }
+
+    //Factor in scale
+    (
+        radius.mul_add(-f32::max(scale.x, f32::max(scale.y, scale.z)), distance) <= 0.001,
+        distance,
+    )
+}
+
+#[allow(clippy::many_single_char_names)]
+fn sdf(mut p: Vec3, h: f32) -> f32 {
+    // Original SDF license:
+    // The MIT License
+    // Copyright © 2019 Inigo Quilez
+    // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    if p.y <= 0.0 {
+        let p = p.abs() - Vec3::new(0.5, 0.0, 0.5);
+
+        return if p > Vec3::new(0.0, 0.0, 0.0) {
+            p.length()
+        } else {
+            0.0
+        };
+    }
+
+    //Symmetry
+    p.x = f32::abs(p.x);
+    p.z = f32::abs(p.z);
+
+    if p.z > p.x {
+        std::mem::swap(&mut p.x, &mut p.z);
+    }
+    p.x -= 0.5;
+    p.z -= 0.5;
+
+    //project into face plane (2d)
+
+    let m2 = h.mul_add(h, 0.25);
+
+    let q = Vec3::new(p.z, h.mul_add(p.y, -(0.5 * p.x)), h.mul_add(p.x, 0.5 * p.y));
+
+    let sign = f32::signum(f32::max(q.z, -p.y));
+
+    if sign <= 0.0 {
+        return f32::NEG_INFINITY;
+    }
+
+    let s = f32::max(-q.x, 0.0);
+
+    let t = f32::clamp(0.5f32.mul_add(-q.x, q.y) / (m2 + 0.25), 0.0, 1.0);
+
+    let a = (m2 * (q.x + s)).mul_add(q.x + s, q.y * q.y);
+
+    let b = (m2 * 0.5f32.mul_add(t, q.x)).mul_add(
+        0.5f32.mul_add(t, q.x),
+        (m2.mul_add(-t, q.y)) * (m2.mul_add(-t, q.y)),
+    );
+
+    let d2 = if f32::max(-q.y, q.x.mul_add(m2, q.y * 0.5)) < 0.0 {
+        0.0
+    } else {
+        f32::min(a, b)
+    };
+
+    f32::sqrt(q.z.mul_add(q.z, d2) / m2)
 }
