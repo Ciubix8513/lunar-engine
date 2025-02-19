@@ -64,10 +64,12 @@ impl MaterialTrait for TextureUnlit {
     fn intialize(&mut self) {
         let device = DEVICE.get().unwrap();
 
-        let v_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
-        let f_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../../shaders/texture_unlit.wgsl"));
+        let v_shader = device.create_shader_module(wgpu_shader_checker::include_wgsl!(
+            "src/shaders/vertex.wgsl"
+        ));
+        let f_shader = device.create_shader_module(wgpu_shader_checker::include_wgsl!(
+            "src/shaders/texture_unlit.wgsl"
+        ));
 
         let bind_group_layout_f =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
