@@ -1,6 +1,8 @@
+pub use color_lit::ColorLit;
 pub use color_unlit::ColorUnlit;
 pub use texture_unlit::TextureUnlit;
 
+mod color_lit;
 mod color_unlit;
 mod texture_unlit;
 

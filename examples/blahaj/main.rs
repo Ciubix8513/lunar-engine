@@ -66,6 +66,7 @@ fn init(state: &mut MyState) {
 
     state.extension = Base::new_with_color(
         0,
+        true,
         Color {
             r: 0.96,
             g: 0.65,
@@ -106,15 +107,18 @@ fn init(state: &mut MyState) {
             .unwrap(),
     );
 
-    state.world.add_entity(
-        EntityBuilder::new()
-            .create_component(Transform::default)
-            .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
-            .add_component::<Blahaj>()
-            .add_component::<Spiny>()
-            .create()
-            .unwrap(),
-    );
+    state
+        .world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(Transform::default)
+                .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+                .add_component::<Blahaj>()
+                .add_component::<Spiny>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
 
     info!("Initialized!");
     info!("World contains {} entities", state.world.get_entity_count());
@@ -126,19 +130,22 @@ fn init(state: &mut MyState) {
 
 fn run(state: &mut MyState) {
     if input::KeyState::Down == input::key(KeyCode::KeyB) {
-        state.world.add_entity(
-            EntityBuilder::new()
-                .create_component(|| Transform {
-                    // scale: Vec3::random(0.3, 3.0),
-                    rotation: Vec3::random(0.0, 360.0),
-                    position: Vec3::random(-5.0, 5.0),
-                    ..Default::default()
-                })
-                .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
-                .add_component::<Blahaj>()
-                .create()
-                .unwrap(),
-        );
+        state
+            .world
+            .add_entity(
+                EntityBuilder::new()
+                    .create_component(|| Transform {
+                        // scale: Vec3::random(0.3, 3.0),
+                        rotation: Vec3::random(0.0, 360.0),
+                        position: Vec3::random(-5.0, 5.0),
+                        ..Default::default()
+                    })
+                    .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+                    .add_component::<Blahaj>()
+                    .create()
+                    .unwrap(),
+            )
+            .unwrap();
     }
 
     if input::KeyState::Down == input::key(KeyCode::KeyC) {

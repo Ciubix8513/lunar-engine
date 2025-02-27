@@ -17,5 +17,21 @@ pub const CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR: wgpu::BindGroupLayoutDescriptor =
         }],
     };
 
+pub const LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR: wgpu::BindGroupLayoutDescriptor =
+    wgpu::BindGroupLayoutDescriptor {
+        label: Some("Directional Light"),
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        }],
+    };
+
 pub const CAMERA_BIND_GROUP_INDEX: u32 = 0;
+pub const LIGHT_BIND_GROUP_INDEX: u32 = 2;
 pub const NUM_THREADS: usize = 8;

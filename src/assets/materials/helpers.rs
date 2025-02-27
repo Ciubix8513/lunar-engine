@@ -9,16 +9,19 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
             array_stride: 36,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
+                // Position?
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
                     offset: 0,
                     shader_location: 0,
                 },
+                //UV
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x2,
                     offset: 16,
                     shader_location: 1,
                 },
+                //Normals
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x3,
                     offset: 24,
@@ -27,6 +30,8 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
             ],
         },
         //Transform data
+        //Encoding a matrix as 4 vec4
+        //Just that i can do instanced rendering
         wgpu::VertexBufferLayout {
             array_stride: 64,
             step_mode: wgpu::VertexStepMode::Instance,

@@ -54,7 +54,7 @@ pub struct Image {
 
 ///Color represented using 4 values from 0 to 1
 #[repr(C)]
-#[derive(Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, PartialEq)]
 pub struct Color {
     ///Value of the red channel
     pub r: f32,

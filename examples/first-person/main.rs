@@ -3,7 +3,7 @@ use core::f32;
 use log::info;
 use lunar_engine::{
     asset_managment::AssetStore,
-    assets::{self, materials::ColorUnlit, mesh::SphereData},
+    assets::{self, materials::ColorLit, mesh::SphereData},
     components::{camera::MainCamera, fps::FpsRecorder, mesh::Mesh, transform::Transform},
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
@@ -127,7 +127,7 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
 
     for _ in 0..num_colors {
         // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
-        colors.push(assets.register(ColorUnlit::new(Color::from_hsl(
+        colors.push(assets.register(ColorLit::new(Color::from_hsl(
             rng.gen_range(0.0..360.0),
             rng.gen_range(0.5..1.0),
             rng.gen_range(0.4..0.8),
@@ -138,18 +138,20 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
         let obj_id = objects[rng.gen_range(0..objects.len())];
         let mat_id = colors[rng.gen_range(0..colors.len())];
 
-        world.add_entity(
-            EntityBuilder::new()
-                .create_component(|| Transform {
-                    position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
-                    rotation: Vec3::random_with_rng(-180.0, 180.0, &mut rng),
-                    scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
-                    ..Default::default()
-                })
-                .create_component(|| Mesh::new(obj_id, mat_id))
-                .create()
-                .unwrap(),
-        );
+        world
+            .add_entity(
+                EntityBuilder::new()
+                    .create_component(|| Transform {
+                        position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
+                        rotation: Vec3::random_with_rng(-180.0, 180.0, &mut rng),
+                        scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
+                        ..Default::default()
+                    })
+                    .create_component(|| Mesh::new(obj_id, mat_id))
+                    .create()
+                    .unwrap(),
+            )
+            .unwrap();
     }
 }
 
@@ -173,19 +175,21 @@ fn init(state: &mut State) {
 
     generate_scene(world, assets, num_objects, num_colors);
 
-    world.add_entity(
-        EntityBuilder::new()
-            .create_component(|| Transform {
-                position: (0.0, 0.0, -4.0).into(),
-                rotation: (0.0, 0.0, 0.0).into(),
-                ..Default::default()
-            })
-            .add_component::<MainCamera>()
-            .add_component::<CameraControls>()
-            .add_component::<FpsRecorder>()
-            .create()
-            .unwrap(),
-    );
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(|| Transform {
+                    position: (0.0, 0.0, -4.0).into(),
+                    rotation: (0.0, 0.0, 0.0).into(),
+                    ..Default::default()
+                })
+                .add_component::<MainCamera>()
+                .add_component::<CameraControls>()
+                .add_component::<FpsRecorder>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
 
     assets.intialize_all().unwrap();
 }
