@@ -17,6 +17,10 @@ pub trait MaterialTrait {
     fn set_bindgroups(&mut self, asset_store: &AssetStore);
     ///State of the bindgroups of the material
     fn bindgroup_sate(&self) -> BindgroupState;
+    ///Is the material lit? or uses any of the lighting resources
+    fn is_lit(&self) -> bool {
+        false
+    }
 }
 
 ///Stores material data, wrapper around the material trait object

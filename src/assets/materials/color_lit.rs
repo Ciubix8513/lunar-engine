@@ -226,4 +226,8 @@ impl MaterialTrait for ColorLit {
     fn bindgroup_sate(&self) -> crate::assets::BindgroupState {
         self.bindgroup_sate
     }
+
+    fn is_lit(&self) -> bool {
+        true
+    }
 }
