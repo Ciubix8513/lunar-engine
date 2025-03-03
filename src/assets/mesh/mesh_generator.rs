@@ -276,5 +276,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
         }
     }
 
+    o.indices.reverse();
+
     o
 }
