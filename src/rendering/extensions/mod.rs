@@ -5,15 +5,16 @@ use std::{num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, BufferUsages};
 
 use crate::{
     asset_managment::AssetStore,
     assets::{BindgroupState, Material, Mesh},
-    components,
+    components::{self, light::DirectionalLight},
     ecs::{ComponentReference, World},
+    grimoire,
     math::{Mat4x4, Vec3, Vec4, Vector as _},
-    structures::Color,
+    structures::{Color, LightBuffer},
     DEVICE, RESOLUTION, STAGING_BELT,
 };
 
@@ -96,6 +97,7 @@ pub struct Base {
     mesh_materials: Vec<MeshMaterial>,
     num_instances: Vec<usize>,
     mesh_refs: Vec<Vec<ComponentReference<components::mesh::Mesh>>>,
+    light_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
 }
 
 impl Base {
@@ -116,6 +118,7 @@ impl Base {
             mesh_materials: Vec::new(),
             num_instances: Vec::new(),
             mesh_refs: Vec::new(),
+            light_buffer: None,
         }
     }
 
@@ -135,6 +138,7 @@ impl Base {
             mesh_materials: Vec::new(),
             num_instances: Vec::new(),
             mesh_refs: Vec::new(),
+            light_buffer: None,
         }
     }
 }
@@ -444,15 +448,79 @@ impl RenderingExtension for Base {
 
         trace!("Initializing the bindgroups");
 
+        let mut is_lit = false;
+
         //Initialize bindgroups for all needed materials
         for m in materials {
             let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
+            is_lit = is_lit || m.is_lit();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
             }
             m.initialize_bindgroups(assets);
         }
+
+        //There are lit materials, need to take care of them
+        if is_lit {
+            //riiiight, need to get some light buffers
+            //If only i remembered what the fuck i was doing lol
+
+            //Initialize the buffer if it is not created
+            if self.light_buffer.is_none() {
+                let device = DEVICE.get().unwrap();
+
+                //Create an empty buffer
+                let buf = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Lighting buffer"),
+                    size: size_of::<LightBuffer>() as u64,
+                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+
+                let bingroup_layout =
+                    device.create_bind_group_layout(&grimoire::LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+
+                let bindgroup = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Light bindgroup"),
+                    layout: &bingroup_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &buf,
+                            offset: 0,
+                            size: None,
+                            // size: NonZeroU64::new(size_of::<LightBuffer>() as u64),
+                        }),
+                    }],
+                });
+
+                //The buffer should be all zeros, so it should be fine to not initialize it?
+                //Tho it may contain garbage data, and the docs don't say anything about it
+                self.light_buffer = Some((buf, bindgroup));
+            }
+
+            //get the light object
+
+            let light = world.get_unique_component::<DirectionalLight>();
+            if let Some(light) = light {
+                let device = DEVICE.get().unwrap();
+                //Update the light buffer if there is a light source
+                let l = light.borrow().get_light();
+
+                let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
+                let mut b = belt.write_buffer(
+                    encoder,
+                    &self.light_buffer.as_ref().unwrap().0,
+                    0 as u64,
+                    NonZeroU64::new(size_of::<LightBuffer>() as u64).unwrap(),
+                    device,
+                );
+
+                b.copy_from_slice(bytemuck::bytes_of(&l));
+            }
+        }
+
         trace!("Starting the render pass");
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -489,6 +557,14 @@ impl RenderingExtension for Base {
 
             if mat != previous_mat {
                 let mat = assets.borrow_by_id::<Material>(mat).unwrap();
+
+                if mat.is_lit() {
+                    render_pass.set_bind_group(
+                        grimoire::LIGHT_BIND_GROUP_INDEX,
+                        &self.light_buffer.as_ref().unwrap().1,
+                        &[],
+                    );
+                }
                 mat.render(&mut render_pass);
             }
             previous_mat = mat;

@@ -4,12 +4,15 @@ use log::info;
 use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::ColorLit, mesh::SphereData},
-    components::{camera::MainCamera, fps::FpsRecorder, mesh::Mesh, transform::Transform},
+    components::{
+        camera::MainCamera, fps::FpsRecorder, light::DirectionalLight, mesh::Mesh,
+        transform::Transform,
+    },
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{lerp, Mat4x4, Vec3, Vector},
-    rendering::{extensions::frustum_culling::Base, render},
+    rendering::{extensions::Base, render},
     structures::Color,
 };
 use lunar_engine_derive::as_any;
@@ -186,6 +189,18 @@ fn init(state: &mut State) {
                 .add_component::<MainCamera>()
                 .add_component::<CameraControls>()
                 .add_component::<FpsRecorder>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(|| DirectionalLight {
+                    color: Color::red(),
+                    ..Default::default()
+                })
                 .create()
                 .unwrap(),
         )

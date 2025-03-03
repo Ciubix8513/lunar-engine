@@ -17,7 +17,6 @@ pub struct Vertex {
 }
 ///Indecies of a mesh
 pub type Index = u32;
-
 #[repr(C)]
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 ///Mesh data
@@ -64,6 +63,18 @@ pub struct Color {
     pub b: f32,
     ///Value of the alpha channel
     pub a: f32,
+}
+
+///Describes a directional light
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+pub(crate) struct LightBuffer {
+    ///Direction of the light
+    pub direction: Vec3,
+    ///Intensity of the light
+    pub intensity: f32,
+    ///Color of the light
+    pub color: Color,
 }
 
 impl Color {

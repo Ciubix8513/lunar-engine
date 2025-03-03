@@ -78,6 +78,11 @@ impl Material {
     pub fn render(&self, render_pass: &mut wgpu::RenderPass) {
         self.material.render(render_pass);
     }
+
+    ///Returns weather the material is lit, or uses any lighting resources
+    pub fn is_lit(&self) -> bool {
+        self.material.is_lit()
+    }
 }
 
 impl<T> From<T> for Material
