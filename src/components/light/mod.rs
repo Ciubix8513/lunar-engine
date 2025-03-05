@@ -1,6 +1,6 @@
 use crate::{
     ecs::Component,
-    math::Vec3,
+    math::{Vec3, Vector},
     structures::{Color, LightBuffer},
 };
 
@@ -16,6 +16,9 @@ pub struct DirectionalLight {
     pub color: Color,
     ///Intensity of the light
     pub intensity: f32,
+
+    ///Color of the ambient light
+    pub ambient_color: Color,
 }
 
 impl Default for DirectionalLight {
@@ -23,7 +26,8 @@ impl Default for DirectionalLight {
         Self {
             direction: Vec3::new(0.0, -1.0, 0.0),
             color: Color::white(),
-            intensity: 100.0,
+            intensity: 1.0,
+            ambient_color: Color::new(0.1, 0.1, 0.1, 1.0),
         }
     }
 }
@@ -45,9 +49,10 @@ impl Component for DirectionalLight {
 impl DirectionalLight {
     pub(crate) fn get_light(&self) -> LightBuffer {
         LightBuffer {
-            direction: self.direction,
+            direction: self.direction.normalize(),
             color: self.color,
             intensity: self.intensity,
+            ambient_color: self.ambient_color,
         }
     }
 }

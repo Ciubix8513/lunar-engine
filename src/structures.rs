@@ -75,6 +75,8 @@ pub(crate) struct LightBuffer {
     pub intensity: f32,
     ///Color of the light
     pub color: Color,
+    ///Color of the ambient light
+    pub ambient_color: Color,
 }
 
 impl Color {

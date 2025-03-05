@@ -130,11 +130,14 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
 
     for _ in 0..num_colors {
         // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
-        colors.push(assets.register(ColorLit::new(Color::from_hsl(
-            rng.gen_range(0.0..360.0),
-            rng.gen_range(0.5..1.0),
-            rng.gen_range(0.4..0.8),
-        ))));
+        colors.push(assets.register(ColorLit::new(
+            Color::from_hsl(
+                rng.gen_range(0.0..360.0),
+                rng.gen_range(0.5..1.0),
+                rng.gen_range(0.4..0.8),
+            ),
+            1.0,
+        )));
     }
 
     for _ in 0..num_objects {
@@ -198,7 +201,10 @@ fn init(state: &mut State) {
         .add_entity(
             EntityBuilder::new()
                 .create_component(|| DirectionalLight {
-                    color: Color::red(),
+                    color: Color::white(),
+                    direction: Vec3::new(0.0, -1.0, 0.0),
+                    ambient_color: Color::new(0.15, 0.15, 0.15, 1.0),
+
                     ..Default::default()
                 })
                 .create()
@@ -219,10 +225,10 @@ fn run(state: &mut State) {
     state.frames += 1;
     state.delta += delta_time();
 
-    if state.delta >= 5.0 {
-        log::info!("Delta = {}", state.delta);
-        lunar_engine::quit();
-    }
+    // if state.delta >= 5.0 {
+    //     log::info!("Delta = {}", state.delta);
+    //     lunar_engine::quit();
+    // }
 }
 
 fn main() {

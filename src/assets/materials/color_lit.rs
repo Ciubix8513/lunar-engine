@@ -32,16 +32,18 @@ pub struct ColorLit {
     #[cfg(not(target_arch = "wasm32"))]
     uniform: Option<wgpu::Buffer>,
     color: Color,
+    shininess: f32,
     bindgroup_sate: BindgroupState,
 }
 
 impl ColorLit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
-    ///Creates a new material with a give texture id
-    pub fn new(color: Color) -> Material {
+    ///Creates a new material with a color
+    pub fn new(color: Color, shininess: f32) -> Material {
         Self {
             color,
+            shininess,
             pipeline: None,
             bind_group: None,
             bind_group_layout_f: None,
@@ -49,6 +51,26 @@ impl ColorLit {
             uniform: None,
         }
         .into()
+    }
+
+    ///Returns the shininess of the material
+    pub fn get_shininess(&self) -> f32 {
+        self.shininess
+    }
+
+    ///Returns the color of the material
+    pub fn get_color(&self) -> Color {
+        self.color
+    }
+
+    ///Sets the shininess of the material
+    pub fn set_shininess(&mut self, shininess: f32) {
+        self.shininess = shininess;
+    }
+
+    ///Sets the color of the material
+    pub fn set_color(&mut self, color: Color) {
+        self.color = color;
     }
 }
 
