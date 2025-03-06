@@ -9,7 +9,7 @@ use crate::math::{Vec2, Vec3, Vec4};
 ///Representation of a vertex in a mesh
 pub struct Vertex {
     ///Coordinate in the 3d space
-    pub coords: Vec4,
+    pub coords: Vec3,
     ///Textrure coordinates
     pub texture: Vec2,
     ///Normal direction

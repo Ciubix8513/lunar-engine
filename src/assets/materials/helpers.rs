@@ -6,25 +6,25 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
     [
         //Vertex data
         wgpu::VertexBufferLayout {
-            array_stride: 36,
+            array_stride: 32,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
-                // Position?
+                // Position
                 wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x4,
+                    format: wgpu::VertexFormat::Float32x3,
                     offset: 0,
                     shader_location: 0,
                 },
                 //UV
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x2,
-                    offset: 16,
+                    offset: 12,
                     shader_location: 1,
                 },
                 //Normals
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x3,
-                    offset: 24,
+                    offset: 20,
                     shader_location: 2,
                 },
             ],
