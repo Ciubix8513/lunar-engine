@@ -2,10 +2,13 @@
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
+use bytemuck::bytes_of;
 use wgpu::util::DeviceExt;
 use wgpu::BufferUsages;
 
 use crate::assets::Material;
+use crate::internal::STAGING_BELT;
+use crate::math::Vec3;
 use crate::structures::Color;
 use crate::{grimoire, DEVICE, FORMAT};
 
@@ -42,6 +45,7 @@ pub struct ColorLit {
 struct MaterialData {
     color: Color,
     shininess: f32,
+    pading: Vec3,
 }
 
 impl ColorLit {
@@ -84,6 +88,32 @@ impl ColorLit {
 }
 
 impl MaterialTrait for ColorLit {
+    fn update_bindgroups(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        //Do nothing if no changes to the data
+        if !self.changed {
+            return;
+        }
+
+        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
+        let device = DEVICE.get().unwrap();
+
+        let data = MaterialData {
+            color: self.color,
+            shininess: self.shininess,
+            pading: Vec3::default(),
+        };
+
+        staging_belt
+            .write_buffer(
+                encoder,
+                self.uniform.as_ref().unwrap(),
+                0,
+                NonZeroU64::new(size_of::<MaterialData>() as u64).unwrap(),
+                device,
+            )
+            .copy_from_slice(bytes_of(&data));
+    }
+
     fn render(&self, render_pass: &mut wgpu::RenderPass) {
         //SHOULD BE FINE
         //TODO: FIND A BETTER SOLUTION
@@ -121,7 +151,7 @@ impl MaterialTrait for ColorLit {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: Some(NonZeroU64::new(4 * 4).unwrap()),
+                        min_binding_size: NonZeroU64::new(size_of::<MaterialData>() as u64),
                     },
                     count: None,
                 }],
@@ -156,6 +186,7 @@ impl MaterialTrait for ColorLit {
         let data = MaterialData {
             shininess: self.shininess,
             color: self.color,
+            pading: Vec3::default(),
         };
 
         #[cfg(target_arch = "wasm32")]
@@ -164,7 +195,7 @@ impl MaterialTrait for ColorLit {
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: None,
                     contents: bytemuck::bytes_of(&data),
-                    usage: BufferUsages::UNIFORM,
+                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 }),
             ));
         }
@@ -172,9 +203,9 @@ impl MaterialTrait for ColorLit {
         {
             self.uniform = Some(
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: None,
+                    label: Some("Material data"),
                     contents: bytemuck::bytes_of(&data),
-                    usage: BufferUsages::UNIFORM,
+                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                 }),
             );
         }

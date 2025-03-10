@@ -136,7 +136,7 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
                 rng.gen_range(0.5..1.0),
                 rng.gen_range(0.4..0.8),
             ),
-            1.0,
+            rng.gen_range(0.0..1.0),
         )));
     }
 

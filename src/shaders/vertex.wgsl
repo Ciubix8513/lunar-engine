@@ -29,13 +29,6 @@ fn main(
         trans_3,
     );
 
-    let  trans_mat_1 = mat3x3<f32>(
-        trans_0.xyz,
-        trans_1.xyz,
-        trans_2.xyz,
-    );
-
-
     var o = trans_mat * vec4(position, 1.0);
     o = camera * o;
 
@@ -44,7 +37,7 @@ fn main(
     res.tex_coord = uvs;
 
     //Transform the normals, and normalize them
-    res.normal = normalize(trans_mat_1 * normal);
+    res.normal = (trans_mat * vec4(normal, 1.0)).xyz;
 
     return res;
 }

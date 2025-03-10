@@ -23,7 +23,7 @@ pub trait MaterialTrait {
         false
     }
     ///Updates the bindgroups of the material with new data
-    fn update_bindgroups(&mut self, encoder: CommandEncoder) {}
+    fn update_bindgroups(&mut self, _encoder: &mut CommandEncoder) {}
 }
 
 ///Stores material data, wrapper around the material trait object
@@ -85,6 +85,11 @@ impl Material {
     ///Returns weather the material is lit, or uses any lighting resources
     pub fn is_lit(&self) -> bool {
         self.material.is_lit()
+    }
+
+    ///Updates the bindgroups of the material
+    pub fn update_bindgroups(&mut self, encoder: &mut CommandEncoder) {
+        self.material.update_bindgroups(encoder);
     }
 }
 
