@@ -5,9 +5,14 @@ struct Light {
   ambient_color: vec4<f32>
 }
 
+struct MaterialData {
+  color: vec4<f32>,
+  shininess: f32,
+}
+
 
 @group(1)@binding(0)
-var<uniform> color: vec4<f32>;
+var<uniform> material: MaterialData;
 @group(2)@binding(0)
 var<uniform> light: Light;
 

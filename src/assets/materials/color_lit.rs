@@ -34,6 +34,14 @@ pub struct ColorLit {
     color: Color,
     shininess: f32,
     bindgroup_sate: BindgroupState,
+    changed: bool,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+struct MaterialData {
+    color: Color,
+    shininess: f32,
 }
 
 impl ColorLit {
@@ -49,6 +57,7 @@ impl ColorLit {
             bind_group_layout_f: None,
             bindgroup_sate: BindgroupState::Uninitialized,
             uniform: None,
+            changed: false,
         }
         .into()
     }
@@ -144,12 +153,17 @@ impl MaterialTrait for ColorLit {
             self.bind_group_layout_f = Some(bind_group_layout_f);
         }
 
+        let data = MaterialData {
+            shininess: self.shininess,
+            color: self.color,
+        };
+
         #[cfg(target_arch = "wasm32")]
         {
             self.uniform = Some(crate::wrappers::WgpuWrapper::new(
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: None,
-                    contents: bytemuck::bytes_of(&self.color),
+                    contents: bytemuck::bytes_of(&data),
                     usage: BufferUsages::UNIFORM,
                 }),
             ));
@@ -159,7 +173,7 @@ impl MaterialTrait for ColorLit {
             self.uniform = Some(
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: None,
-                    contents: bytemuck::bytes_of(&self.color),
+                    contents: bytemuck::bytes_of(&data),
                     usage: BufferUsages::UNIFORM,
                 }),
             );

@@ -1,4 +1,5 @@
 use lunar_engine_derive::as_any;
+use wgpu::CommandEncoder;
 
 use crate::asset_managment::{Asset, AssetStore, UUID};
 
@@ -21,6 +22,8 @@ pub trait MaterialTrait {
     fn is_lit(&self) -> bool {
         false
     }
+    ///Updates the bindgroups of the material with new data
+    fn update_bindgroups(&mut self, encoder: CommandEncoder) {}
 }
 
 ///Stores material data, wrapper around the material trait object
