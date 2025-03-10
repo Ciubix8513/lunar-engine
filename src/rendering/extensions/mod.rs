@@ -459,6 +459,7 @@ impl RenderingExtension for Base {
                 continue;
             }
             m.initialize_bindgroups(assets);
+            m.update_bindgroups(encoder);
         }
 
         //There are lit materials, need to take care of them
@@ -473,7 +474,7 @@ impl RenderingExtension for Base {
                 //Create an empty buffer
                 let buf = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Lighting buffer"),
-                    size: size_of::<LightBuffer>() as u64,
+                    size: size_of::<LightBuffer>() as u64 + 4,
                     usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -506,7 +507,9 @@ impl RenderingExtension for Base {
             if let Some(light) = light {
                 let device = DEVICE.get().unwrap();
                 //Update the light buffer if there is a light source
-                let l = light.borrow().get_light();
+                let mut l = light.borrow().get_light();
+
+                l.camera_direction = camera.view_direction();
 
                 let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
                 let mut b = belt.write_buffer(

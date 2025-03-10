@@ -53,6 +53,7 @@ impl DirectionalLight {
             color: self.color,
             intensity: self.intensity,
             ambient_color: self.ambient_color,
+            camera_direction: Vec3::default(),
         }
     }
 }

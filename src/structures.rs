@@ -77,6 +77,8 @@ pub(crate) struct LightBuffer {
     pub color: Color,
     ///Color of the ambient light
     pub ambient_color: Color,
+    ///Camera view direction
+    pub camera_direction: Vec3,
 }
 
 impl Color {

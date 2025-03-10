@@ -5,6 +5,8 @@ use rand::Rng;
 
 pub use crate::math::traits::Vector;
 
+use super::Vec4;
+
 #[repr(C)]
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
@@ -175,6 +177,12 @@ impl From<f32> for Vec3 {
             y: value,
             z: value,
         }
+    }
+}
+
+impl From<Vec4> for Vec3 {
+    fn from(value: Vec4) -> Self {
+        value.xyz()
     }
 }
 

@@ -3,6 +3,7 @@ use std::num::NonZeroU64;
 use lunar_engine_derive::{alias, as_any, dependencies};
 
 use crate as lunar_engine;
+use crate::math::Vec3;
 
 use crate::{
     ecs::{Component, ComponentReference},
@@ -197,6 +198,16 @@ impl Camera {
             self.bind_group.as_ref().unwrap(),
             &[],
         );
+    }
+
+    ///Returns the rotated forwrard vector of the camera
+    pub(crate) fn view_direction(&self) -> Vec3 {
+        let t = self.transorm_reference.as_ref().unwrap().borrow();
+        let matrix = Mat4x4::rotation_matrix_euler(&t.rotation);
+        drop(t);
+        let forward = Vec4::new(0.0, 0.0, 1.0, 1.0);
+
+        (forward * matrix).into()
     }
 }
 
