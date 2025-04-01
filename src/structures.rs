@@ -152,6 +152,16 @@ impl Color {
         (a + m).into()
     }
 
+    #[must_use]
+    ///Creates a new color from hsl values:
+    ///
+    ///X - hue
+    ///Y - saturation
+    ///z - lightness
+    pub fn from_hsl_vec(vec: Vec3) -> Self {
+        Self::from_hsl(vec.x, vec.y, vec.z)
+    }
+
     ///Red color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
     #[must_use]
     pub const fn red() -> Self {
