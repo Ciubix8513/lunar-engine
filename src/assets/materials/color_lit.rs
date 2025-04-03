@@ -35,6 +35,7 @@ pub struct ColorLit {
     #[cfg(not(target_arch = "wasm32"))]
     uniform: Option<wgpu::Buffer>,
     color: Color,
+    specular_color: Color,
     shininess: f32,
     bindgroup_sate: BindgroupState,
     changed: bool,
@@ -44,6 +45,7 @@ pub struct ColorLit {
 #[derive(Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 struct MaterialData {
     color: Color,
+    specular_color: Color,
     shininess: f32,
     pading: Vec3,
 }
@@ -52,16 +54,17 @@ impl ColorLit {
     #[allow(clippy::new_ret_no_self)]
     #[must_use]
     ///Creates a new material with a color
-    pub fn new(color: Color, shininess: f32) -> Material {
+    pub fn new(color: Color, specular_color: Color, shininess: f32) -> Material {
         Self {
-            color,
-            shininess,
-            pipeline: None,
             bind_group: None,
             bind_group_layout_f: None,
             bindgroup_sate: BindgroupState::Uninitialized,
-            uniform: None,
             changed: false,
+            color,
+            pipeline: None,
+            shininess,
+            specular_color,
+            uniform: None,
         }
         .into()
     }
@@ -85,6 +88,16 @@ impl ColorLit {
     pub fn set_color(&mut self, color: Color) {
         self.color = color;
     }
+
+    ///Returns the specular color of the material
+    pub fn get_specular_color(&self) -> Color {
+        self.specular_color
+    }
+
+    ///Sets the specular color of the material
+    pub fn set_specular_color(&mut self, specular_color: Color) {
+        self.specular_color = specular_color;
+    }
 }
 
 impl MaterialTrait for ColorLit {
@@ -99,8 +112,9 @@ impl MaterialTrait for ColorLit {
 
         let data = MaterialData {
             color: self.color,
-            shininess: self.shininess,
             pading: Vec3::default(),
+            shininess: self.shininess,
+            specular_color: self.specular_color,
         };
 
         staging_belt
@@ -184,9 +198,10 @@ impl MaterialTrait for ColorLit {
         }
 
         let data = MaterialData {
-            shininess: self.shininess,
             color: self.color,
             pading: Vec3::default(),
+            shininess: self.shininess,
+            specular_color: self.specular_color,
         };
 
         #[cfg(target_arch = "wasm32")]
