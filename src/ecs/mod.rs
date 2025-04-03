@@ -96,7 +96,7 @@ pub struct Entity {
     comoponent_types: Vec<std::any::TypeId>,
     //It makes total sense i swear, you need an RC to share the refcell and a refcell to borrow the
     //stuff, I SWEAR IT MAKES SENSE
-    components: Vec<Rc<RefCell<Box<dyn Component + 'static>>>>,
+    components: Vec<Rc<RefCell<dyn Component + 'static>>>,
     self_reference: Option<Weak<RefCell<Self>>>,
     pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
     pub(crate) unique_components: Option<Rc<RefCell<VecSet<TypeId>>>>,
@@ -146,7 +146,7 @@ pub enum Error {
 #[derive(Debug)]
 pub struct ComponentReference<T> {
     phantom: std::marker::PhantomData<T>,
-    cell: Weak<RefCell<Box<dyn Component + 'static>>>,
+    cell: Weak<RefCell<dyn Component + 'static>>,
 }
 
 //Have to use the manual implementation, so that it doesn't require T to implement clone
@@ -210,6 +210,7 @@ impl Entity {
     #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in &self.components {
+            let ptr = c.as_ptr();
             if (&c.as_ptr() as &dyn Any).is::<T>() {
                 return true;
             }
@@ -253,7 +254,7 @@ impl Entity {
 
         //Add component type ID
         self.comoponent_types.push(std::any::TypeId::of::<T>());
-        self.components.push(Rc::new(RefCell::new(Box::new(c))));
+        self.components.push(Rc::new(RefCell::new(c)));
 
         if let Some(w) = &self.world_modified {
             w.borrow_mut().component_changed::<T>();
@@ -335,7 +336,7 @@ impl Entity {
 #[derive(Default)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EntityBuilder {
-    components: Vec<Box<dyn Component>>,
+    components: Vec<Rc<RefCell<dyn Component + 'static>>>,
     component_types: Vec<std::any::TypeId>,
 }
 
@@ -356,8 +357,8 @@ impl EntityBuilder {
                 return self;
             }
         }
-        let c = Box::new(T::mew());
-        self.components.push(c);
+        let c = T::mew();
+        self.components.push(Rc::new(RefCell::new(c)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -369,15 +370,13 @@ impl EntityBuilder {
     where
         T: Component + 'static,
     {
-        let component = Box::new(component) as Box<dyn Component>;
-
         for i in &self.components {
             if i.type_id() == component.type_id() {
                 return self;
             }
         }
 
-        self.components.push(component);
+        self.components.push(Rc::new(RefCell::new(component)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -390,7 +389,7 @@ impl EntityBuilder {
         F: FnOnce() -> T,
         T: Component + 'static,
     {
-        let c = Box::new(f()) as Box<dyn Component>;
+        let c = f();
 
         for i in &self.components {
             if i.type_id() == c.type_id() {
@@ -398,7 +397,7 @@ impl EntityBuilder {
             }
         }
 
-        self.components.push(c);
+        self.components.push(Rc::new(RefCell::new(c)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -417,10 +416,10 @@ impl EntityBuilder {
         };
 
         for (component, comp_type) in self.components.into_iter().zip(self.component_types) {
-            if let Err(e) = component.check_dependencies_instanced(&e) {
+            if let Err(e) = component.borrow().check_dependencies_instanced(&e) {
                 return Err(Error::MissingDependency(e));
             }
-            e.components.push(Rc::new(RefCell::new(component)));
+            e.components.push(component);
             e.comoponent_types.push(comp_type);
         }
 
