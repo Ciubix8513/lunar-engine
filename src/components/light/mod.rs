@@ -4,7 +4,7 @@ use crate::{
     structures::{Color, LightBuffer},
 };
 
-use lunar_engine_derive::{as_any, unique};
+use lunar_engine_derive::unique;
 
 ///The directional light component, describes the behaviour of the main directional light of a
 ///scene, i.e. the sun
@@ -33,7 +33,6 @@ impl Default for DirectionalLight {
 }
 
 impl Component for DirectionalLight {
-    #[as_any]
     #[unique]
 
     fn mew() -> Self

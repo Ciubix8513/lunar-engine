@@ -1,4 +1,3 @@
-use lunar_engine_derive::as_any;
 use wgpu::CommandEncoder;
 
 use crate::asset_managment::{Asset, AssetStore, UUID};
@@ -34,8 +33,6 @@ pub struct Material {
 }
 
 impl Asset for Material {
-    #[as_any]
-
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }

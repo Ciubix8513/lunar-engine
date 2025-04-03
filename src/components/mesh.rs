@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use lunar_engine_derive::as_any;
-
 use crate::{
     asset_managment::UUID,
     ecs::{Component, ComponentReference},
@@ -32,8 +30,6 @@ impl Default for Mesh {
 }
 
 impl Component for Mesh {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,

@@ -15,7 +15,6 @@ use lunar_engine::{
     rendering::{extensions::Base, render},
     structures::Color,
 };
-use lunar_engine_derive::as_any;
 use rand::{Rng, SeedableRng};
 use winit::keyboard::KeyCode;
 
@@ -24,8 +23,6 @@ struct CameraControls {
 }
 
 impl Component for CameraControls {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,

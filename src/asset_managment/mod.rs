@@ -73,8 +73,6 @@ pub type UUID = u128;
 ///# fn dispose(&mut self) { }
 ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
 ///# fn is_initialized(&self) -> bool { todo!() }
-///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
-///# fn as_any_mut(&mut self) -> &mut dyn std::any::Any { todo!() }
 ///# }
 ///# impl TestAsset { fn new(_ : &str) -> Self { Self }}
 /// let mut asset = TestAsset::new("filepath");
@@ -104,54 +102,6 @@ pub trait Asset: Send + Sync + std::any::Any {
     fn set_id(&mut self, id: UUID) -> Result<(), Error>;
     ///Returns whether or not the asset is initialized
     fn is_initialized(&self) -> bool;
-    //Will not be needed after Rust 1.75.0
-    //Cannot be implemented automatically, well... likely can be, but i can't be bothered
-    ///Converts trait object to a `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    ///# use lunar_engine::asset_managment::Asset;
-    ///# use std::any::Any;
-    ///# struct A;
-    ///# impl Asset for A {
-    ///# fn get_id(&self) -> u128 { todo!() }
-    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
-    ///# fn dispose(&mut self) { todo!() }
-    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
-    ///# fn is_initialized(&self) -> bool { todo!() }
-    ///# fn as_any_mut(&mut self) -> &mut dyn Any  { todo!() }
-    ///
-    /// fn as_any(&self) -> &dyn std::any::Any {
-    ///     self as &dyn std::any::Any
-    /// }
-    ///
-    ///# }
-    ///```
-    fn as_any(&self) -> &dyn std::any::Any;
-    ///Converts trait object to a mutable `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    ///# use lunar_engine::asset_managment::Asset;
-    ///# use std::any::Any;
-    ///# struct A;
-    ///# impl Asset for A {
-    ///# fn get_id(&self) -> u128 { todo!() }
-    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
-    ///# fn dispose(&mut self) { todo!() }
-    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
-    ///# fn is_initialized(&self) -> bool { todo!() }
-    ///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
-    ///
-    ///fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-    ///    self as &mut dyn std::any::Any
-    ///}
-    ///
-    ///# }
-    ///```
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 ///Reference to an asset inside [`AssetStore`]
@@ -172,7 +122,7 @@ impl<T> AssetReference<T> {
         // let read = self.refernce.read();
         lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().read() },
-            |i| unsafe { &*(i.as_any() as *const dyn Any as *const T) },
+            |i| unsafe { &*(i as *const dyn Any as *const T) },
         )
     }
 
@@ -182,7 +132,7 @@ impl<T> AssetReference<T> {
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
         lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
-            |i| unsafe { &mut *(i.as_any_mut() as *mut dyn Any as *mut T) },
+            |i| unsafe { &mut *(i as *mut dyn Any as *mut T) },
         )
     }
 }
@@ -340,7 +290,7 @@ impl AssetStore {
                         parking_lot::RawRwLock,
                         Box<(dyn Asset + 'static)>,
                     >::map(x.0.read(), |i| unsafe {
-                        &*(i.as_any() as *const dyn Any as *const T)
+                        &*(i as *const dyn Any as *const T)
                     })
                 })
             }
@@ -373,7 +323,7 @@ impl AssetStore {
                         parking_lot::RawRwLock,
                         Box<(dyn Asset + 'static)>,
                     >::map(x.0.write(), |i| unsafe {
-                        &mut *(i.as_any_mut() as *mut dyn Any as *mut T)
+                        &mut *(i as *mut dyn Any as *mut T)
                     })
                 })
             }

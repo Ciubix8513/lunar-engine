@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use lunar_engine_derive::as_any;
 use wgpu::util::DeviceExt;
 
 use crate::{
@@ -217,8 +216,6 @@ impl Texture {
 }
 
 impl Asset for Texture {
-    #[as_any]
-
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }

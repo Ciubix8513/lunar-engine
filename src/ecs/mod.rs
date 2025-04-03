@@ -28,45 +28,6 @@ pub trait Component: std::any::Any {
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {}
 
-    //Will not be needed after stabilization of
-    //Cannot be implemented automatically, well... likely can be, but i can't be bothered
-    ///Converts trait object to a `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    /// # use lunar_engine::ecs::Component;
-    /// # struct A;
-    /// # impl Component for A {
-    /// # fn mew() -> Self { Self }
-    /// fn as_any(&self) -> &dyn std::any::Any {
-    ///     self as &dyn std::any::Any
-    /// }
-    /// # fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-    /// #   self as &mut dyn std::any::Any
-    /// # }
-    /// # }
-    ///```
-    fn as_any(&self) -> &dyn std::any::Any;
-    ///Converts trait object to a mutable `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    /// # use lunar_engine::ecs::Component;
-    /// # struct A;
-    /// # impl Component for A {
-    /// # fn mew() -> Self { Self }
-    /// # fn as_any(&self) -> &dyn std::any::Any {
-    /// #    self as &dyn std::any::Any
-    /// # }
-    /// fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-    ///     self as &mut dyn std::any::Any
-    /// }
-    /// # }
-    ///```
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
-
     #[allow(clippy::missing_errors_doc)]
     ///Checks if the specified entity contains all the dependencies of this `Component`
     ///
@@ -210,7 +171,7 @@ impl<T: 'static> ComponentReference<T> {
     pub fn borrow(&self) -> Ref<'_, T> {
         Ref::map(
             unsafe { self.cell.as_ptr().as_ref().unwrap().borrow() },
-            |c| unsafe { &*(c.as_any() as *const dyn Any as *const T) },
+            |c| unsafe { &*(c as *const dyn Any as *const T) },
         )
     }
 
@@ -224,7 +185,7 @@ impl<T: 'static> ComponentReference<T> {
     pub fn borrow_mut(&self) -> RefMut<'_, T> {
         RefMut::map(
             unsafe { self.cell.as_ptr().as_ref().unwrap().borrow_mut() },
-            |c| unsafe { &mut *(c.as_any_mut() as *mut dyn Any as *mut T) },
+            |c| unsafe { &mut *(c as *mut dyn Any as *mut T) },
         )
     }
 }
@@ -249,7 +210,7 @@ impl Entity {
     #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in &self.components {
-            if c.borrow().as_any().is::<T>() {
+            if (&c.as_ptr() as &dyn Any).is::<T>() {
                 return true;
             }
         }
@@ -308,7 +269,7 @@ impl Entity {
     pub fn remove_component<T: 'static + Component>(&mut self) -> Result<(), Error> {
         let mut ind = None;
         for (index, c) in self.components.iter().enumerate() {
-            if c.borrow().as_any().is::<T>() {
+            if (&c.as_ptr() as &dyn Any).is::<T>() {
                 ind = Some(index);
                 break;
             }
@@ -391,7 +352,7 @@ impl EntityBuilder {
         T: 'static + Component,
     {
         for i in &self.components {
-            if i.as_any().is::<T>() {
+            if (i as &dyn Any).is::<T>() {
                 return self;
             }
         }
@@ -411,7 +372,7 @@ impl EntityBuilder {
         let component = Box::new(component) as Box<dyn Component>;
 
         for i in &self.components {
-            if i.as_any().type_id() == component.as_any().type_id() {
+            if i.type_id() == component.type_id() {
                 return self;
             }
         }
@@ -432,7 +393,7 @@ impl EntityBuilder {
         let c = Box::new(f()) as Box<dyn Component>;
 
         for i in &self.components {
-            if i.as_any().type_id() == c.as_any().type_id() {
+            if i.type_id() == c.type_id() {
                 return self;
             }
         }

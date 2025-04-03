@@ -1,4 +1,4 @@
-use lunar_engine_derive::{alias, as_any, dependencies, unique};
+use lunar_engine_derive::{alias, dependencies, unique};
 
 use crate as lunar_engine;
 
@@ -10,8 +10,6 @@ struct TestComponent1 {
 }
 
 impl Component for TestComponent1 {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,
@@ -30,7 +28,6 @@ struct TestComponent {
 }
 
 impl Component for TestComponent {
-    #[as_any]
     fn mew() -> Self
     where
         Self: Sized,
@@ -53,7 +50,6 @@ impl std::fmt::Debug for TestComponent2 {
     }
 }
 impl Component for TestComponent2 {
-    #[as_any]
     fn mew() -> Self
     where
         Self: Sized,
@@ -70,7 +66,6 @@ impl Component for TestComponent2 {
 struct TestComponent3;
 
 impl Component for TestComponent3 {
-    #[as_any]
     #[dependencies(TestComponent)]
     fn mew() -> Self
     where
@@ -358,7 +353,6 @@ fn alias_test() {
 struct UniqueComponent;
 
 impl Component for UniqueComponent {
-    #[as_any]
     #[unique]
 
     fn mew() -> Self {

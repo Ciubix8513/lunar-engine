@@ -203,14 +203,6 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
         fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {{
             self.inner.set_self_reference(reference);
         }}
-        #[inline(always)]
-        fn as_any(&self) -> &dyn std::any::Any {{
-            self as &dyn std::any::Any
-        }}
-        #[inline(always)]
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
-            self as &mut dyn std::any::Any
-        }}
         fn check_dependencies(entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str> {{
             {base}::check_dependencies(entity)
         }}
@@ -299,14 +291,6 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
         {{
             Self  
         }}
-        #[inline(always)]
-        fn as_any(&self) -> &dyn std::any::Any {{
-            self as &dyn std::any::Any
-        }}
-        #[inline(always)]
-        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {{
-            self as &mut dyn std::any::Any
-        }}
     }}
     "
     )
@@ -390,46 +374,6 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into_iter()
         .chain(item)
         .collect::<TokenStream>()
-}
-
-#[proc_macro_attribute]
-///Implements `as_any` and `as_any_mut` functions for Components and Assets
-///
-///# Examples
-///```ignore
-///struct TestAsset{
-/// ...
-///}
-///
-///impl Asset for TestAsset{
-///#[as_any]
-/// ...
-///}
-///```
-///
-///```ignore
-///struct TestComponent{
-/// ...
-///}
-///
-///impl Component for TestComponent{
-///#[as_any]
-/// ...
-///}
-///```
-pub fn as_any(_: TokenStream, item: TokenStream) -> TokenStream {
-    let as_any =
-        " #[inline(always)] fn as_any(&self) -> &dyn std::any::Any { self as &dyn std::any::Any } "
-            .to_string();
-    let as_any_mut =
-        " #[inline(always)] fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self as &mut dyn std::any::Any } ";
-
-    (as_any + as_any_mut)
-        .parse::<TokenStream>()
-        .unwrap()
-        .into_iter()
-        .chain(item)
-        .collect()
 }
 
 ///Declares a component to be unique. Must be placed inside the `impl Component` block

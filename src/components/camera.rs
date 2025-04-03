@@ -1,6 +1,6 @@
 use std::num::NonZeroU64;
 
-use lunar_engine_derive::{alias, as_any, dependencies};
+use lunar_engine_derive::{alias, dependencies};
 
 use crate as lunar_engine;
 use crate::math::Vec3;
@@ -83,7 +83,6 @@ impl Default for Camera {
 }
 
 impl Component for Camera {
-    #[as_any]
     #[dependencies(Transform)]
     fn mew() -> Self
     where

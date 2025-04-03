@@ -1,5 +1,3 @@
-use lunar_engine_derive::as_any;
-
 use crate::math::{Mat4x4, Vec3};
 
 use crate::ecs::{Component, ComponentReference};
@@ -35,8 +33,6 @@ impl Default for Transform {
 }
 
 impl Component for Transform {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,

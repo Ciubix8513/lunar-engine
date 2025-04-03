@@ -16,7 +16,7 @@ use lunar_engine::{
     structures::Color,
     State,
 };
-use lunar_engine_derive::{as_any, dependencies, marker_component};
+use lunar_engine_derive::{dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
 #[derive(Default)]
@@ -38,7 +38,6 @@ struct Spiny {
 }
 
 impl Component for Spiny {
-    #[as_any]
     #[dependencies(Transform)]
 
     fn mew() -> Self
