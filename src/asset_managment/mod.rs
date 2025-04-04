@@ -106,7 +106,7 @@ pub trait Asset: Send + Sync + std::any::Any {
 
 ///Reference to an asset inside [`AssetStore`]
 pub struct AssetReference<T: 'static> {
-    refernce: Weak<RwLock<Box<dyn Asset + 'static>>>,
+    refernce: Weak<RwLock<dyn Asset + 'static>>,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -120,7 +120,7 @@ impl<T> AssetReference<T> {
     #[inline(always)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         // let read = self.refernce.read();
-        lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
+        lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, dyn Asset + 'static>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().read() },
             |i| unsafe { &*(i as *const dyn Any as *const T) },
         )
@@ -130,7 +130,7 @@ impl<T> AssetReference<T> {
     #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     #[inline(always)]
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
-        lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
+        lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, dyn Asset + 'static>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
             |i| unsafe { &mut *(i as *mut dyn Any as *mut T) },
         )
@@ -144,7 +144,7 @@ type RwLock<T> = lock_api::RwLock<parking_lot::RawRwLock, T>;
 ///Manages the initialization of assets, borrowing of assets and disposal of assets
 #[allow(clippy::type_complexity)]
 pub struct AssetStore {
-    assets: VecMap<UUID, (Arc<RwLock<Box<dyn Asset>>>, std::any::TypeId)>,
+    assets: VecMap<UUID, (Arc<RwLock<dyn Asset>>, std::any::TypeId)>,
 }
 
 impl Default for AssetStore {
@@ -175,10 +175,7 @@ impl AssetStore {
         asset.set_id(id).unwrap();
         self.assets.insert(
             id,
-            (
-                Arc::new(RwLock::new(Box::new(asset))),
-                std::any::TypeId::of::<T>(),
-            ),
+            (Arc::new(RwLock::new(asset)), std::any::TypeId::of::<T>()),
         );
         id
     }
@@ -288,7 +285,7 @@ impl AssetStore {
                     lock_api::RwLockReadGuard::<
                         '_,
                         parking_lot::RawRwLock,
-                        Box<(dyn Asset + 'static)>,
+                        dyn Asset + 'static,
                     >::map(x.0.read(), |i| unsafe {
                         &*(i as *const dyn Any as *const T)
                     })
@@ -321,7 +318,7 @@ impl AssetStore {
                     lock_api::RwLockWriteGuard::<
                         '_,
                         parking_lot::RawRwLock,
-                        Box<(dyn Asset + 'static)>,
+                        dyn Asset + 'static,
                     >::map(x.0.write(), |i| unsafe {
                         &mut *(i as *mut dyn Any as *mut T)
                     })

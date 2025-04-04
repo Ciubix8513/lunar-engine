@@ -210,8 +210,8 @@ impl Entity {
     #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in &self.components {
-            let ptr = c.as_ptr();
-            if (&c.as_ptr() as &dyn Any).is::<T>() {
+            let ptr = c.as_ptr() as *mut dyn Any;
+            if unsafe { ptr.as_ref().unwrap().is::<T>() } {
                 return true;
             }
         }
@@ -270,7 +270,7 @@ impl Entity {
     pub fn remove_component<T: 'static + Component>(&mut self) -> Result<(), Error> {
         let mut ind = None;
         for (index, c) in self.components.iter().enumerate() {
-            if (&c.as_ptr() as &dyn Any).is::<T>() {
+            if unsafe { (c.as_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
                 ind = Some(index);
                 break;
             }
@@ -353,7 +353,7 @@ impl EntityBuilder {
         T: 'static + Component,
     {
         for i in &self.components {
-            if (i as &dyn Any).is::<T>() {
+            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
                 return self;
             }
         }
@@ -371,7 +371,7 @@ impl EntityBuilder {
         T: Component + 'static,
     {
         for i in &self.components {
-            if i.type_id() == component.type_id() {
+            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
                 return self;
             }
         }
@@ -392,7 +392,7 @@ impl EntityBuilder {
         let c = f();
 
         for i in &self.components {
-            if i.type_id() == c.type_id() {
+            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
                 return self;
             }
         }
