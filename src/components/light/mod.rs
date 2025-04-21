@@ -1,10 +1,16 @@
+use std::cell::OnceCell;
+
+use crate as lunar_engine;
+use crate::ecs::ComponentReference;
+
 use crate::{
+    components::transform::Transform,
     ecs::Component,
     math::{Vec3, Vector},
     structures::{Color, LightBuffer},
 };
 
-use lunar_engine_derive::unique;
+use lunar_engine_derive::{dependencies, unique};
 
 ///The directional light component, describes the behaviour of the main directional light of a
 ///scene, i.e. the sun
@@ -16,7 +22,6 @@ pub struct DirectionalLight {
     pub color: Color,
     ///Intensity of the light
     pub intensity: f32,
-
     ///Color of the ambient light
     pub ambient_color: Color,
 }
@@ -54,5 +59,40 @@ impl DirectionalLight {
             ambient_color: self.ambient_color,
             camera_direction: Vec3::default(),
         }
+    }
+}
+
+#[derive(Debug)]
+///A point light
+pub struct PointLight {
+    ///Color of the light
+    pub color: Color,
+    ///Brightness of the light
+    pub intensity: f32,
+    ///Range of the light
+    pub range: f32,
+    transform_ref: OnceCell<ComponentReference<Transform>>,
+}
+impl Component for PointLight {
+    #[dependencies(Transform)]
+
+    fn mew() -> Self
+    where
+        Self: Sized,
+    {
+        Self {
+            color: Color::white(),
+            intensity: 10.0,
+            range: 10.0,
+            transform_ref: OnceCell::new(),
+        }
+    }
+
+    fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
+        //We can safely unwrap all of this since we can not add this component without adding
+        //transform first
+        self.transform_ref
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 }
