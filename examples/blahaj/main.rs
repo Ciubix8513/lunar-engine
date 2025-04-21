@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{cell::OnceCell, path::Path};
 
 use log::{debug, info};
 use lunar_engine::{
@@ -34,7 +34,7 @@ struct Blahaj;
 
 struct Spiny {
     pub speed: f32,
-    transform: Option<ComponentReference<Transform>>,
+    transform: OnceCell<ComponentReference<Transform>>,
 }
 
 impl Component for Spiny {
@@ -46,16 +46,18 @@ impl Component for Spiny {
     {
         Self {
             speed: 100.0,
-            transform: None,
+            transform: OnceCell::new(),
         }
     }
 
     fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
-        self.transform = Some(reference.get_component().unwrap());
+        self.transform
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 
     fn update(&mut self) {
-        self.transform.as_ref().unwrap().borrow_mut().rotation.y +=
+        self.transform.get().unwrap().borrow_mut().rotation.y +=
             self.speed * lunar_engine::delta_time();
     }
 }

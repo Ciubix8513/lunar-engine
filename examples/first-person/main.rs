@@ -1,4 +1,5 @@
 use core::f32;
+use std::cell::OnceCell;
 
 use log::info;
 use lunar_engine::{
@@ -19,7 +20,7 @@ use rand::{Rng, SeedableRng};
 use winit::keyboard::KeyCode;
 
 struct CameraControls {
-    transform: Option<ComponentReference<Transform>>,
+    transform: OnceCell<ComponentReference<Transform>>,
 }
 
 impl Component for CameraControls {
@@ -29,7 +30,9 @@ impl Component for CameraControls {
     {
         input::set_cursor_grab_mode(CursorLock::Locked);
         input::set_cursor_visible(CursorVisibily::Hidden);
-        Self { transform: None }
+        Self {
+            transform: OnceCell::new(),
+        }
     }
 
     fn update(&mut self) {
@@ -49,7 +52,7 @@ impl Component for CameraControls {
         //Rotation
         let sensetivity = 800.0;
         let delta = input::cursor_delta() * delta_time * sensetivity;
-        let mut trans = self.transform.as_ref().unwrap().borrow_mut();
+        let mut trans = self.transform.get().unwrap().borrow_mut();
         let rot = trans.rotation;
 
         let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
@@ -95,7 +98,9 @@ impl Component for CameraControls {
     }
 
     fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
-        self.transform = reference.get_component::<Transform>().ok();
+        self.transform
+            .set(reference.get_component::<Transform>().unwrap())
+            .unwrap();
     }
 }
 

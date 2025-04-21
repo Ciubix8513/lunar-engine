@@ -25,6 +25,9 @@ pub trait Component: std::any::Any {
     ///
     ///If the entity is in a world, this function will be called when the component is added,
     ///otherwise it will be called when the entity is added to the world
+    ///
+    ///Please consider using [`std::cell::OnceCell`] for storing references acquired using this
+    ///function
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {}
 

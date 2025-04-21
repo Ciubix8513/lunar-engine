@@ -1,3 +1,4 @@
+use std::cell::OnceCell;
 use std::num::NonZeroU64;
 
 use lunar_engine_derive::{alias, dependencies};
@@ -59,7 +60,7 @@ pub struct Camera {
     pub near: f32,
     ///Far plane of the camera
     pub far: f32,
-    transorm_reference: Option<ComponentReference<Transform>>,
+    transorm_reference: OnceCell<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
     bind_group: Option<wgpu::BindGroup>,
 }
@@ -76,7 +77,7 @@ impl Default for Camera {
             },
             near: 0.1,
             far: 100.0,
-            transorm_reference: None,
+            transorm_reference: OnceCell::new(),
             buffer: None,
             bind_group: None,
         }
@@ -97,7 +98,9 @@ impl Component for Camera {
     }
 
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        self.transorm_reference = Some(reference.get_component().unwrap());
+        self.transorm_reference
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 }
 
@@ -116,13 +119,13 @@ impl Camera {
     #[must_use]
     ///Returns the transformation matrix of the camera;
     pub fn camera_transform(&self) -> Mat4x4 {
-        self.transorm_reference.as_ref().unwrap().borrow().matrix()
+        self.transorm_reference.get().unwrap().borrow().matrix()
     }
 
     #[must_use]
     ///Returns the transformation matrix of the camera multiplied by the projection matrix
     pub fn matrix(&self) -> Mat4x4 {
-        let binding = self.transorm_reference.as_ref().unwrap();
+        let binding = self.transorm_reference.get().unwrap();
         let transform = binding.borrow();
         let rotation_matrix = Mat4x4::rotation_matrix_euler(&transform.rotation);
 
@@ -193,7 +196,7 @@ impl Camera {
             matrix: self.matrix(),
             position: self
                 .transorm_reference
-                .as_ref()
+                .get()
                 .unwrap()
                 .borrow()
                 .position
@@ -226,7 +229,7 @@ impl Camera {
 
     ///Returns the rotated forwrard vector of the camera
     pub(crate) fn view_direction(&self) -> Vec3 {
-        let t = self.transorm_reference.as_ref().unwrap().borrow();
+        let t = self.transorm_reference.get().unwrap().borrow();
         let matrix = Mat4x4::rotation_matrix_euler(&t.rotation);
         drop(t);
         let forward = Vec4::new(0.0, 0.0, 1.0, 1.0);
