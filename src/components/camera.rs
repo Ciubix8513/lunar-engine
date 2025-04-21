@@ -1,6 +1,7 @@
 use std::num::NonZeroU64;
 
 use lunar_engine_derive::{alias, dependencies};
+use wgpu::BufferUsages;
 
 use crate as lunar_engine;
 use crate::math::Vec3;
@@ -150,7 +151,14 @@ impl Camera {
     ///Initializes gpu related components of the camera: Buffers, bindgroups, etc.
     pub(crate) fn initialize_gpu(&mut self) {
         let device = DEVICE.get().unwrap();
-        let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
+
+        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Camera Buffer"),
+            // 16 floats for a matrix, plus 4 floats for a vector
+            size: 4 * 16 + 4 * 4,
+            usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+            mapped_at_creation: false,
+        });
 
         let bind_group_layout =
             device.create_bind_group_layout(&CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
@@ -174,17 +182,34 @@ impl Camera {
 
     ///Updates the buffer of the camera with the new camera matrix
     pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
-        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
+        #[repr(C)]
+        #[derive(bytemuck::Zeroable, bytemuck::Pod, Clone, Copy)]
+        struct CameraData {
+            matrix: Mat4x4,
+            position: Vec4,
+        }
 
+        let data = CameraData {
+            matrix: self.matrix(),
+            position: self
+                .transorm_reference
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .position
+                .into(),
+        };
+
+        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
         staging_belt
             .write_buffer(
                 encoder,
                 self.buffer.as_ref().unwrap(),
                 0,
-                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
+                NonZeroU64::new(4 * 16 + 4 * 4).unwrap(),
                 DEVICE.get().unwrap(),
             )
-            .copy_from_slice(bytemuck::bytes_of(&self.matrix()));
+            .copy_from_slice(bytemuck::bytes_of(&data));
     }
 
     ///Sets bindgroups of the camera for rendering

@@ -197,6 +197,17 @@ impl From<f32> for Vec4 {
     }
 }
 
+impl From<Vec3> for Vec4 {
+    fn from(value: Vec3) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+            w: 0.0,
+        }
+    }
+}
+
 impl std::fmt::Display for Vec4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {}, {}, {})", self.x, self.y, self.z, self.w)

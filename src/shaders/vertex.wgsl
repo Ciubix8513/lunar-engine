@@ -7,10 +7,16 @@
 struct ColorOutput {
   @location(0) tex_coord: vec2<f32>,
   @location(1) normal: vec3<f32>,
+  @location(2) view_dir: vec3<f32>,
   @builtin(position) position: vec4<f32>
 }
 
-@group(0) @binding(0) var<uniform> camera: mat4x4<f32>;
+struct Camera {
+  matrix: mat4x4<f32>,
+  position: vec3<f32>
+}
+
+@group(0) @binding(0) var<uniform> camera: Camera;
 
 @vertex
 fn main(
@@ -29,15 +35,19 @@ fn main(
         trans_3,
     );
 
-    var o = trans_mat * vec4(position, 1.0);
-    o = camera * o;
-
     var res: ColorOutput;
+
+    var o = trans_mat * vec4(position, 1.0);
+    res.view_dir = normalize(o.xyz - camera.position);
+
+    o = camera.matrix * o;
     res.position = o;
     res.tex_coord = uvs;
 
     //Transform the normals, and normalize them
-    res.normal = (trans_mat * vec4(normal, 1.0)).xyz;
+    //Use a 3x3 matrix to avoid doing translation
+    res.normal = normalize(mat3x3(trans_mat[0].xyz, trans_mat[1].xyz, trans_mat[2].xyz) * normal);
+
 
     return res;
 }

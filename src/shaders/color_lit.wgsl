@@ -3,7 +3,6 @@ struct Light {
   intensity: f32,
   color: vec4<f32>,
   ambient_color: vec4<f32>,
-  camera: vec3<f32>,
 }
 
 struct MaterialData {
@@ -19,19 +18,24 @@ var<uniform> material: MaterialData;
 var<uniform> light: Light;
 
 @fragment
-fn main(@location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>) -> @location(0) vec4<f32> {
-    let n_normal = normalize(normal);
+fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>) -> @location(0) vec4<f32> {
+    var color = light.ambient_color;
+    var specular = vec4(0.0);
 
-    let base_light = max(dot(light.direction, normal), 0.0);
+    let light_dir = - light.direction;
+    let light_intencity = dot(normal, light_dir);
 
-    let half_dir = normalize(light.direction + light.camera);
-    let spec_angle = max(dot(half_dir, normal), 0.0);
+    if light_intencity > 0.0f {
 
-    let specular = pow(spec_angle, material.shininess);
+        color += saturate(light.color * light_intencity);
 
-    let color = light.ambient_color + base_light * material.color * light.intensity * light.color + specular * material.specular_color * light.intensity * light.color;
+        // reflect(lightlight_dir, normal), but since we already have the dot(x,y) we use this?
+        let reflection = normalize(light_dir - 2 * light_intencity * normal);
+        specular = material.shininess * (pow(saturate(dot(reflection, view_dir)), 30.0) * material.specular_color);
+    }
 
-    let adjusted = pow(color.xyz, vec3(1.0 / 2.2));
+    color = color * material.color;
+    color = saturate(color + specular);
 
-    return vec4(adjusted, 1.0);
+    return color;
 }

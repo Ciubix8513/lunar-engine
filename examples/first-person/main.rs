@@ -47,7 +47,7 @@ impl Component for CameraControls {
         let delta_time = delta_time();
 
         //Rotation
-        let sensetivity = 300.0;
+        let sensetivity = 800.0;
         let delta = input::cursor_delta() * delta_time * sensetivity;
         let mut trans = self.transform.as_ref().unwrap().borrow_mut();
         let rot = trans.rotation;
@@ -114,6 +114,9 @@ fn end(_state: &mut State) {
 
 fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, num_colors: u32) {
     let objects = [
+        assets.register(assets::Mesh::new_from_static_obj(include_str!(
+            "../../assets/blahaj.obj"
+        ))),
         assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0))),
         assets.register(assets::Mesh::new_sphere(SphereData {
             radius: 0.5,
