@@ -243,9 +243,9 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-///Creates a marker component. A marker component has no function, but it can be used to
-///distinguish an entity.
-///
+///Creates a marker component. A marker component can be used to distinguish an entity, or give it
+///a name, additionally there are [`macro@unique_marker_component`] that can be used to distinguish
+///unique entities
 ///# Examples
 ///```ignore
 ///#[marker_component]
@@ -285,6 +285,75 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
     let component_impl = format!(
         "
     impl lunar_engine::ecs::Component for {name} {{
+        fn mew() -> Self
+        where
+            Self: Sized,
+        {{
+            Self  
+        }}
+    }}
+    "
+    )
+    .parse::<TokenStream>()
+    .unwrap()
+    .into_iter()
+    .collect::<Vec<_>>();
+
+    let derive = r"#[derive(Debug)]"
+        .parse::<TokenStream>()
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    let old = items.splice(0.., derive).collect::<Vec<_>>();
+    items.extend_from_slice(&old);
+    items.extend_from_slice(&component_impl);
+
+    items.into_iter().collect()
+}
+
+#[proc_macro_attribute]
+///See [`macro@marker_component`]
+///# Examples
+///```ignore
+///#[unique_marker_component]
+///struct Marker;
+///
+///
+///#[unique_marker_component]
+///struct Marker1{ }
+///```
+pub fn unique_marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
+    //Check if attributes are valid
+    if attr.into_iter().next().is_some() {
+        return comp_error("Too many attributes", item);
+    }
+
+    let struct_type = is_struct_declaration(&item);
+    if struct_type.is_none() {
+        return comp_error("No struct declaration found", item);
+    }
+
+    if matches!(
+        struct_type.unwrap(),
+        StructType::Tupple | StructType::Regular
+    ) {
+        return comp_error("A marker must me an empty struct", item);
+    };
+    //Actual implementation here
+
+    //Implement Componnent
+    let mut items = item.into_iter().collect::<Vec<_>>();
+    let name = items[items.len() - 2]
+        .span()
+        .source_text()
+        .unwrap_or_default();
+
+    // Define all the needed blocks
+    let component_impl = format!(
+        "
+    impl lunar_engine::ecs::Component for {name} {{
+        #[lunar_engine_derive::unique]
         fn mew() -> Self
         where
             Self: Sized,
