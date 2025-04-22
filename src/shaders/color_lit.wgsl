@@ -11,11 +11,20 @@ struct MaterialData {
   shininess: f32,
 }
 
+struct PointLight {
+  position: vec3<f32>,
+  intensity: f32,
+  color: vec3<f32>,
+  range: f32
+}
+
 
 @group(1)@binding(0)
 var<uniform> material: MaterialData;
 @group(2)@binding(0)
 var<uniform> light: Light;
+@group(3)@binding(0)
+var<storage, read> point_lights: array<PointLight>;
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>) -> @location(0) vec4<f32> {

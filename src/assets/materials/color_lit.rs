@@ -174,15 +174,19 @@ impl MaterialTrait for ColorLit {
         let cam_bind_group_layout =
             device.create_bind_group_layout(&grimoire::CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
 
-        let light_bind_group_layout =
-            device.create_bind_group_layout(&grimoire::LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+        let directional_light_bind_group_layout = device
+            .create_bind_group_layout(&grimoire::DIRECTIONAL_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+
+        let point_light_bind_group_layout =
+            device.create_bind_group_layout(&grimoire::POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[
                 &cam_bind_group_layout,
                 &bind_group_layout_f,
-                &light_bind_group_layout,
+                &directional_light_bind_group_layout,
+                &point_light_bind_group_layout,
             ],
             push_constant_ranges: &[],
         });

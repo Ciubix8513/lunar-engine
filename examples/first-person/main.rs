@@ -6,7 +6,10 @@ use lunar_engine::{
     asset_managment::AssetStore,
     assets::{self, materials::ColorLit, mesh::SphereData},
     components::{
-        camera::MainCamera, fps::FpsRecorder, light::DirectionalLight, mesh::Mesh,
+        camera::MainCamera,
+        fps::FpsRecorder,
+        light::{DirectionalLight, PointLight},
+        mesh::Mesh,
         transform::Transform,
     },
     delta_time,
@@ -202,6 +205,7 @@ fn init(state: &mut State) {
                 .add_component::<MainCamera>()
                 .add_component::<CameraControls>()
                 .add_component::<FpsRecorder>()
+                // .add_component::<PointLight>()
                 .create()
                 .unwrap(),
         )
