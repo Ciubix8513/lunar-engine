@@ -120,7 +120,13 @@ fn end(_state: &mut State) {
     // state.world.
 }
 
-fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, num_colors: u32) {
+fn generate_scene(
+    world: &mut World,
+    assets: &mut AssetStore,
+    num_objects: u32,
+    num_colors: u32,
+    num_lights: u32,
+) {
     let objects = [
         assets.register(assets::Mesh::new_from_static_obj(include_str!(
             "../../assets/blahaj.obj"
@@ -172,6 +178,34 @@ fn generate_scene(world: &mut World, assets: &mut AssetStore, num_objects: u32, 
             )
             .unwrap();
     }
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<Transform>()
+                .create_component(|| Mesh::new(objects[0], colors[0]))
+                // .add_component::<PointLight>()
+                .create_component(|| PointLight::new(Color::white(), 100.0, 10.0))
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+
+    //Add N point lights in random positions
+    for _ in 0..num_lights {
+        world
+            .add_entity(
+                EntityBuilder::new()
+                    .create_component(|| Transform {
+                        position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
+                        ..Default::default()
+                    })
+                    // .add_component::<PointLight>()
+                    .create()
+                    .unwrap(),
+            )
+            .unwrap();
+    }
 }
 
 fn init(state: &mut State) {
@@ -192,7 +226,7 @@ fn init(state: &mut State) {
     info!("Num of objects: {num_objects}");
     info!("Num of colors: {num_colors}");
 
-    generate_scene(world, assets, num_objects, num_colors);
+    generate_scene(world, assets, num_objects, num_colors, 8);
 
     world
         .add_entity(
@@ -214,13 +248,12 @@ fn init(state: &mut State) {
     world
         .add_entity(
             EntityBuilder::new()
-                .create_component(|| DirectionalLight {
-                    color: Color::white(),
-                    direction: Vec3::new(0.0, -1.0, 0.0),
-                    ambient_color: Color::new(0.15, 0.15, 0.15, 1.0),
-
-                    ..Default::default()
-                })
+                // .create_component(|| DirectionalLight {
+                //     color: Color::white(),
+                //     direction: Vec3::new(0.0, -1.0, 0.0),
+                //     ambient_color: Color::new(0.15, 0.15, 0.15, 1.0),
+                //     ..Default::default()
+                // })
                 .create()
                 .unwrap(),
         )

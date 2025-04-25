@@ -158,7 +158,7 @@ impl Camera {
         let buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Camera Buffer"),
             // 16 floats for a matrix, plus 4 floats for a vector
-            size: 4 * 16 + 4 * 4,
+            size: 4 * 16 * 2 + 4 * 4,
             usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
             mapped_at_creation: false,
         });
@@ -188,12 +188,14 @@ impl Camera {
         #[repr(C)]
         #[derive(bytemuck::Zeroable, bytemuck::Pod, Clone, Copy)]
         struct CameraData {
-            matrix: Mat4x4,
+            cam_matrix: Mat4x4,
+            t_matrix: Mat4x4,
             position: Vec4,
         }
 
         let data = CameraData {
-            matrix: self.matrix(),
+            cam_matrix: self.matrix(),
+            t_matrix: self.matrix().invert().unwrap(),
             position: self
                 .transorm_reference
                 .get()
@@ -209,7 +211,7 @@ impl Camera {
                 encoder,
                 self.buffer.as_ref().unwrap(),
                 0,
-                NonZeroU64::new(4 * 16 + 4 * 4).unwrap(),
+                NonZeroU64::new(size_of::<CameraData>() as u64).unwrap(),
                 DEVICE.get().unwrap(),
             )
             .copy_from_slice(bytemuck::bytes_of(&data));

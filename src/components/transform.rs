@@ -127,4 +127,14 @@ impl Transform {
     pub fn set_parent(mut self, p: ComponentReference<Self>) {
         self.parent = Some(p);
     }
+
+    ///Returns global position of the entity
+    #[must_use]
+    pub fn position_global(&self) -> Vec3 {
+        if let Some(parent) = &self.parent {
+            parent.borrow().matrix().transform3(self.position)
+        } else {
+            self.position
+        }
+    }
 }

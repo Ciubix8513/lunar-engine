@@ -545,7 +545,7 @@ impl RenderingExtension for Base {
 
                 let buf = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Point light buffer"),
-                    size: 1,
+                    size: 32,
                     usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
                     mapped_at_creation: false,
                 });
@@ -569,7 +569,7 @@ impl RenderingExtension for Base {
                 self.point_light_buffer
                     .set(PointLights {
                         buffer: buf,
-                        num_lights: 0,
+                        num_lights: 1,
                         bindgroup: bg,
                     })
                     .unwrap();
@@ -586,73 +586,51 @@ impl RenderingExtension for Base {
                     range: f32,
                 }
 
-                //Check if the lights have changed
+                let device = DEVICE.get().unwrap();
 
-                let mut changed = lights.len() != self.point_light_buffer.get().unwrap().num_lights;
-
-                if !changed {
-                    for l in &lights {
-                        if l.borrow().modified {
-                            changed = true;
-                            break;
-                        }
-                    }
+                //Check if need to create a new buffer
+                if self.point_light_buffer.get().unwrap().num_lights < lights.len() {
+                    //Recreate the buffer with the new size
+                    self.point_light_buffer.get_mut().unwrap().buffer =
+                        device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Point lights buffer"),
+                            size: lights.len() as u64 * 8 * 4,
+                            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
+                            mapped_at_creation: false,
+                        });
                 }
 
-                if changed {
-                    //Reset the changed flag
-                    for l in &lights {
-                        l.borrow_mut().modified = false;
-                    }
-                    let device = DEVICE.get().unwrap();
+                let data = lights
+                    .iter()
+                    .map(|l| {
+                        let l = l.borrow();
+                        let x = PointLight {
+                            position: l.transform_ref.get().unwrap().borrow().position_global(),
+                            intensity: l.get_intensity(),
+                            color: l.get_color().into(),
+                            range: l.get_range(),
+                        };
+                        x
+                    })
+                    .collect::<Vec<_>>();
 
-                    if self.point_light_buffer.get().unwrap().num_lights < lights.len() {
-                        //Recreate the buffer with the new size
-                        self.point_light_buffer.get_mut().unwrap().buffer =
-                            device.create_buffer(&wgpu::BufferDescriptor {
-                                label: Some("Point lights buffer"),
-                                size: lights.len() as u64 * 8 * 4,
-                                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
-                                mapped_at_creation: false,
-                            });
-                    }
+                let data = data
+                    .iter()
+                    .map(bytemuck::bytes_of)
+                    .flatten()
+                    .copied()
+                    .collect::<Vec<_>>();
 
-                    let data = lights
-                        .iter()
-                        .map(|l| {
-                            let l = l.borrow();
-                            let x = PointLight {
-                                position: l.transform_ref.get().unwrap().borrow().position,
-                                intensity: l.get_intensity(),
-                                color: l.get_color().into(),
-                                range: l.get_range(),
-                            };
-                            x
-                        })
-                        .collect::<Vec<_>>();
+                let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
 
-                    let l = data.first().unwrap();
-                    log::info!("Light: {:?}", l);
-
-                    let data = data
-                        .iter()
-                        .map(bytemuck::bytes_of)
-                        .flatten()
-                        .copied()
-                        .collect::<Vec<_>>();
-                    log::info!("Length of the lights data is : {}", data.len());
-
-                    let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
-
-                    belt.write_buffer(
-                        encoder,
-                        &self.point_light_buffer.get().unwrap().buffer,
-                        0,
-                        NonZeroU64::new(lights.len() as u64 * 8 * 4).unwrap(),
-                        device,
-                    )
-                    .copy_from_slice(data.as_slice());
-                }
+                belt.write_buffer(
+                    encoder,
+                    &self.point_light_buffer.get().unwrap().buffer,
+                    0,
+                    NonZeroU64::new(lights.len() as u64 * 8 * 4).unwrap(),
+                    device,
+                )
+                .copy_from_slice(data.as_slice());
             }
         }
 

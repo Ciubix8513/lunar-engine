@@ -18,7 +18,14 @@ struct PointLight {
   range: f32
 }
 
+struct Camera {
+  matrix: mat4x4<f32>,
+  t_matrix: mat4x4<f32>,
+  position: vec3<f32>
+}
 
+//gonna keep it bc why not
+@group(0) @binding(0) var<uniform> camera: Camera;
 @group(1)@binding(0)
 var<uniform> material: MaterialData;
 @group(2)@binding(0)
@@ -27,20 +34,42 @@ var<uniform> light: Light;
 var<storage, read> point_lights: array<PointLight>;
 
 @fragment
-fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>) -> @location(0) vec4<f32> {
+fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>, @location(3) world_pos: vec3<f32>) -> @location(0) vec4<f32> {
     var color = light.ambient_color;
     var specular = vec4(0.0);
+
+    for (var i: u32 = 0; i < arrayLength(&point_lights); i = i + 1) {
+
+        let dir = point_lights[i].position - world_pos;
+        let distance = length(dir);
+
+        if distance > point_lights[i].range {
+          continue;
+        }
+
+        let l_dir =  normalize(dir);
+        //Inverse square law
+        let  intensity = dot(normal, l_dir) *  saturate(1.0 / (distance * distance)) * point_lights[i].intensity;
+
+        if intensity == 0.0 {
+          continue;
+        }
+
+        color += vec4(point_lights[i].color, 1.0) * intensity;
+        // let refl = normalize(l_,,,dir, -2 * intensity * normal);
+        // specular += saturate(material.shininess * (pow(dot(refl, view_dir), 30.0) * material.specular_color));
+    }
 
     let light_dir = - light.direction;
     let light_intencity = dot(normal, light_dir);
 
-    if light_intencity > 0.0f {
+    if light_intencity > 0.0 {
 
         color += saturate(light.color * light_intencity);
 
         // reflect(lightlight_dir, normal), but since we already have the dot(x,y) we use this?
         let reflection = normalize(light_dir - 2 * light_intencity * normal);
-        specular = material.shininess * (pow(saturate(dot(reflection, view_dir)), 30.0) * material.specular_color);
+        specular += material.shininess * (pow(saturate(dot(reflection, view_dir)), 30.0) * material.specular_color);
     }
 
     color = color * material.color;

@@ -8,11 +8,13 @@ struct ColorOutput {
   @location(0) tex_coord: vec2<f32>,
   @location(1) normal: vec3<f32>,
   @location(2) view_dir: vec3<f32>,
+  @location(3) world_position: vec3<f32>,
   @builtin(position) position: vec4<f32>
 }
 
 struct Camera {
   matrix: mat4x4<f32>,
+  t_matrix: mat4x4<f32>,
   position: vec3<f32>
 }
 
@@ -38,10 +40,10 @@ fn main(
     var res: ColorOutput;
 
     var o = trans_mat * vec4(position, 1.0);
+    res.world_position = o.xyz;
     res.view_dir = normalize(o.xyz - camera.position);
 
-    o = camera.matrix * o;
-    res.position = o;
+    res.position = camera.matrix * o;
     res.tex_coord = uvs;
 
     //Transform the normals, and normalize them

@@ -76,6 +76,17 @@ pub struct PointLight {
 }
 
 impl PointLight {
+    ///Creates a new point light
+    pub fn new(color: Color, intensity: f32, range: f32) -> Self {
+        Self {
+            color,
+            intensity,
+            range,
+            transform_ref: OnceCell::new(),
+            modified: false,
+        }
+    }
+
     ///Returns the color of the light
     pub fn get_color(&self) -> Color {
         self.color
