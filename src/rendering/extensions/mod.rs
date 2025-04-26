@@ -544,7 +544,7 @@ impl RenderingExtension for Base {
                 let device = DEVICE.get().unwrap();
 
                 let buf = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Point light buffer"),
+                    label: Some("Empty point lights buffer"),
                     size: 32,
                     usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
                     mapped_at_creation: false,
@@ -558,11 +558,7 @@ impl RenderingExtension for Base {
                     layout: &bg_layout,
                     entries: &[wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                            buffer: &buf,
-                            offset: 0,
-                            size: None,
-                        }),
+                        resource: wgpu::BindingResource::Buffer(buf.as_entire_buffer_binding()),
                     }],
                 });
 
@@ -590,14 +586,26 @@ impl RenderingExtension for Base {
 
                 //Check if need to create a new buffer
                 if self.point_light_buffer.get().unwrap().num_lights < lights.len() {
+                    let p_l = self.point_light_buffer.get_mut().unwrap();
                     //Recreate the buffer with the new size
-                    self.point_light_buffer.get_mut().unwrap().buffer =
-                        device.create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Point lights buffer"),
-                            size: lights.len() as u64 * 8 * 4,
-                            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
-                            mapped_at_creation: false,
-                        });
+                    p_l.buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Point lights buffer"),
+                        size: lights.len() as u64 * 8 * 4,
+                        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
+                        mapped_at_creation: false,
+                    });
+                    let layout =
+                        device.create_bind_group_layout(&POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+                    p_l.bindgroup = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Point lights bindgroup"),
+                        layout: &layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer(
+                                p_l.buffer.as_entire_buffer_binding(),
+                            ),
+                        }],
+                    })
                 }
 
                 let data = lights

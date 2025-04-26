@@ -29,17 +29,18 @@ struct Camera {
 @group(1)@binding(0)
 var<uniform> material: MaterialData;
 @group(2)@binding(0)
-var<uniform> light: Light;
+var<uniform> directional_light: Light;
 @group(3)@binding(0)
 var<storage, read> point_lights: array<PointLight>;
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>, @location(3) world_pos: vec3<f32>) -> @location(0) vec4<f32> {
-    var color = light.ambient_color;
+    var color = directional_light.ambient_color;
     var specular = vec4(0.0);
 
-    for (var i: u32 = 0; i < arrayLength(&point_lights); i = i + 1) {
+    let len = arrayLength(&point_lights);
 
+    for (var i: u32 = 0; i < len; i++) {
         let dir = point_lights[i].position - world_pos;
         let distance = length(dir);
 
@@ -47,29 +48,33 @@ fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @locatio
           continue;
         }
 
-        let l_dir =  normalize(dir);
+        //Normalize using already calculated distance
+        let l_dir = dir / distance;
+
         //Inverse square law
-        let  intensity = dot(normal, l_dir) *  saturate(1.0 / (distance * distance)) * point_lights[i].intensity;
+        let intensity = dot(normal, l_dir);
 
         if intensity == 0.0 {
           continue;
         }
 
-        color += vec4(point_lights[i].color, 1.0) * intensity;
-        // let refl = normalize(l_,,,dir, -2 * intensity * normal);
-        // specular += saturate(material.shininess * (pow(dot(refl, view_dir), 30.0) * material.specular_color));
+        let attenuation = saturate(1.0 / (distance * distance)); //* point_lights[i].intensity;
+        color += saturate(vec4(point_lights[i].color, 1.0) * intensity * point_lights[i].intensity * attenuation);
+
+        let refl = normalize((l_dir - 2 * intensity * normal));
+        specular += saturate(material.shininess * attenuation * (pow(dot(refl, view_dir), 30.0) * material.specular_color));
     }
 
-    let light_dir = - light.direction;
+    let light_dir = - directional_light.direction;
     let light_intencity = dot(normal, light_dir);
 
     if light_intencity > 0.0 {
 
-        color += saturate(light.color * light_intencity);
+        color += saturate(directional_light.color * light_intencity * directional_light.intensity);
 
         // reflect(lightlight_dir, normal), but since we already have the dot(x,y) we use this?
         let reflection = normalize(light_dir - 2 * light_intencity * normal);
-        specular += material.shininess * (pow(saturate(dot(reflection, view_dir)), 30.0) * material.specular_color);
+        specular += material.shininess * directional_light.intensity * (pow(saturate(dot(reflection, view_dir)), 30.0) * material.specular_color);
     }
 
     color = color * material.color;
