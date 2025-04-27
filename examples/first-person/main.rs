@@ -4,7 +4,7 @@ use std::cell::OnceCell;
 use log::info;
 use lunar_engine::{
     asset_managment::AssetStore,
-    assets::{self, materials::ColorLit, mesh::SphereData},
+    assets::{self, materials::Lit, mesh::SphereData},
     components::{
         camera::MainCamera,
         fps::FpsRecorder,
@@ -142,19 +142,25 @@ fn generate_scene(
     let mut colors = Vec::new();
     let mut rng = rand::rngs::StdRng::from_seed(Default::default());
 
+    let haj_texture = assets.register(assets::Texture::static_png(include_bytes!(
+        "../../assets/blahaj.png"
+    )));
+
     for _ in 0..num_colors {
         // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
-        colors.push(assets.register(ColorLit::new(
-            Color::from_hsl(
+        colors.push(assets.register(Lit::new(
+            Some(haj_texture),
+            // None,
+            Some(Color::from_hsl(
                 rng.gen_range(0.0..360.0),
                 rng.gen_range(0.5..1.0),
                 rng.gen_range(0.4..0.8),
-            ),
-            Color::from_hsl(
+            )),
+            Some(Color::from_hsl(
                 rng.gen_range(0.0..360.0),
                 rng.gen_range(0.5..1.0),
                 rng.gen_range(0.4..0.8),
-            ),
+            )),
             rng.gen_range(0.0..1.0),
         )));
     }
@@ -272,7 +278,7 @@ fn run(state: &mut State) {
     state.world.update();
     render(
         &state.world,
-        &state.asset_store,
+        &mut state.asset_store,
         &mut [&mut state.extension],
     );
     state.frames += 1;
