@@ -285,7 +285,7 @@ impl MaterialTrait for ColorLit {
         self.uniform = None;
     }
 
-    fn set_bindgroups(&mut self, _asset_store: &crate::asset_managment::AssetStore) {
+    fn set_bindgroups(&mut self, _asset_store: &mut crate::asset_managment::AssetStore) {
         let device = DEVICE.get().unwrap();
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {

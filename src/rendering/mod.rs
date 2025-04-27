@@ -21,7 +21,11 @@ use self::extensions::{AttachmentData, RenderingExtension};
 pub mod extensions;
 
 ///Renders all the entities in the world
-pub fn render(world: &World, assets: &AssetStore, extensions: &mut [&mut dyn RenderingExtension]) {
+pub fn render(
+    world: &World,
+    assets: &mut AssetStore,
+    extensions: &mut [&mut dyn RenderingExtension],
+) {
     #[cfg(feature = "tracy")]
     let _span = tracy_client::span!("render", 1000);
 

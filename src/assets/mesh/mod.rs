@@ -21,9 +21,9 @@ use mesh_generator::generate_mesh;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    asset_managment::{Asset, UUID},
+    asset_managment::Asset,
     math::{Vec3, Vector},
-    DEVICE,
+    DEVICE, UUID,
 };
 
 mod mesh_generator;

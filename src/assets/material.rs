@@ -1,6 +1,9 @@
 use wgpu::CommandEncoder;
 
-use crate::asset_managment::{Asset, AssetStore, UUID};
+use crate::{
+    asset_managment::{Asset, AssetStore},
+    UUID,
+};
 
 use super::BindgroupState;
 
@@ -14,7 +17,7 @@ pub trait MaterialTrait {
     ///Disposal of the material
     fn dispose(&mut self);
     ///Creation of bindgroups and populating them with data
-    fn set_bindgroups(&mut self, asset_store: &AssetStore);
+    fn set_bindgroups(&mut self, asset_store: &mut AssetStore);
     ///State of the bindgroups of the material
     fn bindgroup_sate(&self) -> BindgroupState;
     ///Is the material lit? or uses any of the lighting resources
@@ -70,7 +73,7 @@ impl Material {
     }
 
     ///Initialize bindgroups of the material
-    pub fn initialize_bindgroups(&mut self, asset_store: &AssetStore) {
+    pub fn initialize_bindgroups(&mut self, asset_store: &mut AssetStore) {
         self.material.set_bindgroups(asset_store);
     }
 

@@ -29,6 +29,7 @@ use vec_key_value_pair::map::VecMap;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::grimoire;
+use crate::UUID;
 
 #[cfg(test)]
 mod tests;
@@ -44,11 +45,9 @@ pub enum Error {
     ///
     ///The enclosed `Box<dyn std::error::Error>` contains the error that occured
     InitializationError(Box<dyn std::error::Error>),
+    ///An asset with the given id already exists
+    IdAlreadyExists,
 }
-
-//Potentially use ecs::UUID
-///Type the management system uses for a sset IDs
-pub type UUID = u128;
 
 //Send and sync for parallel initialization
 ///Trait all assets must implement
@@ -178,6 +177,28 @@ impl AssetStore {
             (Arc::new(RwLock::new(asset)), std::any::TypeId::of::<T>()),
         );
         id
+    }
+
+    ///Tries to register an asset with a given ID
+    pub fn try_register_with_id<T>(&mut self, asset: T, id: UUID) -> Result<(), Error>
+    where
+        T: Asset + 'static,
+    {
+        //Check if the id is in use
+        for (i, _) in &self.assets {
+            if &id == i {
+                return Err(Error::IdAlreadyExists);
+            }
+        }
+
+        let mut asset = asset;
+        asset.set_id(id).unwrap();
+        self.assets.insert(
+            id,
+            (Arc::new(RwLock::new(asset)), std::any::TypeId::of::<T>()),
+        );
+
+        Ok(())
     }
 
     ///Initializes all of the assets in the assetstore

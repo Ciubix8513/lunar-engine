@@ -38,7 +38,7 @@ pub trait RenderingExtension {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         world: &World,
-        assets: &AssetStore,
+        assets: &mut AssetStore,
         attachments: &AttachmentData,
     );
 
@@ -183,7 +183,7 @@ impl RenderingExtension for Base {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         world: &World,
-        assets: &AssetStore,
+        assets: &mut AssetStore,
         attachments: &AttachmentData,
     ) {
         #[cfg(feature = "tracy")]
@@ -465,7 +465,9 @@ impl RenderingExtension for Base {
 
         //Initialize bindgroups for all needed materials
         for m in materials {
-            let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
+            let binding = assets.get_by_id::<Material>(m).unwrap();
+            let mut m = binding.borrow_mut();
+
             is_lit = is_lit || m.is_lit();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {

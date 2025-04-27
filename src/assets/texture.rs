@@ -5,10 +5,7 @@ use std::{
 
 use wgpu::util::DeviceExt;
 
-use crate::{
-    asset_managment::{Asset, UUID},
-    helpers::flip_texture,
-};
+use crate::{asset_managment::Asset, helpers::flip_texture, UUID};
 
 use lunar_png::Image;
 

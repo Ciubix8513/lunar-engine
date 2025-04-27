@@ -80,6 +80,9 @@ mod windowing;
 #[cfg(target_arch = "wasm32")]
 mod wrappers;
 
+///UUID of an asset or an entity
+pub type UUID = u128;
+
 //TODO find a better way than just staticing it
 static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
 

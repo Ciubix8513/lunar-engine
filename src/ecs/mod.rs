@@ -83,9 +83,6 @@ use std::any::{Any, TypeId};
 use std::cell::{Ref, RefMut};
 use vec_key_value_pair::set::VecSet;
 
-///Id type [Entity] uses
-pub type UUID = u64;
-
 ///A reference to an [Entity] in a world intended for uses with short lifetimes
 pub type EntityRefence = Rc<RefCell<Entity>>;
 ///A weak reference to an [Entity] in a world intended for use with longer lifetimes
@@ -438,6 +435,8 @@ use std::rc::Weak;
 use std::{cell::RefCell, rc::Rc};
 
 use vec_key_value_pair::map::VecMap;
+
+use crate::UUID;
 
 //Oh god this is gonna be a mess
 #[derive(Debug, Default)]

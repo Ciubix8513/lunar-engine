@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use crate::assets::Material;
-use crate::{asset_managment::UUID, grimoire, DEVICE, FORMAT};
+use crate::{grimoire, DEVICE, FORMAT, UUID};
 
 use crate::{assets::material::MaterialTrait, assets::BindgroupState, assets::Texture};
 
@@ -168,7 +168,7 @@ impl MaterialTrait for TextureUnlit {
         self.bindgroup_sate = BindgroupState::Uninitialized;
     }
 
-    fn set_bindgroups(&mut self, asset_store: &crate::asset_managment::AssetStore) {
+    fn set_bindgroups(&mut self, asset_store: &mut crate::asset_managment::AssetStore) {
         let device = DEVICE.get().unwrap();
 
         let texture = asset_store
