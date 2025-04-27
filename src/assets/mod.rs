@@ -1,5 +1,6 @@
 //! Implemented assets
 
+pub(crate) mod heleprs;
 ///Material struct
 pub mod material;
 ///Contains implemented materials

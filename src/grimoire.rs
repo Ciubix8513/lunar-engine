@@ -51,3 +51,5 @@ pub const CAMERA_BIND_GROUP_INDEX: u32 = 0;
 pub const DIRECT_LIGHT_BIND_GROUP_INDEX: u32 = 2;
 pub const POINT_LIGHT_BIND_GROUP_INDEX: u32 = 3;
 pub const NUM_THREADS: usize = 8;
+
+pub const DEFAULT_TEXTURE_ASSET_ID: u128 = 0;
