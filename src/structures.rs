@@ -162,6 +162,22 @@ impl Color {
         Self::from_hsl(vec.x, vec.y, vec.z)
     }
 
+    #[must_use]
+    ///Creates a new color from a hex value
+    ///
+    ///# Examples
+    ///```
+    ///# use lunar_engine::structures::Color;
+    ///let color = Color::from_hex(0xff00ffff);
+    ///```
+    pub const fn from_hex(color: u32) -> Color {
+        let r = (color & 0xff000000) as f32 / 255.0;
+        let g = (color & 0x00ff0000) as f32 / 255.0;
+        let b = (color & 0x0000ff00) as f32 / 255.0;
+        let a = (color & 0x000000ff) as f32 / 255.0;
+        Self { r, g, b, a }
+    }
+
     ///Red color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}
     #[must_use]
     pub const fn red() -> Self {
