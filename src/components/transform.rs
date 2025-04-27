@@ -131,10 +131,8 @@ impl Transform {
     ///Returns global position of the entity
     #[must_use]
     pub fn position_global(&self) -> Vec3 {
-        if let Some(parent) = &self.parent {
-            parent.borrow().matrix().transform3(self.position)
-        } else {
-            self.position
-        }
+        self.parent.as_ref().map_or(self.position, |p| {
+            p.borrow().matrix().transform3(self.position)
+        })
     }
 }

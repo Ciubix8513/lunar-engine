@@ -65,6 +65,7 @@ pub trait Component: std::any::Any {
     ///
     ///This function is not meant to be implemented manually, use [`lunar_engine_derive::unique`]
     ///macro instead
+    #[must_use]
     fn unique() -> bool
     where
         Self: Sized,
@@ -458,7 +459,7 @@ impl ComponentsModified {
     }
 
     ///Must be called upon new entity creation or entity delition
-    pub fn entity_changed(&mut self) {
+    pub const fn entity_changed(&mut self) {
         self.entity_modified = true;
     }
 }
@@ -506,6 +507,10 @@ impl World {
     }
 
     ///Adds entity to the world, consuming it in the process
+    ///
+    ///# Errors
+    ///Returns an error if the entity contains an instance of a unique component that already
+    ///exists in the world
     pub fn add_entity(&mut self, entity: Entity) -> Result<WeakEntityRefence, Error> {
         let mut e = entity;
         e.world_modified = Some(self.modified.clone());

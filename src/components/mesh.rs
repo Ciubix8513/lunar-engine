@@ -64,13 +64,13 @@ impl Mesh {
         self.visible
     }
     ///Sets whether or not this mesh is rendered
-    pub fn set_visible(&mut self, value: bool) {
+    pub const fn set_visible(&mut self, value: bool) {
         self.visible = value;
     }
 
     ///Changes the asset used by the component
     ///Does not chedk if the provided id is valid
-    pub fn set_mesh(&mut self, id: UUID) {
+    pub const fn set_mesh(&mut self, id: UUID) {
         self.mesh_id = Some(id);
     }
 
@@ -84,7 +84,7 @@ impl Mesh {
 
     ///Changes the asset used by the component
     ///Does not check if the provided id is valid
-    pub fn set_material(&mut self, id: UUID) {
+    pub const fn set_material(&mut self, id: UUID) {
         self.material_id = Some(id);
     }
 

@@ -77,7 +77,8 @@ pub struct PointLight {
 
 impl PointLight {
     ///Creates a new point light
-    pub fn new(color: Color, intensity: f32, range: f32) -> Self {
+    #[must_use]
+    pub const fn new(color: Color, intensity: f32, range: f32) -> Self {
         Self {
             color,
             intensity,
@@ -88,32 +89,32 @@ impl PointLight {
     }
 
     ///Returns the color of the light
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         self.color
     }
     ///Sets the color of the light
-    pub fn set_color(&mut self, color: Color) {
+    pub const fn set_color(&mut self, color: Color) {
         self.color = color;
         self.modified = true;
     }
 
     ///Returns the intensity of the light
-    pub fn get_intensity(&self) -> f32 {
+    pub const fn get_intensity(&self) -> f32 {
         self.intensity
     }
 
     ///Sets the intensity of the light
-    pub fn set_intensity(&mut self, intensity: f32) {
+    pub const fn set_intensity(&mut self, intensity: f32) {
         self.intensity = intensity;
         self.modified = true;
     }
 
     ///Returns the range of the light
-    pub fn get_range(&self) -> f32 {
+    pub const fn get_range(&self) -> f32 {
         self.range
     }
     ///Sets the range of the light
-    pub fn set_range(&mut self, range: f32) {
+    pub const fn set_range(&mut self, range: f32) {
         self.range = range;
         self.modified = true;
     }

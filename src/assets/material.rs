@@ -83,6 +83,7 @@ impl Material {
     }
 
     ///Returns weather the material is lit, or uses any lighting resources
+    #[must_use]
     pub fn is_lit(&self) -> bool {
         self.material.is_lit()
     }

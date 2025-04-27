@@ -180,6 +180,14 @@ impl AssetStore {
     }
 
     ///Tries to register an asset with a given ID
+    ///
+    ///# Errors
+    ///Returns an error if there is already an asset with the provided id
+    ///
+    ///# Note
+    ///
+    ///In most cases [`AssetStore::register`] is more appropriate, and it is always more performant, due
+    ///to it not needing to check all other existing assets
     pub fn try_register_with_id<T>(&mut self, asset: T, id: UUID) -> Result<(), Error>
     where
         T: Asset + 'static,
@@ -384,7 +392,7 @@ impl AssetStore {
         match self.assets.get(&id) {
             Some(it) => it.0.write().dispose(),
             None => return Err(Error::DoesNotExist),
-        };
+        }
         Ok(())
     }
 

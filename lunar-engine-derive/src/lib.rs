@@ -131,7 +131,7 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     if matches!(struct_type.unwrap(), StructType::Tupple) {
         return comp_error("Tupple structs not supported", item);
-    };
+    }
     //Actual implementation here
 
     //Add inner of the type of the attribute
@@ -243,7 +243,9 @@ pub fn alias(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-///Creates a marker component. A marker component can be used to distinguish an entity, or give it
+///Creates a marker component.
+///
+///A marker component can be used to distinguish an entity, or give it
 ///a name, additionally there are [`macro@unique_marker_component`] that can be used to distinguish
 ///unique entities
 ///# Examples
@@ -271,7 +273,7 @@ pub fn marker_component(attr: TokenStream, item: TokenStream) -> TokenStream {
         StructType::Tupple | StructType::Regular
     ) {
         return comp_error("A marker must me an empty struct", item);
-    };
+    }
     //Actual implementation here
 
     //Implement Componnent
@@ -339,7 +341,7 @@ pub fn unique_marker_component(attr: TokenStream, item: TokenStream) -> TokenStr
         StructType::Tupple | StructType::Regular
     ) {
         return comp_error("A marker must me an empty struct", item);
-    };
+    }
     //Actual implementation here
 
     //Implement Componnent

@@ -65,12 +65,12 @@ impl Unlit {
     }
 
     ///Returns the color of the material
-    pub fn get_color(&self) -> Color {
+    pub const fn get_color(&self) -> Color {
         self.color
     }
 
     ///Sets the color of the material
-    pub fn set_color(&mut self, color: Color) {
+    pub const fn set_color(&mut self, color: Color) {
         self.color = color;
         self.changed = true;
     }
@@ -266,7 +266,7 @@ impl MaterialTrait for Unlit {
             self.texture_id = Some(grimoire::DEFAULT_TEXTURE_ASSET_ID);
         }
 
-        let mut texture = asset_store.borrow_by_id::<Texture>(self.texture_id.unwrap());
+        let mut texture = asset_store.get_by_id::<Texture>(self.texture_id.unwrap());
 
         if self.texture_id.unwrap() == grimoire::DEFAULT_TEXTURE_ASSET_ID && texture.is_err() {
             drop(texture);
@@ -276,9 +276,11 @@ impl MaterialTrait for Unlit {
                 crate::assets::heleprs::generate_empty_texture(),
                 grimoire::DEFAULT_TEXTURE_ASSET_ID,
             );
-            texture = asset_store.borrow_by_id::<Texture>(self.texture_id.unwrap());
+            texture = asset_store.get_by_id::<Texture>(self.texture_id.unwrap());
         }
-        let texture = texture.unwrap();
+
+        let binding = texture.unwrap();
+        let texture = binding.borrow();
 
         let bind_group_f = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Fragment bind group"),
@@ -311,6 +313,9 @@ impl MaterialTrait for Unlit {
                 },
             ],
         });
+
+        drop(texture);
+
         #[cfg(target_arch = "wasm32")]
         {
             self.bind_group = Some(Arc::new(crate::wrappers::WgpuWrapper::new(bind_group_f)));

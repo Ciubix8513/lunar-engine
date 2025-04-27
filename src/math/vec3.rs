@@ -56,7 +56,7 @@ impl Vec3 {
 
     ///Returns the absolute vector
     #[must_use]
-    pub fn abs(self) -> Self {
+    pub const fn abs(self) -> Self {
         Self {
             x: self.x.abs(),
             y: self.y.abs(),

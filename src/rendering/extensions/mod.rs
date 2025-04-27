@@ -89,7 +89,7 @@ struct PointLights {
 ///fn update(state: &mut State) {
 /// render(
 ///   &state.world,
-///   &state.assets,
+///   &mut state.assets,
 ///   &mut [&mut state.extension]
 ///  );
 ///}
@@ -507,7 +507,6 @@ impl RenderingExtension for Base {
                             buffer: &buf,
                             offset: 0,
                             size: None,
-                            // size: NonZeroU64::new(size_of::<LightBuffer>() as u64),
                         }),
                     }],
                 });
@@ -528,15 +527,14 @@ impl RenderingExtension for Base {
                 l.camera_direction = camera.view_direction();
 
                 let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
-                let mut b = belt.write_buffer(
+                belt.write_buffer(
                     encoder,
                     &self.light_buffer.get().unwrap().0,
-                    0 as u64,
+                    0,
                     NonZeroU64::new(size_of::<LightBuffer>() as u64).unwrap(),
                     device,
-                );
-
-                b.copy_from_slice(bytemuck::bytes_of(&l));
+                )
+                .copy_from_slice(bytemuck::bytes_of(&l));
             }
 
             //Create a point lights buffer even if there are no point lights
@@ -607,7 +605,7 @@ impl RenderingExtension for Base {
                                 p_l.buffer.as_entire_buffer_binding(),
                             ),
                         }],
-                    })
+                    });
                 }
 
                 let data = lights
@@ -626,8 +624,7 @@ impl RenderingExtension for Base {
 
                 let data = data
                     .iter()
-                    .map(bytemuck::bytes_of)
-                    .flatten()
+                    .flat_map(bytemuck::bytes_of)
                     .copied()
                     .collect::<Vec<_>>();
 
