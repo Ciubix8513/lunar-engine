@@ -3,7 +3,7 @@ use std::{cell::OnceCell, path::Path};
 use log::{debug, info};
 use lunar_engine::{
     asset_managment::AssetStore,
-    assets::{self, materials::TextureUnlit},
+    assets::{self, materials::Unlit},
     components::{
         camera::{MainCamera, ProjectionType},
         mesh::Mesh,
@@ -16,7 +16,7 @@ use lunar_engine::{
     structures::Color,
     State,
 };
-use lunar_engine_derive::{dependencies, marker_component, unique_marker_component};
+use lunar_engine_derive::{dependencies, unique_marker_component};
 use winit::keyboard::KeyCode;
 
 #[derive(Default)]
@@ -83,7 +83,7 @@ fn init(state: &mut MyState) {
     let texture = state
         .assset_store
         .register(assets::Texture::new_png(Path::new("assets/blahaj.png")));
-    let material = state.assset_store.register(TextureUnlit::new(texture));
+    let material = state.assset_store.register(Unlit::new(Some(texture), None));
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
@@ -164,7 +164,7 @@ fn run(state: &mut MyState) {
     debug!("Called render!");
     rendering::render(
         &state.world,
-        &state.assset_store,
+        &mut state.assset_store,
         &mut [&mut state.extension],
     );
     state.frame += 1;
