@@ -1,5 +1,7 @@
 use wgpu::VertexBufferLayout;
 
+use crate::internal::DEVICE;
+
 ///Returns the default vertex buffer bindings
 #[must_use]
 pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
@@ -59,4 +61,12 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
             ],
         },
     ]
+}
+
+#[must_use]
+///Returns whether or not storage buffers are available on the current device
+pub fn storage_buffer_available() -> bool {
+    let features = DEVICE.get().unwrap().features();
+
+    features.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY)
 }
