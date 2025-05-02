@@ -70,3 +70,125 @@ pub fn storage_buffer_available() -> bool {
 
     features.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY)
 }
+
+///Errors returned by the preprocessor
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Error {
+    ///Syntax of the preprocessor is not valid
+    InvalidSyntax(&'static str),
+    ///A block with the specified index does not exist
+    BlockDoesNotExist,
+}
+
+#[must_use]
+///processes a shader, picking which one of the blocks to use.
+///
+///Consider the following shader:
+///```wgsl
+///### 0
+///let a: f32 = 0.0;
+///### 1
+///let a: u32 = 1;
+///###
+///```
+///
+///The preprocessor, can pick which one of the blocks to use, based on [`block_index`].
+pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error> {
+    let lines = shader.lines();
+    let blocks = lines
+        .enumerate()
+        .filter(|i| i.1.contains("###"))
+        .collect::<Vec<_>>();
+
+    if blocks.len() == 0 {
+        return Ok(shader.into());
+    } else if blocks.len() < 3 {
+        return Err(Error::InvalidSyntax("Must have at least 2 blocks"));
+    }
+    //We have at least 3 blocks, now make sure that they have the correct syntax
+
+    let mut indecies = Vec::new();
+
+    for (i, (l, b)) in blocks.iter().enumerate() {
+        let ind = b.replace("###", " ");
+        let index = ind.trim();
+
+        let last = i == blocks.len() - 1;
+
+        if index.is_empty() && !last {
+            return Err(Error::InvalidSyntax("A block does not have an index"));
+        }
+
+        if last && !index.is_empty() {
+            return Err(Error::InvalidSyntax(
+                "The last block separator must not have an index",
+            ));
+        }
+
+        let ind = if last {
+            Ok(u32::MAX)
+        } else {
+            index.parse::<u32>()
+        };
+
+        if ind.is_err() && !last {
+            println!("{:?}", ind);
+            return Err(Error::InvalidSyntax(
+                "Block index must be a non negative number",
+            ));
+        }
+        let index = ind.unwrap();
+
+        if indecies.iter().filter(|(_, i)| i == &index).count() != 0 {
+            return Err(Error::InvalidSyntax("Block indecies must be unique"));
+        }
+
+        indecies.push((*l, index));
+    }
+
+    if indecies.iter().filter(|(_, i)| i == &block_index).count() == 0 {
+        return Err(Error::BlockDoesNotExist);
+    }
+
+    //Now we are sure that the block syntax is correct and the requested block exists
+
+    //Get block contents of the requested block
+    let block = indecies
+        .iter()
+        .enumerate()
+        .find(|(_, (_, i))| i == &block_index)
+        .unwrap();
+    let block_beginning = block.1 .0;
+    let block_end = blocks[block.0 + 1].0;
+
+    println!("{}, {}", block_beginning, block_end);
+
+    let block_contents = shader.lines().collect::<Vec<_>>()[block_beginning + 1..block_end]
+        .into_iter()
+        .fold(String::new(), |s, i| s + i);
+
+    let output = shader.lines().collect::<Vec<_>>()[blocks.last().unwrap().0 + 1..]
+        .iter()
+        .fold(block_contents + "\n", |s, i| s + i);
+    return Ok(output);
+}
+
+#[test]
+fn preprocessor_test() {
+    let shader = "### 0
+:neofox_snug:
+### 1
+:neocat_floof:
+###
+meow meow";
+
+    assert_eq!(
+        preprocess_shader(shader, 1).unwrap(),
+        ":neocat_floof:\nmeow meow"
+    );
+
+    assert_eq!(
+        preprocess_shader(shader, 0).unwrap(),
+        ":neofox_snug:\nmeow meow"
+    );
+}
