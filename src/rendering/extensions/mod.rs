@@ -198,9 +198,9 @@ impl RenderingExtension for Base {
                 .unwrap();
 
             if storage_buf_available {
-                log::info!("Storage buffer supported")
+                log::info!("Storage buffer supported");
             } else {
-                log::info!("Storage buffer not supported")
+                log::info!("Storage buffer not supported");
             }
         }
 

@@ -63,7 +63,7 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
 
 #[must_use]
 ///Returns whether or not storage buffers are available on the current device
-pub fn storage_buffer_available() -> bool {
+pub const fn storage_buffer_available() -> bool {
     // let features = DEVICE.get().unwrap().features();
 
     // features.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY)
@@ -86,7 +86,6 @@ pub enum Error {
     BlockDoesNotExist,
 }
 
-#[must_use]
 ///processes a shader, picking which one of the blocks to use.
 ///
 ///Consider the following shader:
@@ -98,7 +97,11 @@ pub enum Error {
 ///###
 ///```
 ///
-///The preprocessor, can pick which one of the blocks to use, based on [`block_index`].
+///The preprocessor, can pick which one of the blocks to use, based on `block_index`.
+///
+///# Errors
+///
+///Will return an error if the syntax of the preprocessor is invalid
 pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error> {
     let lines = shader.lines();
     let blocks = lines
@@ -106,7 +109,7 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
         .filter(|i| i.1.contains("###"))
         .collect::<Vec<_>>();
 
-    if blocks.len() == 0 {
+    if blocks.is_empty() {
         return Ok(shader.into());
     } else if blocks.len() < 3 {
         return Err(Error::InvalidSyntax("Must have at least 2 blocks"));
@@ -167,13 +170,14 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
     let block_end = blocks[block.0 + 1].0;
 
     let block_contents = shader.lines().collect::<Vec<_>>()[block_beginning + 1..block_end]
-        .into_iter()
+        .iter()
         .fold(String::new(), |s, i| s + i + "\n");
 
     let output = shader.lines().collect::<Vec<_>>()[blocks.last().unwrap().0 + 1..]
         .iter()
         .fold(block_contents, |s, i| s + i + "\n");
-    return Ok(output);
+
+    Ok(output)
 }
 
 #[test]

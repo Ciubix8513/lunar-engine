@@ -170,7 +170,8 @@ impl Color {
     ///# use lunar_engine::structures::Color;
     ///let color = Color::from_hex(0xff00ffff);
     ///```
-    pub const fn from_hex(color: u32) -> Color {
+    #[allow(clippy::unreadable_literal)]
+    pub const fn from_hex(color: u32) -> Self {
         let r = (color & 0xff000000) as f32 / 255.0;
         let g = (color & 0x00ff0000) as f32 / 255.0;
         let b = (color & 0x0000ff00) as f32 / 255.0;

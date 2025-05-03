@@ -172,7 +172,7 @@ impl MaterialTrait for Lit {
             source: wgpu::ShaderSource::Wgsl({
                 preprocess_shader(
                     include_str!("../../shaders/lit.wgsl"),
-                    if storage_buf_available { 0 } else { 1 },
+                    u32::from(!storage_buf_available),
                 )
                 .unwrap()
                 .into()
