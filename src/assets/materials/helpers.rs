@@ -138,7 +138,6 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
         };
 
         if ind.is_err() && !last {
-            println!("{:?}", ind);
             return Err(Error::InvalidSyntax(
                 "Block index must be a non negative number",
             ));
@@ -166,8 +165,6 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
         .unwrap();
     let block_beginning = block.1 .0;
     let block_end = blocks[block.0 + 1].0;
-
-    println!("{}, {}", block_beginning, block_end);
 
     let block_contents = shader.lines().collect::<Vec<_>>()[block_beginning + 1..block_end]
         .into_iter()

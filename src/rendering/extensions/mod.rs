@@ -192,9 +192,16 @@ impl RenderingExtension for Base {
     ) {
         //Initialize needed stuff
         if self.storage_buffer_available.get().is_none() {
+            let storage_buf_available = storage_buffer_available();
             self.storage_buffer_available
-                .set(storage_buffer_available())
+                .set(storage_buf_available)
                 .unwrap();
+
+            if storage_buf_available {
+                log::info!("Storage buffer supported")
+            } else {
+                log::info!("Storage buffer not supported")
+            }
         }
 
         #[cfg(feature = "tracy")]

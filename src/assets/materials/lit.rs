@@ -162,8 +162,6 @@ impl MaterialTrait for Lit {
 
     fn intialize(&mut self) {
         let storage_buf_available = storage_buffer_available();
-        println!("{:?}", storage_buf_available);
-
         let device = DEVICE.get().unwrap();
 
         let v_shader =
@@ -172,13 +170,12 @@ impl MaterialTrait for Lit {
         let f_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl({
-                let s = preprocess_shader(
+                preprocess_shader(
                     include_str!("../../shaders/lit.wgsl"),
                     if storage_buf_available { 0 } else { 1 },
                 )
-                .unwrap();
-                println!("{}", s);
-                s.into()
+                .unwrap()
+                .into()
             }),
         });
 
