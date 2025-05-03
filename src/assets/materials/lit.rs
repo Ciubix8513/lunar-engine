@@ -15,7 +15,7 @@ use crate::{grimoire, DEVICE, FORMAT};
 
 use crate::{assets::material::MaterialTrait, assets::BindgroupState};
 
-use super::helpers::vertex_binding;
+use super::helpers::{preprocess_shader, storage_buffer_available, vertex_binding};
 
 ///Basic material that renders an object with a given texture, without lighting
 pub struct Lit {
@@ -161,11 +161,26 @@ impl MaterialTrait for Lit {
     }
 
     fn intialize(&mut self) {
+        let storage_buf_available = storage_buffer_available();
+        println!("{:?}", storage_buf_available);
+
         let device = DEVICE.get().unwrap();
 
         let v_shader =
             device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
-        let f_shader = device.create_shader_module(wgpu::include_wgsl!("../../shaders/lit.wgsl"));
+
+        let f_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl({
+                let s = preprocess_shader(
+                    include_str!("../../shaders/lit.wgsl"),
+                    if storage_buf_available { 0 } else { 1 },
+                )
+                .unwrap();
+                println!("{}", s);
+                s.into()
+            }),
+        });
 
         let bind_group_layout_f =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -206,8 +221,9 @@ impl MaterialTrait for Lit {
         let directional_light_bind_group_layout = device
             .create_bind_group_layout(&grimoire::DIRECTIONAL_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
 
-        let point_light_bind_group_layout =
-            device.create_bind_group_layout(&grimoire::POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+        let point_light_bind_group_layout = device.create_bind_group_layout(
+            &grimoire::point_light_bind_group_layout_descriptor(storage_buf_available),
+        );
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,

@@ -1,7 +1,5 @@
 use wgpu::VertexBufferLayout;
 
-use crate::internal::DEVICE;
-
 ///Returns the default vertex buffer bindings
 #[must_use]
 pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
@@ -66,9 +64,17 @@ pub const fn vertex_binding() -> [VertexBufferLayout<'static>; 2] {
 #[must_use]
 ///Returns whether or not storage buffers are available on the current device
 pub fn storage_buffer_available() -> bool {
-    let features = DEVICE.get().unwrap().features();
+    // let features = DEVICE.get().unwrap().features();
 
-    features.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY)
+    // features.contains(wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY)
+
+    //This is a mess but eh
+    #[cfg(feature = "webgl")]
+    let o = false;
+    #[cfg(not(feature = "webgl"))]
+    let o = true;
+
+    o
 }
 
 ///Errors returned by the preprocessor
@@ -165,11 +171,11 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
 
     let block_contents = shader.lines().collect::<Vec<_>>()[block_beginning + 1..block_end]
         .into_iter()
-        .fold(String::new(), |s, i| s + i);
+        .fold(String::new(), |s, i| s + i + "\n");
 
     let output = shader.lines().collect::<Vec<_>>()[blocks.last().unwrap().0 + 1..]
         .iter()
-        .fold(block_contents + "\n", |s, i| s + i);
+        .fold(block_contents, |s, i| s + i + "\n");
     return Ok(output);
 }
 

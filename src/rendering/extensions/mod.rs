@@ -9,13 +9,13 @@ use wgpu::{util::DeviceExt, BufferUsages};
 
 use crate::{
     asset_managment::AssetStore,
-    assets::{BindgroupState, Material, Mesh},
+    assets::{materials::helpers::storage_buffer_available, BindgroupState, Material, Mesh},
     components::{
         self,
         light::{DirectionalLight, PointLight},
     },
     ecs::{ComponentReference, World},
-    grimoire::{self, POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR},
+    grimoire::{self, point_light_bind_group_layout_descriptor},
     math::{Mat4x4, Vec3, Vec4, Vector as _},
     structures::{Color, LightBuffer},
     DEVICE, RESOLUTION, STAGING_BELT,
@@ -69,6 +69,7 @@ impl std::cmp::Ord for dyn RenderingExtension {
 #[derive(Debug)]
 struct PointLights {
     buffer: wgpu::Buffer,
+    count_buf: wgpu::Buffer,
     num_lights: usize,
     bindgroup: wgpu::BindGroup,
 }
@@ -109,6 +110,7 @@ pub struct Base {
     mesh_refs: Vec<Vec<ComponentReference<components::mesh::Mesh>>>,
     light_buffer: OnceCell<(wgpu::Buffer, wgpu::BindGroup)>,
     point_light_buffer: OnceCell<PointLights>,
+    storage_buffer_available: OnceCell<bool>,
 }
 
 impl Base {
@@ -131,6 +133,7 @@ impl Base {
             mesh_refs: Vec::new(),
             light_buffer: OnceCell::new(),
             point_light_buffer: OnceCell::new(),
+            storage_buffer_available: OnceCell::new(),
         }
     }
 
@@ -152,6 +155,7 @@ impl Base {
             mesh_refs: Vec::new(),
             light_buffer: OnceCell::new(),
             point_light_buffer: OnceCell::new(),
+            storage_buffer_available: OnceCell::new(),
         }
     }
 }
@@ -186,6 +190,13 @@ impl RenderingExtension for Base {
         assets: &mut AssetStore,
         attachments: &AttachmentData,
     ) {
+        //Initialize needed stuff
+        if self.storage_buffer_available.get().is_none() {
+            self.storage_buffer_available
+                .set(storage_buffer_available())
+                .unwrap();
+        }
+
         #[cfg(feature = "tracy")]
         let _span = tracy_client::span!("Frustum culling render");
         trace!("Started frame");
@@ -546,26 +557,49 @@ impl RenderingExtension for Base {
                 let buf = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Empty point lights buffer"),
                     size: 32,
-                    usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
+                    usage: BufferUsages::COPY_DST
+                        | if *self.storage_buffer_available.get().unwrap() {
+                            BufferUsages::STORAGE
+                        } else {
+                            BufferUsages::UNIFORM
+                        },
+                    mapped_at_creation: false,
+                });
+
+                let buf1 = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Empty point lights buffer"),
+                    size: 4,
+                    usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
                     mapped_at_creation: false,
                 });
 
                 let bg_layout =
-                    device.create_bind_group_layout(&POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+                    device.create_bind_group_layout(&point_light_bind_group_layout_descriptor(
+                        *self.storage_buffer_available.get().unwrap(),
+                    ));
 
                 let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Point lights bind group"),
                     layout: &bg_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Buffer(buf.as_entire_buffer_binding()),
-                    }],
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer(
+                                buf1.as_entire_buffer_binding(),
+                            ),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Buffer(buf.as_entire_buffer_binding()),
+                        },
+                    ],
                 });
 
                 self.point_light_buffer
                     .set(PointLights {
                         buffer: buf,
-                        num_lights: 1,
+                        count_buf: buf1,
+                        num_lights: 0,
                         bindgroup: bg,
                     })
                     .unwrap();
@@ -590,21 +624,53 @@ impl RenderingExtension for Base {
                     //Recreate the buffer with the new size
                     p_l.buffer = device.create_buffer(&wgpu::BufferDescriptor {
                         label: Some("Point lights buffer"),
-                        size: lights.len() as u64 * 8 * 4,
-                        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::STORAGE,
+                        size: if *self.storage_buffer_available.get().unwrap() {
+                            lights.len() as u64 * 8 * 4
+                        } else {
+                            size_of::<PointLight>() as u64 * 256
+                        },
+
+                        usage: wgpu::BufferUsages::COPY_DST
+                            | if *self.storage_buffer_available.get().unwrap() {
+                                BufferUsages::STORAGE
+                            } else {
+                                BufferUsages::UNIFORM
+                            },
+
                         mapped_at_creation: false,
                     });
                     let layout =
-                        device.create_bind_group_layout(&POINT_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR);
+                        device.create_bind_group_layout(&point_light_bind_group_layout_descriptor(
+                            *self.storage_buffer_available.get().unwrap(),
+                        ));
+
+                    let belt = STAGING_BELT.get().unwrap();
+                    belt.write()
+                        .unwrap()
+                        .write_buffer(
+                            encoder,
+                            &p_l.count_buf,
+                            0,
+                            NonZeroU64::new(4).unwrap(),
+                            device,
+                        )
+                        .copy_from_slice(bytemuck::bytes_of(&(lights.len() as u32)));
+
                     p_l.bindgroup = device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: Some("Point lights bindgroup"),
                         layout: &layout,
-                        entries: &[wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: wgpu::BindingResource::Buffer(
-                                p_l.buffer.as_entire_buffer_binding(),
-                            ),
-                        }],
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: p_l.count_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Buffer(
+                                    p_l.buffer.as_entire_buffer_binding(),
+                                ),
+                            },
+                        ],
                     });
                 }
 

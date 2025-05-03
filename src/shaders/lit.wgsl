@@ -1,3 +1,12 @@
+### 0 
+@group(3)@binding(1)
+var<storage, read> point_lights: array<PointLight>;
+### 1
+@group(3)@binding(1)
+var<uniform> point_lights: array<PointLight, 256>;
+###
+
+
 struct Light {
   direction: vec3<f32>,
   intensity: f32,
@@ -26,6 +35,7 @@ struct Camera {
 
 //gonna keep it bc why not
 @group(0) @binding(0) var<uniform> camera: Camera;
+
 @group(1)@binding(0)
 var<uniform> material: MaterialData;
 
@@ -33,18 +43,18 @@ var<uniform> material: MaterialData;
 var texture: texture_2d<f32>;
 @group(1)@binding(2)
 var tex_sampler: sampler;
-
 @group(2)@binding(0)
 var<uniform> directional_light: Light;
+
 @group(3)@binding(0)
-var<storage, read> point_lights: array<PointLight>;
+var<uniform> num_lights: u32;
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>, @location(3) world_pos: vec3<f32>) -> @location(0) vec4<f32> {
     var color = directional_light.ambient_color;
     var specular = vec4(0.0);
 
-    let len = arrayLength(&point_lights);
+    let len = num_lights;
 
     for (var i: u32 = 0; i < len; i++) {
         let dir = point_lights[i].position - world_pos;
