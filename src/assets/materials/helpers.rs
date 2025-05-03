@@ -190,12 +190,12 @@ fn preprocessor_test() {
 meow meow";
 
     assert_eq!(
-        preprocess_shader(shader, 1).unwrap(),
+        preprocess_shader(shader, 1).unwrap().trim(),
         ":neocat_floof:\nmeow meow"
     );
 
     assert_eq!(
-        preprocess_shader(shader, 0).unwrap(),
+        preprocess_shader(shader, 0).unwrap().trim(),
         ":neofox_snug:\nmeow meow"
     );
 }
