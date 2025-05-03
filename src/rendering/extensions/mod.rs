@@ -568,7 +568,7 @@ impl RenderingExtension for Base {
 
                 let buf1 = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Empty point lights buffer"),
-                    size: 4,
+                    size: 16,
                     usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
                     mapped_at_creation: false,
                 });

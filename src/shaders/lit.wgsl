@@ -46,15 +46,22 @@ var tex_sampler: sampler;
 @group(2)@binding(0)
 var<uniform> directional_light: Light;
 
+struct n_l {
+  num_lights: u32,
+  padding_0: u32,
+  padding_1: u32,
+  padding_2: u32,
+}
+
 @group(3)@binding(0)
-var<uniform> num_lights: u32;
+var<uniform> num_lights: n_l;
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>, @location(3) world_pos: vec3<f32>) -> @location(0) vec4<f32> {
     var color = directional_light.ambient_color;
     var specular = vec4(0.0);
 
-    let len = num_lights;
+    let len = num_lights.num_lights;
 
     for (var i: u32 = 0; i < len; i++) {
         let dir = point_lights[i].position - world_pos;
