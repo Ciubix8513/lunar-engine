@@ -563,7 +563,7 @@ impl RenderingExtension for Base {
 
                 let buf = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Empty point lights buffer"),
-                    size: 32,
+                    size: size_of::<PointLight>() as u64 * 256,
                     usage: BufferUsages::COPY_DST
                         | if *self.storage_buffer_available.get().unwrap() {
                             BufferUsages::STORAGE
