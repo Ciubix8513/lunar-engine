@@ -16,7 +16,7 @@ use lunar_engine::{
     structures::Color,
     State,
 };
-use lunar_engine_derive::{dependencies, unique_marker_component};
+use lunar_engine_derive::{dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
 #[derive(Default)]
@@ -29,7 +29,7 @@ struct MyState {
     blahaj_mat: u128,
 }
 
-#[unique_marker_component]
+#[marker_component]
 struct Blahaj;
 
 struct Spiny {
