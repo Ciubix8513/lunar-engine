@@ -19,7 +19,7 @@ use lunar_engine::{
     rendering::{extensions::Base, render},
     structures::Color,
 };
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 use winit::keyboard::KeyCode;
 
 struct CameraControls {
@@ -61,7 +61,7 @@ impl Component for CameraControls {
         let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
         let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
         trans.rotation.y = rot_y;
-        trans.rotation.x = rot_x; //* delta_time * sensetivity;
+        trans.rotation.x = rot_x;
 
         //Movement
         let mut speed = 400.0;
@@ -116,9 +116,7 @@ struct State {
     delta: f32,
 }
 
-fn end(_state: &mut State) {
-    // state.world.
-}
+fn end(_state: &mut State) {}
 
 fn generate_scene(
     world: &mut World,
@@ -140,17 +138,11 @@ fn generate_scene(
     ];
 
     let mut colors = Vec::new();
-    let mut rng = rand::rngs::StdRng::from_seed(Default::default());
-
-    let haj_texture = assets.register(assets::Texture::static_png(include_bytes!(
-        "../../assets/blahaj.png"
-    )));
+    let mut rng = rand::thread_rng();
 
     for _ in 0..num_colors {
-        // colors.push(assets.register(ColorUnlit::new(Vec3::random(0.0, 1.0).into())));
         colors.push(assets.register(Lit::new(
-            Some(haj_texture),
-            // None,
+            None,
             Some(Color::from_hsl(
                 rng.gen_range(0.0..360.0),
                 rng.gen_range(0.5..1.0),
@@ -190,7 +182,6 @@ fn generate_scene(
             EntityBuilder::new()
                 .add_component::<Transform>()
                 .create_component(|| Mesh::new(objects[0], colors[0]))
-                // .create_component(|| PointLight::new(Color::white(), 10.0, 10.0))
                 .create()
                 .unwrap(),
         )
@@ -205,7 +196,13 @@ fn generate_scene(
                         position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
                         ..Default::default()
                     })
-                    .create_component(|| PointLight::new(Color::white(), 25.0, 10.0))
+                    .create_component(|| {
+                        PointLight::new(
+                            Color::white(),
+                            rng.gen_range(10.0..50.0),
+                            rng.gen_range(8.0..25.0),
+                        )
+                    })
                     .create()
                     .unwrap(),
             )
@@ -250,7 +247,6 @@ fn init(state: &mut State) {
                 .add_component::<MainCamera>()
                 .add_component::<CameraControls>()
                 .add_component::<FpsRecorder>()
-                // .add_component::<PointLight>()
                 .create()
                 .unwrap(),
         )
@@ -283,11 +279,6 @@ fn run(state: &mut State) {
     );
     state.frames += 1;
     state.delta += delta_time();
-
-    // if state.delta >= 5.0 {
-    //     log::info!("Delta = {}", state.delta);
-    //     lunar_engine::quit();
-    // }
 }
 
 fn main() {
