@@ -35,6 +35,21 @@ jobs:
        target: wasm32-unknown-unknown
     - uses: actions/checkout@v3
     - name: Build
+      run: cargo build --target=wasm32-unknown-unknown
+    # no tests becuase you can't run .wasm files
+    # - name: Run tests
+    #   run: cargo test --target=wasm32-unknown-unknown --features webgl
+    - name: Linting
+      run: cargo clippy --target=wasm32-unknown-unknown -- -D warnings -D clippy::pedantic -D clippy::nursery
+  build-wasm-webgl:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+       toolchain: stable
+       target: wasm32-unknown-unknown
+    - uses: actions/checkout@v3
+    - name: Build
       run: cargo build --target=wasm32-unknown-unknown --features webgl
     # no tests becuase you can't run .wasm files
     # - name: Run tests
