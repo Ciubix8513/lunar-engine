@@ -5,6 +5,7 @@ use std::sync::Arc;
 use bytemuck::bytes_of;
 use wgpu::util::DeviceExt;
 use wgpu::BufferUsages;
+use wgpu_shader_checker::include_wgsl;
 
 use crate::assets::{Material, Texture};
 use crate::internal::STAGING_BELT;
@@ -17,7 +18,9 @@ use crate::{assets::material::MaterialTrait, assets::BindgroupState};
 
 use super::helpers::{preprocess_shader, storage_buffer_available, vertex_binding};
 
-///Basic material that renders an object with a given texture, without lighting
+///Basic material that renders an object, with an optional texture and color. This  material is lit.
+///
+///If neither the color nor the texture is  set, the material will be white
 pub struct Lit {
     #[cfg(target_arch = "wasm32")]
     pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
@@ -164,8 +167,7 @@ impl MaterialTrait for Lit {
         let storage_buf_available = storage_buffer_available();
         let device = DEVICE.get().unwrap();
 
-        let v_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
+        let v_shader = device.create_shader_module(include_wgsl!("src/shaders/vertex.wgsl"));
 
         let f_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,

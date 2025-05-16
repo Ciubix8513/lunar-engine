@@ -5,6 +5,7 @@ use std::sync::Arc;
 use bytemuck::bytes_of;
 use wgpu::util::DeviceExt;
 use wgpu::BufferUsages;
+use wgpu_shader_checker::include_wgsl;
 
 use crate::assets::{Material, Texture};
 use crate::internal::STAGING_BELT;
@@ -16,7 +17,9 @@ use crate::{assets::material::MaterialTrait, assets::BindgroupState};
 
 use super::helpers::vertex_binding;
 
-///Basic material that renders an object with a given texture, without lighting
+///Basic material that renders an object, with an optional texture and color. This  material is NOT lit.
+///
+///If neither the color nor the texture is  set, the material will be white
 pub struct Unlit {
     #[cfg(target_arch = "wasm32")]
     pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
@@ -123,9 +126,8 @@ impl MaterialTrait for Unlit {
     fn intialize(&mut self) {
         let device = DEVICE.get().unwrap();
 
-        let v_shader =
-            device.create_shader_module(wgpu::include_wgsl!("../../shaders/vertex.wgsl"));
-        let f_shader = device.create_shader_module(wgpu::include_wgsl!("../../shaders/unlit.wgsl"));
+        let v_shader = device.create_shader_module(include_wgsl!("src/shaders/vertex.wgsl"));
+        let f_shader = device.create_shader_module(include_wgsl!("src/shaders/unlit.wgsl"));
 
         let bind_group_layout_f =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -332,6 +334,6 @@ impl MaterialTrait for Unlit {
     }
 
     fn is_lit(&self) -> bool {
-        true
+        false
     }
 }
