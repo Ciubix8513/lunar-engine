@@ -5,6 +5,8 @@ use rand::Rng;
 
 pub use crate::math::traits::Vector;
 
+use super::Vec4;
+
 #[repr(C)]
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
@@ -54,7 +56,7 @@ impl Vec3 {
 
     ///Returns the absolute vector
     #[must_use]
-    pub fn abs(self) -> Self {
+    pub const fn abs(self) -> Self {
         Self {
             x: self.x.abs(),
             y: self.y.abs(),
@@ -175,6 +177,12 @@ impl From<f32> for Vec3 {
             y: value,
             z: value,
         }
+    }
+}
+
+impl From<Vec4> for Vec3 {
+    fn from(value: Vec4) -> Self {
+        value.xyz()
     }
 }
 

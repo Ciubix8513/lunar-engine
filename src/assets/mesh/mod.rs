@@ -17,14 +17,13 @@ use std::{
     sync::Arc,
 };
 
-use lunar_engine_derive::as_any;
 use mesh_generator::generate_mesh;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    asset_managment::{Asset, UUID},
+    asset_managment::Asset,
     math::{Vec3, Vector},
-    DEVICE,
+    DEVICE, UUID,
 };
 
 mod mesh_generator;
@@ -225,8 +224,6 @@ impl Mesh {
 }
 
 impl Asset for Mesh {
-    #[as_any]
-
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }

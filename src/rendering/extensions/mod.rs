@@ -1,22 +1,25 @@
 #![allow(clippy::too_many_lines)]
 
-use std::{num::NonZeroU64, sync::Arc};
+use core::f32;
+use std::{cell::OnceCell, num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, BufferUsages};
 
 use crate::{
     asset_managment::AssetStore,
-    assets::{BindgroupState, Material, Mesh},
-    components,
+    assets::{materials::helpers::storage_buffer_available, BindgroupState, Material, Mesh},
+    components::{
+        self,
+        light::{DirectionalLight, PointLight},
+    },
     ecs::{ComponentReference, World},
-    structures::Color,
-    DEVICE, STAGING_BELT,
+    grimoire::{self, point_light_bind_group_layout_descriptor},
+    math::{Mat4x4, Vec3, Vec4, Vector as _},
+    structures::{Color, LightBuffer},
+    DEVICE, RESOLUTION, STAGING_BELT,
 };
-
-///Frustum culling experiment
-pub mod frustum_culling;
 
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
@@ -35,7 +38,7 @@ pub trait RenderingExtension {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         world: &World,
-        assets: &AssetStore,
+        assets: &mut AssetStore,
         attachments: &AttachmentData,
     );
 
@@ -63,6 +66,14 @@ impl std::cmp::Ord for dyn RenderingExtension {
     }
 }
 
+#[derive(Debug)]
+struct PointLights {
+    buffer: wgpu::Buffer,
+    count_buf: wgpu::Buffer,
+    num_lights: usize,
+    bindgroup: wgpu::BindGroup,
+}
+
 #[derive(Default)]
 ///Basic renderer that renders all [`crate::components::mesh::Mesh`] components
 ///
@@ -79,7 +90,7 @@ impl std::cmp::Ord for dyn RenderingExtension {
 ///fn update(state: &mut State) {
 /// render(
 ///   &state.world,
-///   &state.assets,
+///   &mut state.assets,
 ///   &mut [&mut state.extension]
 ///  );
 ///}
@@ -89,19 +100,25 @@ pub struct Base {
     pub priority: u32,
     ///Clear color used for rendering
     pub clear_color: Color,
+    ///Whether or not to use frustum culling
+    pub frustum_culling: bool,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
     v_buffers: Vec<wgpu::Buffer>,
     mesh_materials: Vec<MeshMaterial>,
     num_instances: Vec<usize>,
     mesh_refs: Vec<Vec<ComponentReference<components::mesh::Mesh>>>,
+    light_buffer: OnceCell<(wgpu::Buffer, wgpu::BindGroup)>,
+    point_light_buffer: OnceCell<PointLights>,
+    storage_buffer_available: OnceCell<bool>,
 }
 
 impl Base {
     #[must_use]
     ///Creates a new [`Base`]
-    pub const fn new(order: u32) -> Self {
+    pub const fn new(order: u32, frustum_culling: bool) -> Self {
         Self {
+            frustum_culling,
             priority: order,
             clear_color: Color {
                 r: 0.0,
@@ -114,6 +131,9 @@ impl Base {
             mesh_materials: Vec::new(),
             num_instances: Vec::new(),
             mesh_refs: Vec::new(),
+            light_buffer: OnceCell::new(),
+            point_light_buffer: OnceCell::new(),
+            storage_buffer_available: OnceCell::new(),
         }
     }
 
@@ -123,8 +143,9 @@ impl Base {
     ///
     ///Everything rendered with this extension will have that color in the parts not occupied by a mesh.
     #[must_use]
-    pub const fn new_with_color(order: u32, color: Color) -> Self {
+    pub const fn new_with_color(order: u32, frustum_culling: bool, color: Color) -> Self {
         Self {
+            frustum_culling,
             priority: order,
             clear_color: color,
             identifier: Vec::new(),
@@ -132,6 +153,9 @@ impl Base {
             mesh_materials: Vec::new(),
             num_instances: Vec::new(),
             mesh_refs: Vec::new(),
+            light_buffer: OnceCell::new(),
+            point_light_buffer: OnceCell::new(),
+            storage_buffer_available: OnceCell::new(),
         }
     }
 }
@@ -163,12 +187,25 @@ impl RenderingExtension for Base {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         world: &World,
-        assets: &AssetStore,
+        assets: &mut AssetStore,
         attachments: &AttachmentData,
     ) {
-        #[cfg(feature = "tracy")]
-        let _span = tracy_client::span!("Base render");
+        //Initialize needed stuff
+        if self.storage_buffer_available.get().is_none() {
+            let storage_buf_available = storage_buffer_available();
+            self.storage_buffer_available
+                .set(storage_buf_available)
+                .unwrap();
 
+            if storage_buf_available {
+                log::info!("Storage buffer supported");
+            } else {
+                log::info!("Storage buffer not supported");
+            }
+        }
+
+        #[cfg(feature = "tracy")]
+        let _span = tracy_client::span!("Frustum culling render");
         trace!("Started frame");
 
         //Update camera first
@@ -185,10 +222,47 @@ impl RenderingExtension for Base {
             .get_all_components::<crate::components::mesh::Mesh>()
             .unwrap_or_default();
 
-        let meshes = binding
-            .iter()
-            .filter(|i| i.borrow().get_visible())
-            .collect::<Vec<_>>();
+        #[cfg(feature = "tracy")]
+        let _frustum_span = tracy_client::span!("Frustum checking");
+
+        let meshes = if self.frustum_culling {
+            let frustum = calculate_frustum(
+                camera.inner.near,
+                camera.inner.far,
+                camera.inner.projection_type.fov().unwrap_or_default(),
+            );
+            let camera_transform = camera.camera_transform();
+            //Precompute the transformation matrix, since it's the same for all the objects
+            let matrix = calculate_frustum_matrix(frustum, camera_transform);
+            binding
+                .iter()
+                .filter(|i| {
+                    let m = i.borrow();
+                    let binding = m.get_transform();
+                    let t = binding.borrow();
+
+                    m.get_visible()
+                        && check_frustum(
+                            frustum.z,
+                            matrix,
+                            t.position,
+                            assets
+                                .borrow_by_id::<Mesh>(m.get_mesh_id().unwrap())
+                                .unwrap()
+                                .get_extent(),
+                            t.scale,
+                        )
+                        .0
+                })
+                .collect::<Vec<_>>()
+        } else {
+            binding
+                .iter()
+                .filter(|i| i.borrow().get_visible())
+                .collect::<Vec<_>>()
+        };
+        #[cfg(feature = "tracy")]
+        drop(_frustum_span);
         trace!("Got all the meshes");
 
         //List of materials used for rendering
@@ -204,7 +278,6 @@ impl RenderingExtension for Base {
         }
 
         //What is even going on here?
-        //I... don't know...
 
         let mut matrices = matrices
             .iter()
@@ -214,6 +287,9 @@ impl RenderingExtension for Base {
 
         //determine if can re use cache
         let mut identical = true;
+
+        #[cfg(feature = "tracy")]
+        let _cache_check_span = tracy_client::span!("Cache reuse check");
 
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
@@ -226,6 +302,9 @@ impl RenderingExtension for Base {
         } else {
             identical = false;
         }
+
+        #[cfg(feature = "tracy")]
+        drop(_cache_check_span);
 
         #[allow(clippy::if_not_else)]
         if !identical {
@@ -273,7 +352,7 @@ impl RenderingExtension for Base {
                 let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
 
                 //(mesh_ID, (transformation matrix, material_id, mesh reference));
-                let mut current_window = matrices[points.0..points.1].iter().collect::<Vec<_>>();
+                let mut current_window = matrices[points.0..points.1].to_vec();
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
@@ -333,7 +412,6 @@ impl RenderingExtension for Base {
                         .flat_map(bytemuck::bytes_of)
                         .copied()
                         .collect::<Vec<u8>>();
-
                     v_buffers.push(
                         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                             label: Some(&label),
@@ -397,15 +475,244 @@ impl RenderingExtension for Base {
             }
         }
 
+        trace!("Initializing the bindgroups");
+
+        let mut is_lit = false;
+
         //Initialize bindgroups for all needed materials
         for m in materials {
-            let mut m = assets.borrow_by_id_mut::<Material>(m).unwrap();
+            let binding = assets.get_by_id::<Material>(m).unwrap();
+            let mut m = binding.borrow_mut();
+
+            is_lit = is_lit || m.is_lit();
 
             if matches!(m.get_bindgroup_state(), BindgroupState::Initialized) {
                 continue;
             }
             m.initialize_bindgroups(assets);
+            m.update_bindgroups(encoder);
         }
+
+        //There are lit materials, need to take care of them
+        if is_lit {
+            //riiiight, need to get some light buffers
+            //If only i remembered what the fuck i was doing lol
+
+            //Initialize the buffer if it is not created
+            if self.light_buffer.get().is_none() {
+                let device = DEVICE.get().unwrap();
+
+                //Create an empty buffer
+                let buf = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Lighting buffer"),
+                    size: size_of::<LightBuffer>() as u64 + 4,
+                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+
+                let bingroup_layout = device.create_bind_group_layout(
+                    &grimoire::DIRECTIONAL_LIGHT_BIND_GROUP_LAYOUT_DESCRIPTOR,
+                );
+
+                let bindgroup = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Light bindgroup"),
+                    layout: &bingroup_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &buf,
+                            offset: 0,
+                            size: None,
+                        }),
+                    }],
+                });
+
+                //The buffer should be all zeros, so it should be fine to not initialize it?
+                //Tho it may contain garbage data, and the docs don't say anything about it
+                self.light_buffer.set((buf, bindgroup)).unwrap();
+            }
+
+            //get the light object
+
+            let light = world.get_unique_component::<DirectionalLight>();
+            if let Some(light) = light {
+                let device = DEVICE.get().unwrap();
+                //Update the light buffer if there is a light source
+                let mut l = light.borrow().get_light();
+
+                l.camera_direction = camera.view_direction();
+
+                let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
+                belt.write_buffer(
+                    encoder,
+                    &self.light_buffer.get().unwrap().0,
+                    0,
+                    NonZeroU64::new(size_of::<LightBuffer>() as u64).unwrap(),
+                    device,
+                )
+                .copy_from_slice(bytemuck::bytes_of(&l));
+            }
+
+            //Create a point lights buffer even if there are no point lights
+            if self.point_light_buffer.get().is_none() {
+                log::info!("Creating point lights buffer");
+                //Initialize the buffer and the bindgroups
+                let device = DEVICE.get().unwrap();
+
+                let buf = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Empty point lights buffer"),
+                    size: size_of::<PointLight>() as u64 * 256,
+                    usage: BufferUsages::COPY_DST
+                        | if *self.storage_buffer_available.get().unwrap() {
+                            BufferUsages::STORAGE
+                        } else {
+                            BufferUsages::UNIFORM
+                        },
+                    mapped_at_creation: false,
+                });
+
+                let buf1 = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Empty point lights buffer"),
+                    size: 16,
+                    usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+                    mapped_at_creation: false,
+                });
+
+                let bg_layout =
+                    device.create_bind_group_layout(&point_light_bind_group_layout_descriptor(
+                        *self.storage_buffer_available.get().unwrap(),
+                    ));
+
+                let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Point lights bind group"),
+                    layout: &bg_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::Buffer(
+                                buf1.as_entire_buffer_binding(),
+                            ),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Buffer(buf.as_entire_buffer_binding()),
+                        },
+                    ],
+                });
+
+                self.point_light_buffer
+                    .set(PointLights {
+                        buffer: buf,
+                        count_buf: buf1,
+                        num_lights: 0,
+                        bindgroup: bg,
+                    })
+                    .unwrap();
+            }
+
+            //Handle point lights
+            if let Some(lights) = world.get_all_components::<PointLight>() {
+                #[repr(C)]
+                #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+                struct PointLight {
+                    position: Vec3,
+                    intensity: f32,
+                    color: Vec3,
+                    range: f32,
+                }
+
+                let device = DEVICE.get().unwrap();
+
+                //Check if need to create a new buffer
+                if self.point_light_buffer.get().unwrap().num_lights < lights.len() {
+                    let p_l = self.point_light_buffer.get_mut().unwrap();
+                    //Recreate the buffer with the new size
+                    p_l.buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Point lights buffer"),
+                        size: if *self.storage_buffer_available.get().unwrap() {
+                            lights.len() as u64 * 8 * 4
+                        } else {
+                            size_of::<PointLight>() as u64 * 256
+                        },
+
+                        usage: wgpu::BufferUsages::COPY_DST
+                            | if *self.storage_buffer_available.get().unwrap() {
+                                BufferUsages::STORAGE
+                            } else {
+                                BufferUsages::UNIFORM
+                            },
+
+                        mapped_at_creation: false,
+                    });
+                    let layout =
+                        device.create_bind_group_layout(&point_light_bind_group_layout_descriptor(
+                            *self.storage_buffer_available.get().unwrap(),
+                        ));
+
+                    let belt = STAGING_BELT.get().unwrap();
+                    belt.write()
+                        .unwrap()
+                        .write_buffer(
+                            encoder,
+                            &p_l.count_buf,
+                            0,
+                            NonZeroU64::new(4).unwrap(),
+                            device,
+                        )
+                        .copy_from_slice(bytemuck::bytes_of(&(lights.len() as u32)));
+
+                    p_l.bindgroup = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Point lights bindgroup"),
+                        layout: &layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: p_l.count_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Buffer(
+                                    p_l.buffer.as_entire_buffer_binding(),
+                                ),
+                            },
+                        ],
+                    });
+                }
+
+                let data = lights
+                    .iter()
+                    .map(|l| {
+                        let l = l.borrow();
+                        let x = PointLight {
+                            position: l.transform_ref.get().unwrap().borrow().position_global(),
+                            intensity: l.get_intensity(),
+                            color: l.get_color().into(),
+                            range: l.get_range(),
+                        };
+                        x
+                    })
+                    .collect::<Vec<_>>();
+
+                let data = data
+                    .iter()
+                    .flat_map(bytemuck::bytes_of)
+                    .copied()
+                    .collect::<Vec<_>>();
+
+                let mut belt = STAGING_BELT.get().unwrap().write().unwrap();
+
+                belt.write_buffer(
+                    encoder,
+                    &self.point_light_buffer.get().unwrap().buffer,
+                    0,
+                    NonZeroU64::new(lights.len() as u64 * 8 * 4).unwrap(),
+                    device,
+                )
+                .copy_from_slice(data.as_slice());
+            }
+        }
+
+        trace!("Starting the render pass");
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("First pass"),
@@ -434,12 +741,28 @@ impl RenderingExtension for Base {
 
         let mut previous_mat = 0;
 
+        trace!("Rendering materials");
         //Iterate through the meshes and render them
         for (i, m) in self.mesh_materials.iter().enumerate() {
             let mat = m.material_id;
 
             if mat != previous_mat {
                 let mat = assets.borrow_by_id::<Material>(mat).unwrap();
+
+                if mat.is_lit() {
+                    render_pass.set_bind_group(
+                        grimoire::DIRECT_LIGHT_BIND_GROUP_INDEX,
+                        &self.light_buffer.get().unwrap().1,
+                        &[],
+                    );
+                    if let Some(light) = self.point_light_buffer.get() {
+                        render_pass.set_bind_group(
+                            grimoire::POINT_LIGHT_BIND_GROUP_INDEX,
+                            &light.bindgroup,
+                            &[],
+                        );
+                    }
+                }
                 mat.render(&mut render_pass);
             }
             previous_mat = mat;
@@ -465,4 +788,109 @@ impl RenderingExtension for Base {
     fn get_priority(&self) -> u32 {
         self.priority
     }
+}
+
+fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
+    let beta = f32::consts::FRAC_PI_2 - (fov / 2.0);
+    let bottom = 2.0 * (((near + far) * f32::sin(fov / 2.0)) / f32::sin(beta));
+
+    let resolution = RESOLUTION.read().unwrap();
+    let aspect = resolution.width as f32 / resolution.height as f32;
+    drop(resolution);
+
+    let side = bottom / aspect;
+
+    (bottom, side, near + far).into()
+}
+
+fn calculate_frustum_matrix(frustum: Vec3, camera_transform: Mat4x4) -> Mat4x4 {
+    let scale = Mat4x4::scale_matrix(&(Vec3::new(1.0 / frustum.x, 1.0, 1.0 / frustum.y)));
+    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, frustum.z, 0.0));
+    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(90.0, 90.0, 0.0));
+
+    translation * scale * rotation * camera_transform.inverted().unwrap()
+}
+
+fn check_frustum(
+    h: f32,
+    frustum_matrix: Mat4x4,
+    point: Vec3,
+    radius: f32,
+    scale: Vec3,
+) -> (bool, f32) {
+    let p: Vec4 = (point, 1.0).into();
+
+    let p = p * frustum_matrix;
+    let p = p.xyz();
+
+    let distance = sdf(p, h);
+
+    if distance <= 0.0 {
+        return (true, distance);
+    }
+
+    //Factor in scale
+    (
+        radius.mul_add(-f32::max(scale.x, f32::max(scale.y, scale.z)), distance) <= 0.001,
+        distance,
+    )
+}
+
+#[allow(clippy::many_single_char_names)]
+fn sdf(mut p: Vec3, h: f32) -> f32 {
+    // Original SDF license:
+    // The MIT License
+    // Copyright © 2019 Inigo Quilez
+    // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    if p.y <= 0.0 {
+        let p = p.abs() - Vec3::new(0.5, 0.0, 0.5);
+
+        return if p > Vec3::new(0.0, 0.0, 0.0) {
+            p.length()
+        } else {
+            0.0
+        };
+    }
+
+    //Symmetry
+    p.x = f32::abs(p.x);
+    p.z = f32::abs(p.z);
+
+    if p.z > p.x {
+        std::mem::swap(&mut p.x, &mut p.z);
+    }
+    p.x -= 0.5;
+    p.z -= 0.5;
+
+    //project into face plane (2d)
+
+    let m2 = h.mul_add(h, 0.25);
+
+    let q = Vec3::new(p.z, h.mul_add(p.y, -(0.5 * p.x)), h.mul_add(p.x, 0.5 * p.y));
+
+    let sign = f32::signum(f32::max(q.z, -p.y));
+
+    if sign <= 0.0 {
+        return f32::NEG_INFINITY;
+    }
+
+    let s = f32::max(-q.x, 0.0);
+
+    let t = f32::clamp(0.5f32.mul_add(-q.x, q.y) / (m2 + 0.25), 0.0, 1.0);
+
+    let a = (m2 * (q.x + s)).mul_add(q.x + s, q.y * q.y);
+
+    let b = (m2 * 0.5f32.mul_add(t, q.x)).mul_add(
+        0.5f32.mul_add(t, q.x),
+        (m2.mul_add(-t, q.y)) * (m2.mul_add(-t, q.y)),
+    );
+
+    let d2 = if f32::max(-q.y, q.x.mul_add(m2, q.y * 0.5)) < 0.0 {
+        0.0
+    } else {
+        f32::min(a, b)
+    };
+
+    f32::sqrt(q.z.mul_add(q.z, d2) / m2)
 }

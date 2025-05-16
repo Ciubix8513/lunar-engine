@@ -1,5 +1,3 @@
-use lunar_engine_derive::as_any;
-
 use super::*;
 
 struct TestAsset {
@@ -18,7 +16,6 @@ impl TestAsset {
 }
 
 impl Asset for TestAsset {
-    #[as_any]
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }

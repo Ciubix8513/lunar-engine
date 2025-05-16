@@ -1,23 +1,24 @@
 #![allow(dead_code)]
 
-use lunar_engine_derive::as_any;
+use std::cell::OnceCell;
 
 use crate::{
-    asset_managment::UUID,
     ecs::{Component, ComponentReference},
     math::Mat4x4,
+    UUID,
 };
 
 use super::transform::Transform;
 
 #[derive(Debug)]
 ///Mesh component used for rendering
+#[allow(clippy::struct_field_names)]
 pub struct Mesh {
     visible: bool,
     mesh_id: Option<UUID>,
 
     material_id: Option<UUID>,
-    transform_reference: Option<ComponentReference<Transform>>,
+    transform_reference: OnceCell<ComponentReference<Transform>>,
 }
 
 impl Default for Mesh {
@@ -26,14 +27,12 @@ impl Default for Mesh {
             visible: true,
             mesh_id: None,
             material_id: None,
-            transform_reference: None,
+            transform_reference: OnceCell::new(),
         }
     }
 }
 
 impl Component for Mesh {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,
@@ -43,7 +42,9 @@ impl Component for Mesh {
 
     #[allow(unused_variables)]
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        self.transform_reference = Some(reference.get_component().unwrap());
+        self.transform_reference
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 }
 
@@ -55,7 +56,7 @@ impl Mesh {
             visible: true,
             mesh_id: Some(mesh),
             material_id: Some(material),
-            transform_reference: None,
+            transform_reference: OnceCell::new(),
         }
     }
     ///Whether or not this mesh is rendered
@@ -64,13 +65,13 @@ impl Mesh {
         self.visible
     }
     ///Sets whether or not this mesh is rendered
-    pub fn set_visible(&mut self, value: bool) {
+    pub const fn set_visible(&mut self, value: bool) {
         self.visible = value;
     }
 
     ///Changes the asset used by the component
     ///Does not chedk if the provided id is valid
-    pub fn set_mesh(&mut self, id: UUID) {
+    pub const fn set_mesh(&mut self, id: UUID) {
         self.mesh_id = Some(id);
     }
 
@@ -84,7 +85,7 @@ impl Mesh {
 
     ///Changes the asset used by the component
     ///Does not check if the provided id is valid
-    pub fn set_material(&mut self, id: UUID) {
+    pub const fn set_material(&mut self, id: UUID) {
         self.material_id = Some(id);
     }
 
@@ -99,13 +100,13 @@ impl Mesh {
     ///Returns a reference to the transform component
     #[must_use]
     pub fn get_transform(&self) -> ComponentReference<Transform> {
-        self.transform_reference.clone().unwrap()
+        self.transform_reference.get().unwrap().clone()
     }
 
     #[must_use]
     pub(crate) fn get_matrix(&self) -> Mat4x4 {
         self.transform_reference
-            .as_ref()
+            .get()
             .unwrap()
             .borrow()
             .matrix_transposed()

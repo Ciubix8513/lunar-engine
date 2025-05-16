@@ -1,6 +1,9 @@
-use lunar_engine_derive::as_any;
+use wgpu::CommandEncoder;
 
-use crate::asset_managment::{Asset, AssetStore, UUID};
+use crate::{
+    asset_managment::{Asset, AssetStore},
+    UUID,
+};
 
 use super::BindgroupState;
 
@@ -14,12 +17,19 @@ pub trait MaterialTrait {
     ///Disposal of the material
     fn dispose(&mut self);
     ///Creation of bindgroups and populating them with data
-    fn set_bindgroups(&mut self, asset_store: &AssetStore);
+    fn set_bindgroups(&mut self, asset_store: &mut AssetStore);
     ///State of the bindgroups of the material
     fn bindgroup_sate(&self) -> BindgroupState;
+    ///Is the material lit? or uses any of the lighting resources
+    fn is_lit(&self) -> bool {
+        false
+    }
+    ///Updates the bindgroups of the material with new data
+    fn update_bindgroups(&mut self, _encoder: &mut CommandEncoder) {}
 }
 
 ///Stores material data, wrapper around the material trait object
+#[allow(clippy::struct_field_names)]
 pub struct Material {
     id: Option<UUID>,
     initialized: bool,
@@ -27,8 +37,6 @@ pub struct Material {
 }
 
 impl Asset for Material {
-    #[as_any]
-
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }
@@ -66,13 +74,24 @@ impl Material {
     }
 
     ///Initialize bindgroups of the material
-    pub fn initialize_bindgroups(&mut self, asset_store: &AssetStore) {
+    pub fn initialize_bindgroups(&mut self, asset_store: &mut AssetStore) {
         self.material.set_bindgroups(asset_store);
     }
 
     ///Call the render function of the material
     pub fn render(&self, render_pass: &mut wgpu::RenderPass) {
         self.material.render(render_pass);
+    }
+
+    ///Returns whether the material is lit, or uses any lighting resources
+    #[must_use]
+    pub fn is_lit(&self) -> bool {
+        self.material.is_lit()
+    }
+
+    ///Updates the bindgroups of the material
+    pub fn update_bindgroups(&mut self, encoder: &mut CommandEncoder) {
+        self.material.update_bindgroups(encoder);
     }
 }
 

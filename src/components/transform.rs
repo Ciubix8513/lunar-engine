@@ -1,5 +1,3 @@
-use lunar_engine_derive::as_any;
-
 use crate::math::{Mat4x4, Vec3};
 
 use crate::ecs::{Component, ComponentReference};
@@ -35,8 +33,6 @@ impl Default for Transform {
 }
 
 impl Component for Transform {
-    #[as_any]
-
     fn mew() -> Self
     where
         Self: Sized,
@@ -130,5 +126,13 @@ impl Transform {
     ///Sets the parent of the entity, applying all parent transformations to this entity
     pub fn set_parent(mut self, p: ComponentReference<Self>) {
         self.parent = Some(p);
+    }
+
+    ///Returns global position of the entity
+    #[must_use]
+    pub fn position_global(&self) -> Vec3 {
+        self.parent.as_ref().map_or(self.position, |p| {
+            p.borrow().matrix().transform3(self.position)
+        })
     }
 }

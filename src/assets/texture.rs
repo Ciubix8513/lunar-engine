@@ -3,17 +3,14 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use lunar_engine_derive::as_any;
 use wgpu::util::DeviceExt;
 
-use crate::{
-    asset_managment::{Asset, UUID},
-    helpers::flip_texture,
-};
+use crate::{asset_managment::Asset, helpers::flip_texture, UUID};
 
 use lunar_png::Image;
 
 ///Stores texture data
+#[allow(clippy::struct_field_names)]
 pub struct Texture {
     id: Option<UUID>,
     initialized: bool,
@@ -217,8 +214,6 @@ impl Texture {
 }
 
 impl Asset for Texture {
-    #[as_any]
-
     fn get_id(&self) -> UUID {
         self.id.unwrap()
     }

@@ -36,7 +36,7 @@ impl Vec4 {
 
     ///Returns the absolute vector
     #[must_use]
-    pub fn abs(self) -> Self {
+    pub const fn abs(self) -> Self {
         Self {
             x: self.x.abs(),
             y: self.y.abs(),
@@ -193,6 +193,17 @@ impl From<f32> for Vec4 {
             y: value,
             z: value,
             w: value,
+        }
+    }
+}
+
+impl From<Vec3> for Vec4 {
+    fn from(value: Vec3) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+            w: 0.0,
         }
     }
 }

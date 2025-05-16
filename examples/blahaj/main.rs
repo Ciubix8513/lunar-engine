@@ -1,9 +1,9 @@
-use std::path::Path;
+use std::{cell::OnceCell, path::Path};
 
 use log::{debug, info};
 use lunar_engine::{
     asset_managment::AssetStore,
-    assets::{self, materials::TextureUnlit},
+    assets::{self, materials::Unlit},
     components::{
         camera::{MainCamera, ProjectionType},
         mesh::Mesh,
@@ -16,7 +16,7 @@ use lunar_engine::{
     structures::Color,
     State,
 };
-use lunar_engine_derive::{as_any, dependencies, marker_component};
+use lunar_engine_derive::{dependencies, marker_component};
 use winit::keyboard::KeyCode;
 
 #[derive(Default)]
@@ -34,11 +34,10 @@ struct Blahaj;
 
 struct Spiny {
     pub speed: f32,
-    transform: Option<ComponentReference<Transform>>,
+    transform: OnceCell<ComponentReference<Transform>>,
 }
 
 impl Component for Spiny {
-    #[as_any]
     #[dependencies(Transform)]
 
     fn mew() -> Self
@@ -47,16 +46,18 @@ impl Component for Spiny {
     {
         Self {
             speed: 100.0,
-            transform: None,
+            transform: OnceCell::new(),
         }
     }
 
     fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
-        self.transform = Some(reference.get_component().unwrap());
+        self.transform
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 
     fn update(&mut self) {
-        self.transform.as_ref().unwrap().borrow_mut().rotation.y +=
+        self.transform.get().unwrap().borrow_mut().rotation.y +=
             self.speed * lunar_engine::delta_time();
     }
 }
@@ -66,6 +67,7 @@ fn init(state: &mut MyState) {
 
     state.extension = Base::new_with_color(
         0,
+        true,
         Color {
             r: 0.96,
             g: 0.65,
@@ -81,7 +83,7 @@ fn init(state: &mut MyState) {
     let texture = state
         .assset_store
         .register(assets::Texture::new_png(Path::new("assets/blahaj.png")));
-    let material = state.assset_store.register(TextureUnlit::new(texture));
+    let material = state.assset_store.register(Unlit::new(Some(texture), None));
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
@@ -106,15 +108,18 @@ fn init(state: &mut MyState) {
             .unwrap(),
     );
 
-    state.world.add_entity(
-        EntityBuilder::new()
-            .create_component(Transform::default)
-            .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
-            .add_component::<Blahaj>()
-            .add_component::<Spiny>()
-            .create()
-            .unwrap(),
-    );
+    state
+        .world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(Transform::default)
+                .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+                .add_component::<Blahaj>()
+                .add_component::<Spiny>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
 
     info!("Initialized!");
     info!("World contains {} entities", state.world.get_entity_count());
@@ -126,19 +131,22 @@ fn init(state: &mut MyState) {
 
 fn run(state: &mut MyState) {
     if input::KeyState::Down == input::key(KeyCode::KeyB) {
-        state.world.add_entity(
-            EntityBuilder::new()
-                .create_component(|| Transform {
-                    // scale: Vec3::random(0.3, 3.0),
-                    rotation: Vec3::random(0.0, 360.0),
-                    position: Vec3::random(-5.0, 5.0),
-                    ..Default::default()
-                })
-                .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
-                .add_component::<Blahaj>()
-                .create()
-                .unwrap(),
-        );
+        state
+            .world
+            .add_entity(
+                EntityBuilder::new()
+                    .create_component(|| Transform {
+                        // scale: Vec3::random(0.3, 3.0),
+                        rotation: Vec3::random(0.0, 360.0),
+                        position: Vec3::random(-5.0, 5.0),
+                        ..Default::default()
+                    })
+                    .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
+                    .add_component::<Blahaj>()
+                    .create()
+                    .unwrap(),
+            )
+            .unwrap();
     }
 
     if input::KeyState::Down == input::key(KeyCode::KeyC) {
@@ -156,7 +164,7 @@ fn run(state: &mut MyState) {
     debug!("Called render!");
     rendering::render(
         &state.world,
-        &state.assset_store,
+        &mut state.assset_store,
         &mut [&mut state.extension],
     );
     state.frame += 1;

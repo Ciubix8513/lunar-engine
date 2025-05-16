@@ -1,8 +1,11 @@
+use std::cell::OnceCell;
 use std::num::NonZeroU64;
 
-use lunar_engine_derive::{alias, as_any, dependencies};
+use lunar_engine_derive::{alias, dependencies};
+use wgpu::BufferUsages;
 
 use crate as lunar_engine;
+use crate::math::Vec3;
 
 use crate::{
     ecs::{Component, ComponentReference},
@@ -57,7 +60,7 @@ pub struct Camera {
     pub near: f32,
     ///Far plane of the camera
     pub far: f32,
-    transorm_reference: Option<ComponentReference<Transform>>,
+    transorm_reference: OnceCell<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
     bind_group: Option<wgpu::BindGroup>,
 }
@@ -74,7 +77,7 @@ impl Default for Camera {
             },
             near: 0.1,
             far: 100.0,
-            transorm_reference: None,
+            transorm_reference: OnceCell::new(),
             buffer: None,
             bind_group: None,
         }
@@ -82,7 +85,6 @@ impl Default for Camera {
 }
 
 impl Component for Camera {
-    #[as_any]
     #[dependencies(Transform)]
     fn mew() -> Self
     where
@@ -96,7 +98,9 @@ impl Component for Camera {
     }
 
     fn set_self_reference(&mut self, reference: crate::ecs::SelfReferenceGuard) {
-        self.transorm_reference = Some(reference.get_component().unwrap());
+        self.transorm_reference
+            .set(reference.get_component().unwrap())
+            .unwrap();
     }
 }
 
@@ -115,13 +119,13 @@ impl Camera {
     #[must_use]
     ///Returns the transformation matrix of the camera;
     pub fn camera_transform(&self) -> Mat4x4 {
-        self.transorm_reference.as_ref().unwrap().borrow().matrix()
+        self.transorm_reference.get().unwrap().borrow().matrix()
     }
 
     #[must_use]
     ///Returns the transformation matrix of the camera multiplied by the projection matrix
     pub fn matrix(&self) -> Mat4x4 {
-        let binding = self.transorm_reference.as_ref().unwrap();
+        let binding = self.transorm_reference.get().unwrap();
         let transform = binding.borrow();
         let rotation_matrix = Mat4x4::rotation_matrix_euler(&transform.rotation);
 
@@ -150,7 +154,14 @@ impl Camera {
     ///Initializes gpu related components of the camera: Buffers, bindgroups, etc.
     pub(crate) fn initialize_gpu(&mut self) {
         let device = DEVICE.get().unwrap();
-        let buf = crate::helpers::create_uniform_matrix(Some("Camera"));
+
+        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Camera Buffer"),
+            // 16 floats for a matrix, plus 4 floats for a vector
+            size: 4 * 16 * 2 + 4 * 4,
+            usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+            mapped_at_creation: false,
+        });
 
         let bind_group_layout =
             device.create_bind_group_layout(&CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR);
@@ -174,17 +185,36 @@ impl Camera {
 
     ///Updates the buffer of the camera with the new camera matrix
     pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
-        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
+        #[repr(C)]
+        #[derive(bytemuck::Zeroable, bytemuck::Pod, Clone, Copy)]
+        struct CameraData {
+            cam_matrix: Mat4x4,
+            t_matrix: Mat4x4,
+            position: Vec4,
+        }
 
+        let data = CameraData {
+            cam_matrix: self.matrix(),
+            t_matrix: self.matrix().invert().unwrap(),
+            position: self
+                .transorm_reference
+                .get()
+                .unwrap()
+                .borrow()
+                .position
+                .into(),
+        };
+
+        let mut staging_belt = STAGING_BELT.get().unwrap().write().unwrap();
         staging_belt
             .write_buffer(
                 encoder,
                 self.buffer.as_ref().unwrap(),
                 0,
-                NonZeroU64::new(std::mem::size_of::<Mat4x4>() as u64).unwrap(),
+                NonZeroU64::new(size_of::<CameraData>() as u64).unwrap(),
                 DEVICE.get().unwrap(),
             )
-            .copy_from_slice(bytemuck::bytes_of(&self.matrix()));
+            .copy_from_slice(bytemuck::bytes_of(&data));
     }
 
     ///Sets bindgroups of the camera for rendering
@@ -197,6 +227,16 @@ impl Camera {
             self.bind_group.as_ref().unwrap(),
             &[],
         );
+    }
+
+    ///Returns the rotated forwrard vector of the camera
+    pub fn view_direction(&self) -> Vec3 {
+        let t = self.transorm_reference.get().unwrap().borrow();
+        let matrix = Mat4x4::rotation_matrix_euler(&t.rotation);
+        drop(t);
+        let forward = Vec4::new(0.0, 0.0, 1.0, 1.0);
+
+        (forward * matrix).into()
     }
 }
 

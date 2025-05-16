@@ -9,7 +9,7 @@ use crate::math::{Vec2, Vec3, Vec4};
 ///Representation of a vertex in a mesh
 pub struct Vertex {
     ///Coordinate in the 3d space
-    pub coords: Vec4,
+    pub coords: Vec3,
     ///Textrure coordinates
     pub texture: Vec2,
     ///Normal direction
@@ -17,7 +17,6 @@ pub struct Vertex {
 }
 ///Indecies of a mesh
 pub type Index = u32;
-
 #[repr(C)]
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 ///Mesh data
@@ -54,7 +53,7 @@ pub struct Image {
 
 ///Color represented using 4 values from 0 to 1
 #[repr(C)]
-#[derive(Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, PartialEq)]
 pub struct Color {
     ///Value of the red channel
     pub r: f32,
@@ -64,6 +63,22 @@ pub struct Color {
     pub b: f32,
     ///Value of the alpha channel
     pub a: f32,
+}
+
+///Describes a directional light
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+pub(crate) struct LightBuffer {
+    ///Direction of the light
+    pub direction: Vec3,
+    ///Intensity of the light
+    pub intensity: f32,
+    ///Color of the light
+    pub color: Color,
+    ///Color of the ambient light
+    pub ambient_color: Color,
+    ///Camera view direction
+    pub camera_direction: Vec3,
 }
 
 impl Color {
@@ -135,6 +150,33 @@ impl Color {
         let m = lightness - chroma / 2.0;
 
         (a + m).into()
+    }
+
+    #[must_use]
+    ///Creates a new color from hsl values:
+    ///
+    ///X - hue
+    ///Y - saturation
+    ///z - lightness
+    pub fn from_hsl_vec(vec: Vec3) -> Self {
+        Self::from_hsl(vec.x, vec.y, vec.z)
+    }
+
+    #[must_use]
+    ///Creates a new color from a hex value
+    ///
+    ///# Examples
+    ///```
+    ///# use lunar_engine::structures::Color;
+    ///let color = Color::from_hex(0xff00ffff);
+    ///```
+    #[allow(clippy::unreadable_literal)]
+    pub const fn from_hex(color: u32) -> Self {
+        let r = (color & 0xff000000) as f32 / 255.0;
+        let g = (color & 0x00ff0000) as f32 / 255.0;
+        let b = (color & 0x0000ff00) as f32 / 255.0;
+        let a = (color & 0x000000ff) as f32 / 255.0;
+        Self { r, g, b, a }
     }
 
     ///Red color: {r: 1.0, g: 0.0, b: 0.0, a: 1.0}

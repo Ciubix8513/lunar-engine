@@ -3,7 +3,7 @@
 use std::f32::consts::PI;
 
 use crate::{
-    math::{Vec3, Vec4},
+    math::Vec3,
     structures::{Mesh, Vertex},
 };
 
@@ -28,127 +28,127 @@ fn generate_box(dimensions: Vec3) -> Mesh {
     o.vertices = vec![
         //Top face
         Vertex {
-            coords: Vec4::new(hx, hy, hz, 1.0),
+            coords: Vec3::new(hx, hy, hz),
             normal: Vec3::new(0.0, 1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, hy, -hz, 1.0),
+            coords: Vec3::new(hx, hy, -hz),
             normal: Vec3::new(0.0, 1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, hz, 1.0),
+            coords: Vec3::new(-hx, hy, hz),
             normal: Vec3::new(0.0, 1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, -hz, 1.0),
+            coords: Vec3::new(-hx, hy, -hz),
             normal: Vec3::new(0.0, 1.0, 0.0),
             ..Default::default()
         },
         //bottom
         Vertex {
-            coords: Vec4::new(hx, -hy, -hz, 1.0),
+            coords: Vec3::new(hx, -hy, -hz),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, hz, 1.0),
+            coords: Vec3::new(hx, -hy, hz),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, -hz, 1.0),
+            coords: Vec3::new(-hx, -hy, -hz),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, hz, 1.0),
+            coords: Vec3::new(-hx, -hy, hz),
             normal: Vec3::new(0.0, -1.0, 0.0),
             ..Default::default()
         },
         //forward
         Vertex {
-            coords: Vec4::new(hx, hy, hz, 1.0),
+            coords: Vec3::new(hx, hy, hz),
             normal: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, hz, 1.0),
+            coords: Vec3::new(-hx, -hy, hz),
             normal: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, hz, 1.0),
+            coords: Vec3::new(hx, -hy, hz),
             normal: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, hz, 1.0),
+            coords: Vec3::new(-hx, hy, hz),
             normal: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
         //Back
         Vertex {
-            coords: Vec4::new(hx, hy, -hz, 1.0),
+            coords: Vec3::new(hx, hy, -hz),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, -hz, 1.0),
+            coords: Vec3::new(-hx, -hy, -hz),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, -hz, 1.0),
+            coords: Vec3::new(-hx, hy, -hz),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, -hz, 1.0),
+            coords: Vec3::new(hx, -hy, -hz),
             normal: Vec3::new(0.0, 0.0, -1.0),
             ..Default::default()
         },
         //left
         Vertex {
-            coords: Vec4::new(hx, hy, hz, 1.0),
+            coords: Vec3::new(hx, hy, hz),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, -hz, 1.0),
+            coords: Vec3::new(hx, -hy, -hz),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, hy, -hz, 1.0),
+            coords: Vec3::new(hx, hy, -hz),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(hx, -hy, hz, 1.0),
+            coords: Vec3::new(hx, -hy, hz),
             normal: Vec3::new(1.0, 0.0, 0.0),
             ..Default::default()
         },
         //right
         Vertex {
-            coords: Vec4::new(-hx, hy, hz, 1.0),
+            coords: Vec3::new(-hx, hy, hz),
             normal: Vec3::new(-1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, -hz, 1.0),
+            coords: Vec3::new(-hx, -hy, -hz),
             normal: Vec3::new(-1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, -hy, hz, 1.0),
+            coords: Vec3::new(-hx, -hy, hz),
             normal: Vec3::new(-1.0, 0.0, 0.0),
             ..Default::default()
         },
         Vertex {
-            coords: Vec4::new(-hx, hy, -hz, 1.0),
+            coords: Vec3::new(-hx, hy, -hz),
             normal: Vec3::new(-1.0, 0.0, 0.0),
             ..Default::default()
         },
@@ -175,7 +175,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
 
     //Add top vertex
     o.vertices.push(Vertex {
-        coords: Vec4::new(0.0, -radius, 0.0, 1.0),
+        coords: Vec3::new(0.0, -radius, 0.0),
         normal: Vec3::new(0.0, -1.0, 0.0),
         ..Default::default()
     });
@@ -197,7 +197,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
             let x = sin_theta * f32::sin(segment_step * j as f32);
 
             o.vertices.push(Vertex {
-                coords: Vec4 { x, y, z, w: 1.0 } * radius,
+                coords: Vec3 { x, y, z } * radius,
                 //This should work since the length is 1
                 normal: Vec3 { x, y, z },
                 ..Default::default()
@@ -207,7 +207,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
 
     //Add bottom vertex
     o.vertices.push(Vertex {
-        coords: Vec4::new(0.0, radius, 0.0, 1.0),
+        coords: Vec3::new(0.0, radius, 0.0),
         normal: Vec3::new(0.0, 1.0, 0.0),
         ..Default::default()
     });
@@ -275,6 +275,8 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
             o.indices.push(j + 1);
         }
     }
+
+    o.indices.reverse();
 
     o
 }

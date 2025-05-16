@@ -1,5 +1,3 @@
-use lunar_engine_derive::as_any;
-
 use crate::{delta_time, ecs::Component};
 
 ///Records fps over the runtime of the program
@@ -13,7 +11,6 @@ pub struct FpsRecorder {
 }
 
 impl Component for FpsRecorder {
-    #[as_any]
     fn mew() -> Self {
         Self::default()
     }

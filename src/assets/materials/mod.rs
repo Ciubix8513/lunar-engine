@@ -1,8 +1,8 @@
-pub use color_unlit::ColorUnlit;
-pub use texture_unlit::TextureUnlit;
+pub use lit::Lit;
+pub use unlit::Unlit;
 
-mod color_unlit;
-mod texture_unlit;
+mod lit;
+mod unlit;
 
 ///Helper functions for implementing materials
 pub mod helpers;

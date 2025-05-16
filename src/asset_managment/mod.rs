@@ -29,6 +29,7 @@ use vec_key_value_pair::map::VecMap;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::grimoire;
+use crate::UUID;
 
 #[cfg(test)]
 mod tests;
@@ -44,11 +45,9 @@ pub enum Error {
     ///
     ///The enclosed `Box<dyn std::error::Error>` contains the error that occured
     InitializationError(Box<dyn std::error::Error>),
+    ///An asset with the given id already exists
+    IdAlreadyExists,
 }
-
-//Potentially use ecs::UUID
-///Type the management system uses for a sset IDs
-pub type UUID = u128;
 
 //Send and sync for parallel initialization
 ///Trait all assets must implement
@@ -73,8 +72,6 @@ pub type UUID = u128;
 ///# fn dispose(&mut self) { }
 ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
 ///# fn is_initialized(&self) -> bool { todo!() }
-///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
-///# fn as_any_mut(&mut self) -> &mut dyn std::any::Any { todo!() }
 ///# }
 ///# impl TestAsset { fn new(_ : &str) -> Self { Self }}
 /// let mut asset = TestAsset::new("filepath");
@@ -104,59 +101,11 @@ pub trait Asset: Send + Sync + std::any::Any {
     fn set_id(&mut self, id: UUID) -> Result<(), Error>;
     ///Returns whether or not the asset is initialized
     fn is_initialized(&self) -> bool;
-    //Will not be needed after Rust 1.75.0
-    //Cannot be implemented automatically, well... likely can be, but i can't be bothered
-    ///Converts trait object to a `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    ///# use lunar_engine::asset_managment::Asset;
-    ///# use std::any::Any;
-    ///# struct A;
-    ///# impl Asset for A {
-    ///# fn get_id(&self) -> u128 { todo!() }
-    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
-    ///# fn dispose(&mut self) { todo!() }
-    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
-    ///# fn is_initialized(&self) -> bool { todo!() }
-    ///# fn as_any_mut(&mut self) -> &mut dyn Any  { todo!() }
-    ///
-    /// fn as_any(&self) -> &dyn std::any::Any {
-    ///     self as &dyn std::any::Any
-    /// }
-    ///
-    ///# }
-    ///```
-    fn as_any(&self) -> &dyn std::any::Any;
-    ///Converts trait object to a mutable `std::any::Any` reference
-    ///
-    ///Please use [`lunar_engine_derive::as_any`] to implement this function automatically.
-    ///Alternatively this function should be implemented as follows
-    ///```
-    ///# use lunar_engine::asset_managment::Asset;
-    ///# use std::any::Any;
-    ///# struct A;
-    ///# impl Asset for A {
-    ///# fn get_id(&self) -> u128 { todo!() }
-    ///# fn initialize(&mut self) -> Result<(), Box<(dyn std::error::Error + Send + 'static)>> { todo!() }
-    ///# fn dispose(&mut self) { todo!() }
-    ///# fn set_id(&mut self, _: u128) -> Result<(), lunar_engine::asset_managment::Error> { todo!() }
-    ///# fn is_initialized(&self) -> bool { todo!() }
-    ///# fn as_any(&self) -> &(dyn Any + 'static) { todo!() }
-    ///
-    ///fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-    ///    self as &mut dyn std::any::Any
-    ///}
-    ///
-    ///# }
-    ///```
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 ///Reference to an asset inside [`AssetStore`]
 pub struct AssetReference<T: 'static> {
-    refernce: Weak<RwLock<Box<dyn Asset + 'static>>>,
+    refernce: Weak<RwLock<dyn Asset + 'static>>,
     phantom: std::marker::PhantomData<T>,
 }
 
@@ -170,9 +119,9 @@ impl<T> AssetReference<T> {
     #[inline(always)]
     pub fn borrow(&self) -> AssetGuard<'_, T> {
         // let read = self.refernce.read();
-        lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
+        lock_api::RwLockReadGuard::<'_, parking_lot::RawRwLock, dyn Asset + 'static>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().read() },
-            |i| unsafe { &*(i.as_any() as *const dyn Any as *const T) },
+            |i| unsafe { &*(i as *const dyn Any as *const T) },
         )
     }
 
@@ -180,9 +129,9 @@ impl<T> AssetReference<T> {
     #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
     #[inline(always)]
     pub fn borrow_mut(&self) -> AssetGuardMut<'_, T> {
-        lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, Box<(dyn Asset + 'static)>>::map(
+        lock_api::RwLockWriteGuard::<'_, parking_lot::RawRwLock, dyn Asset + 'static>::map(
             unsafe { self.refernce.as_ptr().as_ref().unwrap().write() },
-            |i| unsafe { &mut *(i.as_any_mut() as *mut dyn Any as *mut T) },
+            |i| unsafe { &mut *(i as *mut dyn Any as *mut T) },
         )
     }
 }
@@ -194,7 +143,7 @@ type RwLock<T> = lock_api::RwLock<parking_lot::RawRwLock, T>;
 ///Manages the initialization of assets, borrowing of assets and disposal of assets
 #[allow(clippy::type_complexity)]
 pub struct AssetStore {
-    assets: VecMap<UUID, (Arc<RwLock<Box<dyn Asset>>>, std::any::TypeId)>,
+    assets: VecMap<UUID, (Arc<RwLock<dyn Asset>>, std::any::TypeId)>,
 }
 
 impl Default for AssetStore {
@@ -225,12 +174,39 @@ impl AssetStore {
         asset.set_id(id).unwrap();
         self.assets.insert(
             id,
-            (
-                Arc::new(RwLock::new(Box::new(asset))),
-                std::any::TypeId::of::<T>(),
-            ),
+            (Arc::new(RwLock::new(asset)), std::any::TypeId::of::<T>()),
         );
         id
+    }
+
+    ///Tries to register an asset with a given ID
+    ///
+    ///# Errors
+    ///Returns an error if there is already an asset with the provided id
+    ///
+    ///# Note
+    ///
+    ///In most cases [`AssetStore::register`] is more appropriate, and it is always more performant, due
+    ///to it not needing to check all other existing assets
+    pub fn try_register_with_id<T>(&mut self, asset: T, id: UUID) -> Result<(), Error>
+    where
+        T: Asset + 'static,
+    {
+        //Check if the id is in use
+        for (i, _) in &self.assets {
+            if &id == i {
+                return Err(Error::IdAlreadyExists);
+            }
+        }
+
+        let mut asset = asset;
+        asset.set_id(id).unwrap();
+        self.assets.insert(
+            id,
+            (Arc::new(RwLock::new(asset)), std::any::TypeId::of::<T>()),
+        );
+
+        Ok(())
     }
 
     ///Initializes all of the assets in the assetstore
@@ -338,9 +314,9 @@ impl AssetStore {
                     lock_api::RwLockReadGuard::<
                         '_,
                         parking_lot::RawRwLock,
-                        Box<(dyn Asset + 'static)>,
+                        dyn Asset + 'static,
                     >::map(x.0.read(), |i| unsafe {
-                        &*(i.as_any() as *const dyn Any as *const T)
+                        &*(i as *const dyn Any as *const T)
                     })
                 })
             }
@@ -371,9 +347,9 @@ impl AssetStore {
                     lock_api::RwLockWriteGuard::<
                         '_,
                         parking_lot::RawRwLock,
-                        Box<(dyn Asset + 'static)>,
+                        dyn Asset + 'static,
                     >::map(x.0.write(), |i| unsafe {
-                        &mut *(i.as_any_mut() as *mut dyn Any as *mut T)
+                        &mut *(i as *mut dyn Any as *mut T)
                     })
                 })
             }
@@ -416,7 +392,7 @@ impl AssetStore {
         match self.assets.get(&id) {
             Some(it) => it.0.write().dispose(),
             None => return Err(Error::DoesNotExist),
-        };
+        }
         Ok(())
     }
 
