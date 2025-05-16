@@ -230,7 +230,7 @@ impl Camera {
     }
 
     ///Returns the rotated forwrard vector of the camera
-    pub(crate) fn view_direction(&self) -> Vec3 {
+    pub fn view_direction(&self) -> Vec3 {
         let t = self.transorm_reference.get().unwrap().borrow();
         let matrix = Mat4x4::rotation_matrix_euler(&t.rotation);
         drop(t);
