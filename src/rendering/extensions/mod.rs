@@ -352,7 +352,7 @@ impl RenderingExtension for Base {
                 let label = format!("Instances: {}..{}", m.first().unwrap(), m.last().unwrap());
 
                 //(mesh_ID, (transformation matrix, material_id, mesh reference));
-                let mut current_window = matrices[points.0..points.1].to_vec(); //.iter().collect::<Vec<_>>();
+                let mut current_window = matrices[points.0..points.1].to_vec();
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
@@ -453,8 +453,6 @@ impl RenderingExtension for Base {
 
             for (buffer, meshes) in self.v_buffers.iter().zip(self.mesh_refs.iter()) {
                 //I do have to collect here
-                // let matrices = matrices.iter().map(|i| i.1 .0).collect::<Vec<_>>();
-
                 let matrices = meshes
                     .iter()
                     .map(|m| m.borrow().get_matrix())
