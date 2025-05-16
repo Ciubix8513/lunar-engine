@@ -57,7 +57,7 @@ pub trait Component: std::any::Any {
         Ok(())
     }
 
-    ///Returns weather the component is unique or not, by default a component is not unique
+    ///Returns whether the component is unique or not, by default a component is not unique
     ///
     ///If a component is unique, then only one instance of that component can exist in a `World`.
     ///
@@ -516,7 +516,7 @@ impl World {
         e.world_modified = Some(self.modified.clone());
         e.unique_components = Some(self.unique_components.clone());
 
-        //Check every component for weather or not it's unique
+        //Check every component for whether or not it's unique
         for (i, c) in e.components.iter().enumerate() {
             if c.borrow().unique_instanced() {
                 let u = &mut self.unique_components.borrow_mut();

@@ -100,7 +100,7 @@ pub struct Base {
     pub priority: u32,
     ///Clear color used for rendering
     pub clear_color: Color,
-    ///Weather or not to use frustum culling
+    ///Whether or not to use frustum culling
     pub frustum_culling: bool,
     //Stores vector of (mesh_id, material_id) for caching
     identifier: Vec<(u128, u128)>,
