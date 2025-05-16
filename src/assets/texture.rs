@@ -10,6 +10,7 @@ use crate::{asset_managment::Asset, helpers::flip_texture, UUID};
 use lunar_png::Image;
 
 ///Stores texture data
+#[allow(clippy::struct_field_names)]
 pub struct Texture {
     id: Option<UUID>,
     initialized: bool,

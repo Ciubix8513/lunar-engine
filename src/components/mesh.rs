@@ -12,6 +12,7 @@ use super::transform::Transform;
 
 #[derive(Debug)]
 ///Mesh component used for rendering
+#[allow(clippy::struct_field_names)]
 pub struct Mesh {
     visible: bool,
     mesh_id: Option<UUID>,

@@ -599,7 +599,7 @@ impl World {
     ///
     ///Returns an error if the entity with a given id doesn't exist
     #[must_use]
-    pub fn get_entity_count(&self) -> usize {
+    pub const fn get_entity_count(&self) -> usize {
         self.entities.len()
     }
 

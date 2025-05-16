@@ -29,6 +29,7 @@ pub trait MaterialTrait {
 }
 
 ///Stores material data, wrapper around the material trait object
+#[allow(clippy::struct_field_names)]
 pub struct Material {
     id: Option<UUID>,
     initialized: bool,
