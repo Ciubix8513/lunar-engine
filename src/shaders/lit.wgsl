@@ -33,9 +33,6 @@ struct Camera {
   position: vec3<f32>
 }
 
-//gonna keep it bc why not
-@group(0) @binding(0) var<uniform> camera: Camera;
-
 @group(1)@binding(0)
 var<uniform> material: MaterialData;
 
