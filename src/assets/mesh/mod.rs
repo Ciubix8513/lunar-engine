@@ -12,10 +12,7 @@
 //
 //This sounds interesting
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 use mesh_generator::generate_mesh;
 use wgpu::util::DeviceExt;
@@ -38,9 +35,9 @@ pub struct Mesh {
     #[cfg(target_arch = "wasm32")]
     index_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
     #[cfg(not(target_arch = "wasm32"))]
-    vertex_buffer: Option<Arc<wgpu::Buffer>>,
+    vertex_buffer: Option<wgpu::Buffer>,
     #[cfg(not(target_arch = "wasm32"))]
-    index_buffer: Option<Arc<wgpu::Buffer>>,
+    index_buffer: Option<wgpu::Buffer>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
     index_count: Option<u32>,
@@ -137,7 +134,7 @@ impl Mesh {
     ///Panics if the asset was not initialized
     #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
-    pub fn get_vertex_buffer(&self) -> Arc<wgpu::Buffer> {
+    pub fn get_vertex_buffer(&self) -> wgpu::Buffer {
         self.vertex_buffer.clone().unwrap()
     }
 
@@ -157,7 +154,7 @@ impl Mesh {
     ///Panics if the asset was not initialized
     #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
-    pub fn get_index_buffer(&self) -> Arc<wgpu::Buffer> {
+    pub fn get_index_buffer(&self) -> wgpu::Buffer {
         self.index_buffer.clone().unwrap()
     }
 
@@ -300,8 +297,8 @@ impl Asset for Mesh {
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
-            self.vertex_buffer = Some(Arc::new(vb));
-            self.index_buffer = Some(Arc::new(ib));
+            self.vertex_buffer = Some(vb);
+            self.index_buffer = Some(ib);
         }
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indices.len() as u32) / 3u32);

@@ -105,7 +105,7 @@ impl MaterialTrait for Unlit {
 
     fn render(&self, render_pass: &mut wgpu::RenderPass) {
         render_pass.set_pipeline(self.pipeline.as_ref().unwrap());
-        render_pass.set_bind_group(1, self.bind_group.as_ref(), &[]);
+        render_pass.set_bind_group(1, self.bind_group.as_ref().unwrap(), &[]);
     }
 
     fn intialize(&mut self) {

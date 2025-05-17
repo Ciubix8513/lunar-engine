@@ -768,13 +768,11 @@ impl RenderingExtension for Base {
 
             let mesh = assets.borrow_by_id::<Mesh>(m.mesh_id).unwrap();
 
-            let vert = unsafe { Arc::as_ptr(&mesh.get_vertex_buffer()).as_ref().unwrap() };
-            let ind = unsafe { Arc::as_ptr(&mesh.get_index_buffer()).as_ref().unwrap() };
-
-            render_pass.set_vertex_buffer(0, vert.slice(..));
+            render_pass.set_vertex_buffer(0, mesh.get_vertex_buffer().slice(..));
             render_pass.set_vertex_buffer(1, self.v_buffers[i].slice(..));
 
-            render_pass.set_index_buffer(ind.slice(..), wgpu::IndexFormat::Uint32);
+            render_pass
+                .set_index_buffer(mesh.get_index_buffer().slice(..), wgpu::IndexFormat::Uint32);
             render_pass.draw_indexed(
                 0..mesh.get_index_count(),
                 0,
