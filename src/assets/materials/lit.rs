@@ -3,18 +3,18 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use bytemuck::bytes_of;
-use wgpu::util::DeviceExt;
 use wgpu::BufferUsages;
+use wgpu::util::DeviceExt;
 use wgpu_shader_checker::include_wgsl;
 
+use crate::UUID;
 use crate::assets::{Material, Texture};
 use crate::internal::STAGING_BELT;
 use crate::math::Vec3;
 use crate::structures::Color;
-use crate::UUID;
-use crate::{grimoire, DEVICE, FORMAT};
+use crate::{DEVICE, FORMAT, grimoire};
 
-use crate::{assets::material::MaterialTrait, assets::BindgroupState};
+use crate::{assets::BindgroupState, assets::material::MaterialTrait};
 
 use super::helpers::{preprocess_shader, storage_buffer_available, vertex_binding};
 

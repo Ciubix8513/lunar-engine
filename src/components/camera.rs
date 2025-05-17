@@ -8,10 +8,10 @@ use crate as lunar_engine;
 use crate::math::Vec3;
 
 use crate::{
+    DEVICE, RESOLUTION, STAGING_BELT,
     ecs::{Component, ComponentReference},
     grimoire::{CAMERA_BIND_GROUP_INDEX, CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR},
     math::{Mat4x4, Vec4},
-    DEVICE, RESOLUTION, STAGING_BELT,
 };
 
 use super::transform::Transform;

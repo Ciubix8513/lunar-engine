@@ -425,8 +425,7 @@ pub fn dependencies(attr: TokenStream, item: TokenStream) -> TokenStream {
     let top: String =
         "fn check_dependencies(entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str >{"
             .to_string();
-    let top_instanced =
-        "fn check_dependencies_instanced(&self,entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str >{";
+    let top_instanced = "fn check_dependencies_instanced(&self,entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str >{";
     let mut body = Vec::new();
 
     //This is such a hack i love it :3

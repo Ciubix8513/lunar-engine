@@ -2,10 +2,10 @@
 use std::sync::RwLock;
 
 use vec_key_value_pair::map::VecMap;
-use wgpu::{util::StagingBelt, Backends, Surface, SurfaceConfiguration, Texture};
+use wgpu::{Backends, Surface, SurfaceConfiguration, Texture, util::StagingBelt};
 use winit::window::Window;
 
-use crate::{input::InputState, math::Vec2, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT};
+use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT, input::InputState, math::Vec2};
 
 pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();

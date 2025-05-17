@@ -1,8 +1,8 @@
 use wgpu::CommandEncoder;
 
 use crate::{
-    asset_managment::{Asset, AssetStore},
     UUID,
+    asset_managment::{Asset, AssetStore},
 };
 
 use super::BindgroupState;

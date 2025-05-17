@@ -15,7 +15,7 @@ use lunar_engine::{
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
-    math::{lerp, Mat4x4, Vec3, Vector},
+    math::{Mat4x4, Vec3, Vector, lerp},
     rendering::{extensions::Base, render},
     structures::Color,
 };

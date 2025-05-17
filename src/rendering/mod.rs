@@ -12,7 +12,7 @@
 use log::trace;
 
 use crate::{
-    asset_managment::AssetStore, ecs::World, DEPTH, DEVICE, FORMAT, QUEUE, STAGING_BELT, SURFACE,
+    DEPTH, DEVICE, FORMAT, QUEUE, STAGING_BELT, SURFACE, asset_managment::AssetStore, ecs::World,
 };
 
 use self::extensions::{AttachmentData, RenderingExtension};

@@ -3,9 +3,9 @@
 use std::cell::OnceCell;
 
 use crate::{
+    UUID,
     ecs::{Component, ComponentReference},
     math::Mat4x4,
-    UUID,
 };
 
 use super::transform::Transform;

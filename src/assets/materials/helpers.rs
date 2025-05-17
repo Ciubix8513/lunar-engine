@@ -166,7 +166,7 @@ pub fn preprocess_shader(shader: &str, block_index: u32) -> Result<String, Error
         .enumerate()
         .find(|(_, (_, i))| i == &block_index)
         .unwrap();
-    let block_beginning = block.1 .0;
+    let block_beginning = block.1.0;
     let block_end = blocks[block.0 + 1].0;
 
     let block_contents = shader.lines().collect::<Vec<_>>()[block_beginning + 1..block_end]

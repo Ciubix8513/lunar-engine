@@ -1,8 +1,8 @@
 #![allow(clippy::too_many_arguments, dead_code)]
 use std::ops::{Add, Mul, Sub};
 
-use crate::math::vec4::Vec4;
 use crate::math::vec3::Vec3;
+use crate::math::vec4::Vec4;
 
 use super::traits::Vector;
 
@@ -35,30 +35,29 @@ impl Default for Mat4x4 {
     }
 }
 
-
 impl Mat4x4 {
-
-///Identity matrix
-#[must_use]
-pub const fn identity() -> Self {
+    ///Identity matrix
+    #[must_use]
+    pub const fn identity() -> Self {
         Self {
-    m00: 1.0,
-    m01: 0.0,
-    m02: 0.0,
-    m03: 0.0,
-    m10: 0.0,
-    m11: 1.0,
-    m12: 0.0,
-    m13: 0.0,
-    m20: 0.0,
-    m21: 0.0,
-    m22: 1.0,
-    m23: 0.0,
-    m30: 0.0,
-    m31: 0.0,
-    m32: 0.0,
-    m33: 1.0,}
-}
+            m00: 1.0,
+            m01: 0.0,
+            m02: 0.0,
+            m03: 0.0,
+            m10: 0.0,
+            m11: 1.0,
+            m12: 0.0,
+            m13: 0.0,
+            m20: 0.0,
+            m21: 0.0,
+            m22: 1.0,
+            m23: 0.0,
+            m30: 0.0,
+            m31: 0.0,
+            m32: 0.0,
+            m33: 1.0,
+        }
+    }
     #[must_use]
     ///Creates a new matrix with the given data
     pub const fn new(
@@ -107,10 +106,10 @@ pub const fn identity() -> Self {
             m02: self.m20,
             m03: self.m30,
 
-            m10: self.m01, 
+            m10: self.m01,
             m11: self.m11,
             m12: self.m21,
-            m13: self.m31, 
+            m13: self.m31,
 
             m20: self.m02,
             m21: self.m12,
@@ -156,7 +155,7 @@ pub const fn identity() -> Self {
     ///Transforms `other` using `self` matrix
     #[must_use]
     pub fn transform3(&self, other: Vec3) -> Vec3 {
-        self.transform((other,1.0).into()).xyz()
+        self.transform((other, 1.0).into()).xyz()
     }
 
     //[1 , 2] . [1 , 2] _ [1 * 1 +  3 * 2,  1 * 2 + 4*2]
@@ -308,7 +307,7 @@ pub const fn identity() -> Self {
         let cubed = squared * *self;
         let trace = self.trace();
 
-        let a = Self::identity() 
+        let a = Self::identity()
             * (0.166_667
                 * 2.0f32.mul_add(
                     cubed.trace(),
@@ -321,7 +320,7 @@ pub const fn identity() -> Self {
     }
 
     #[must_use]
-    ///Inverts the matrix consuming it the process 
+    ///Inverts the matrix consuming it the process
     ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
     pub fn invert(self) -> Option<Self> {
         let det = self.determinant();
@@ -333,7 +332,7 @@ pub const fn identity() -> Self {
         let cubed = squared * self;
         let trace = self.trace();
 
-        let a = Self::identity() 
+        let a = Self::identity()
             * (0.166_667
                 * 2.0f32.mul_add(
                     cubed.trace(),
@@ -344,7 +343,6 @@ pub const fn identity() -> Self {
 
         Some((a - b + c - cubed) * (1.0 / det))
     }
-
 
     #[must_use]
     ///Creates a perspective projection matrix with the given parameters
@@ -367,30 +365,42 @@ pub const fn identity() -> Self {
             m23: -1.0,
             m32: r * screen_near,
             m33: 0.0,
-           ..Self::identity()
+            ..Self::identity()
         }
     }
 
     ///Creates an orthographic projection matrix from a half size and the aspect ratio
     #[must_use]
-    pub const fn orth_aspect_projection(size: f32, aspect: f32, near:f32, far: f32) -> Self{
+    pub const fn orth_aspect_projection(size: f32, aspect: f32, near: f32, far: f32) -> Self {
         let aspect = 1.0 / aspect;
-        Self::orth_projection(-size / 2.0, size /2.0, -size/aspect /2.0,size/aspect /2.0,near,far)
+        Self::orth_projection(
+            -size / 2.0,
+            size / 2.0,
+            -size / aspect / 2.0,
+            size / aspect / 2.0,
+            near,
+            far,
+        )
     }
 
     ///Creates an orthographic projection matrix from the dimensions of the view port
     #[must_use]
-    pub const fn orth_projection(bottom:f32, top:f32, left:f32, right:f32, near:f32, far:f32
-    )-> Self{
-        Self{
+    pub const fn orth_projection(
+        bottom: f32,
+        top: f32,
+        left: f32,
+        right: f32,
+        near: f32,
+        far: f32,
+    ) -> Self {
+        Self {
             m00: 2.0 / (right - left),
             m03: -((left + right) / (right - left)),
             m11: 2.0 / (top - bottom),
             m13: -((top + bottom) / (top - bottom)),
-            m22:  -2.0 / (far - near),
-            m32: ((far+near)/ (far -near)),
+            m22: -2.0 / (far - near),
+            m32: ((far + near) / (far - near)),
             ..Self::identity()
-
         }
     }
 
@@ -423,9 +433,9 @@ pub const fn identity() -> Self {
             return Self::identity();
         }
 
-        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
 
         Self {
             m00: cos_y * cos_z,
@@ -441,37 +451,35 @@ pub const fn identity() -> Self {
         }
     }
 
-
     #[must_use]
     ///Crates a transformation matrix with the following order of operations:
     ///1. Scale
-    ///2. Rotation 
+    ///2. Rotation
     ///3. Translation
     pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
 
         let x = scale.x;
         let y = scale.y;
         let z = scale.z;
 
         Self {
-            m00: cos_y * cos_z *x,
-            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
-            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m00: cos_y * cos_z * x,
+            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
+            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
             m10: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
-            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
-            m20: -sin_y *x,
-            m21: sin_x * cos_y*y,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
+            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
+            m20: -sin_y * x,
+            m21: sin_x * cos_y * y,
             m22: cos_x * cos_y * z,
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
             ..Default::default()
-        } 
-
+        }
     }
 
     #[must_use]
@@ -481,31 +489,34 @@ pub const fn identity() -> Self {
     ///3. Translation
     ///
     ///This matrix is transposed
-    pub fn transform_matrix_euler_transposed(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        let (sin_x, cos_x)= f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y)= f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z)= f32::sin_cos(rotation.z.to_radians());
+    pub fn transform_matrix_euler_transposed(
+        translation: &Vec3,
+        scale: &Vec3,
+        rotation: &Vec3,
+    ) -> Self {
+        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
+        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
+        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
 
         let x = scale.x;
         let y = scale.y;
         let z = scale.z;
 
         Self {
-            m00: cos_y * cos_z *x,
-            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) *y,
-            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z)*z,
+            m00: cos_y * cos_z * x,
+            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
+            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
             m30: translation.x,
             m01: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z)*y,
-            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z)*z,
+            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
+            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
             m31: translation.y,
-            m02: -sin_y *x,
-            m12: sin_x * cos_y*y,
+            m02: -sin_y * x,
+            m12: sin_x * cos_y * y,
             m22: cos_x * cos_y * z,
             m32: translation.z,
             ..Default::default()
         }
-
     }
 
     #[must_use]
@@ -530,8 +541,6 @@ pub const fn identity() -> Self {
             ..Default::default()
         }
     }
-
-
 }
 
 impl Mul<f32> for Mat4x4 {
@@ -625,8 +634,7 @@ impl Mul<Vec4> for Mat4x4 {
     }
 }
 
-
-impl Mul<Mat4x4> for Vec4{
+impl Mul<Mat4x4> for Vec4 {
     type Output = Self;
 
     fn mul(self, rhs: Mat4x4) -> Self::Output {

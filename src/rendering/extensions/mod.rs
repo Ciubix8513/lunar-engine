@@ -5,11 +5,12 @@ use std::{cell::OnceCell, num::NonZeroU64, sync::Arc};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
-use wgpu::{util::DeviceExt, BufferUsages};
+use wgpu::{BufferUsages, util::DeviceExt};
 
 use crate::{
+    DEVICE, RESOLUTION, STAGING_BELT,
     asset_managment::AssetStore,
-    assets::{materials::helpers::storage_buffer_available, BindgroupState, Material, Mesh},
+    assets::{BindgroupState, Material, Mesh, materials::helpers::storage_buffer_available},
     components::{
         self,
         light::{DirectionalLight, PointLight},
@@ -18,7 +19,6 @@ use crate::{
     grimoire::{self, point_light_bind_group_layout_descriptor},
     math::{Mat4x4, Vec3, Vec4, Vector as _},
     structures::{Color, LightBuffer},
-    DEVICE, RESOLUTION, STAGING_BELT,
 };
 
 ///A color buffer and a depth stencil buffer
@@ -282,7 +282,7 @@ impl RenderingExtension for Base {
         let mut matrices = matrices
             .iter()
             .zip(meshes)
-            .map(|i| (i.0 .0, (i.0 .1, i.1)))
+            .map(|i| (i.0.0, (i.0.1, i.1)))
             .collect::<Vec<_>>();
 
         //determine if can re use cache
@@ -293,7 +293,7 @@ impl RenderingExtension for Base {
 
         if matrices.len() == self.identifier.len() {
             for (index, data) in self.identifier.iter().enumerate() {
-                if data.0 == matrices[index].0 && data.1 == matrices[index].1 .0 {
+                if data.0 == matrices[index].0 && data.1 == matrices[index].1.0 {
                     continue;
                 }
                 identical = false;
@@ -312,7 +312,7 @@ impl RenderingExtension for Base {
             let _span = tracy_client::span!("Cache generation");
 
             debug!("Generating new cache data");
-            self.identifier = matrices.iter().map(|i| (i.0, i.1 .0)).collect::<Vec<_>>();
+            self.identifier = matrices.iter().map(|i| (i.0, i.1.0)).collect::<Vec<_>>();
 
             //Sort meshes by mesh id for easier buffer creation
             //NO Sort by material id?
@@ -356,15 +356,15 @@ impl RenderingExtension for Base {
 
                 //Split into vectors and sorted by material
                 //Sort the window by materials
-                current_window.sort_unstable_by(|s, o| s.1 .0.cmp(&o.1 .0));
+                current_window.sort_unstable_by(|s, o| s.1.0.cmp(&o.1.0));
 
                 //find where materials change, similar to how meshes were sorted
                 let mut material_split_points = Vec::new();
                 let mut old = 0;
                 for (i, m) in current_window.iter().enumerate() {
-                    if m.1 .0 != old {
+                    if m.1.0 != old {
                         material_split_points.push(i);
-                        old = m.1 .0;
+                        old = m.1.0;
                     }
                 }
                 //Again ensure there's at least one window
@@ -379,8 +379,8 @@ impl RenderingExtension for Base {
                 //Get indicators for every block of what mesh and material they are
                 for i in &material_split_points[..material_split_points.len() - 1] {
                     let curent = current_window[*i];
-                    if last != (curent.0, curent.1 .0) {
-                        last = MeshMaterial::new(curent.0, curent.1 .0);
+                    if last != (curent.0, curent.1.0) {
+                        last = MeshMaterial::new(curent.0, curent.1.0);
                         mesh_materials.push(last);
                     }
                 }
@@ -398,13 +398,13 @@ impl RenderingExtension for Base {
                     mesh_refs.push(
                         current_window
                             .iter()
-                            .map(|i| i.1 .1.clone())
+                            .map(|i| i.1.1.clone())
                             .collect::<Vec<_>>(),
                     );
 
                     let matrices = current_window
                         .iter()
-                        .map(|i| i.1 .1.borrow().get_matrix())
+                        .map(|i| i.1.1.borrow().get_matrix())
                         .collect::<Vec<_>>();
 
                     let matrices = matrices
@@ -683,13 +683,12 @@ impl RenderingExtension for Base {
                     .iter()
                     .map(|l| {
                         let l = l.borrow();
-                        let x = PointLight {
+                        PointLight {
                             position: l.transform_ref.get().unwrap().borrow().position_global(),
                             intensity: l.get_intensity(),
                             color: l.get_color().into(),
                             range: l.get_range(),
-                        };
-                        x
+                        }
                     })
                     .collect::<Vec<_>>();
 
