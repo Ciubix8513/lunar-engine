@@ -10,6 +10,7 @@
 //! The rendering function gets the asset ids and queries them from the store.
 
 use log::trace;
+use wgpu::TextureUsages;
 
 use crate::{
     DEPTH, DEVICE, FORMAT, QUEUE, STAGING_BELT, SURFACE, asset_managment::AssetStore, ecs::World,
@@ -52,6 +53,7 @@ pub fn render(
         mip_level_count: None,
         base_array_layer: 0,
         array_layer_count: None,
+        usage: Some(TextureUsages::RENDER_ATTACHMENT),
     });
 
     let depth_setencil_veiw =
@@ -69,6 +71,7 @@ pub fn render(
                 mip_level_count: None,
                 base_array_layer: 0,
                 array_layer_count: None,
+                usage: Some(TextureUsages::RENDER_ATTACHMENT),
             });
 
     let attachments = AttachmentData {

@@ -3,8 +3,8 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use bytemuck::bytes_of;
-use wgpu::BufferUsages;
 use wgpu::util::DeviceExt;
+use wgpu::{BufferUsages, TextureUsages};
 use wgpu_shader_checker::include_wgsl;
 
 use crate::UUID;
@@ -81,11 +81,13 @@ impl Lit {
     }
 
     ///Returns the shininess of the material
+    #[must_use]
     pub const fn get_shininess(&self) -> f32 {
         self.shininess
     }
 
     ///Returns the color of the material
+    #[must_use]
     pub const fn get_color(&self) -> Color {
         self.color
     }
@@ -103,6 +105,7 @@ impl Lit {
     }
 
     ///Returns the specular color of the material
+    #[must_use]
     pub const fn get_specular_color(&self) -> Color {
         self.specular_color
     }
@@ -278,7 +281,7 @@ impl MaterialTrait for Lit {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &v_shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 buffers: &vertex_binding(),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
@@ -301,7 +304,7 @@ impl MaterialTrait for Lit {
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module: &f_shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: *FORMAT.get().unwrap(),
                     blend: None,
@@ -310,6 +313,7 @@ impl MaterialTrait for Lit {
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             multiview: None,
+            cache: None,
         });
 
         #[cfg(target_arch = "wasm32")]
@@ -374,6 +378,7 @@ impl MaterialTrait for Lit {
                                 mip_level_count: Some(1),
                                 base_array_layer: 0,
                                 array_layer_count: None,
+                                usage: Some(TextureUsages::TEXTURE_BINDING),
                             },
                         ),
                     ),

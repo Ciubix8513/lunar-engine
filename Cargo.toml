@@ -23,7 +23,7 @@ log = "0.4.20"
 parking_lot = "0.12.1"
 rand = "0.8.5"
 vec_key_value_pair = "0.2.0"
-wgpu = { version = "0.20.1"}
+wgpu = { version = "25.0.0"}
 winit = { version = "0.30.1" }
 lunar-logger= "0.2.0"
 lunar-png = "0.1.2"

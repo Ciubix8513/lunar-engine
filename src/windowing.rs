@@ -14,7 +14,7 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
     log::debug!("Window size is {size:?}");
     *RESOLUTION.write().unwrap() = size;
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: Backends::GL | Backends::VULKAN,
         ..Default::default()
     });
@@ -160,7 +160,7 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
 async fn req_adapter(
     instance: wgpu::Instance,
     options: &wgpu::RequestAdapterOptions<'_, '_>,
-) -> Option<wgpu::Adapter> {
+) -> Result<wgpu::Adapter, wgpu::RequestAdapterError> {
     instance.request_adapter(options).await
 }
 
@@ -169,7 +169,7 @@ async fn req_device(
     adapter: &wgpu::Adapter,
     descriptor: &wgpu::DeviceDescriptor<'_>,
 ) -> Result<(wgpu::Device, wgpu::Queue), wgpu::RequestDeviceError> {
-    adapter.request_device(descriptor, None).await
+    adapter.request_device(descriptor).await
 }
 
 pub fn get_depth_descriptor<'a>(width: u32, height: u32) -> wgpu::TextureDescriptor<'a> {

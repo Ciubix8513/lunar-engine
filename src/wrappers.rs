@@ -17,6 +17,12 @@ impl<T> DerefMut for WgpuWrapper<T> {
     }
 }
 
+impl<'a> From<&'a WgpuWrapper<wgpu::BindGroup>> for Option<&'a wgpu::BindGroup> {
+    fn from(value: &'a WgpuWrapper<wgpu::BindGroup>) -> Self {
+        Some(&value.0)
+    }
+}
+
 unsafe impl<T> Send for WgpuWrapper<T> {}
 unsafe impl<T> Sync for WgpuWrapper<T> {}
 
