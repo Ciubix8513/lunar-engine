@@ -1,20 +1,5 @@
-//============================================================
-//===========================Mesh=============================
-//============================================================
-//Yea this trash is not expandable later on, gltf may be a bit too complex for loading into
-//separate assets, who knows tho
-//
-//Actually, thinking about it, i think loading a gltf should produce an entire set of assets
-//Yea, maybe even an entire world and assetstore
-//
-//Loading a gltf could ask you to provide it with a world and an assetstore, to load all the
-//textures, materials and meshes into. And also to create a scene
-//
-//This sounds interesting
-
-use std::path::{Path, PathBuf};
-
 use mesh_generator::generate_mesh;
+use std::path::{Path, PathBuf};
 use wgpu::util::DeviceExt;
 
 use crate::{
@@ -30,13 +15,7 @@ pub struct Mesh {
     id: Option<UUID>,
     initialized: bool,
     mode: MeshMode,
-    #[cfg(target_arch = "wasm32")]
-    vertex_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
-    #[cfg(target_arch = "wasm32")]
-    index_buffer: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>>>,
-    #[cfg(not(target_arch = "wasm32"))]
     vertex_buffer: Option<wgpu::Buffer>,
-    #[cfg(not(target_arch = "wasm32"))]
     index_buffer: Option<wgpu::Buffer>,
     vert_count: Option<u32>,
     tris_count: Option<u32>,
@@ -121,18 +100,6 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
-    #[cfg(target_arch = "wasm32")]
-    #[must_use]
-    pub fn get_vertex_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
-        //THIS IS SO TRASH
-        self.vertex_buffer.clone().unwrap()
-    }
-
-    ///Returns the vertex buffer of the mesh
-    ///
-    ///# Panics
-    ///Panics if the asset was not initialized
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn get_vertex_buffer(&self) -> wgpu::Buffer {
         self.vertex_buffer.clone().unwrap()
@@ -142,17 +109,6 @@ impl Mesh {
     ///
     ///# Panics
     ///Panics if the asset was not initialized
-    #[cfg(target_arch = "wasm32")]
-    #[must_use]
-    pub fn get_index_buffer(&self) -> Arc<crate::wrappers::WgpuWrapper<wgpu::Buffer>> {
-        self.index_buffer.clone().unwrap()
-    }
-
-    ///Returns the index buffer of the mesh
-    ///
-    ///# Panics
-    ///Panics if the asset was not initialized
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn get_index_buffer(&self) -> wgpu::Buffer {
         self.index_buffer.clone().unwrap()
@@ -290,16 +246,9 @@ impl Asset for Mesh {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.vertex_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(vb)));
-            self.index_buffer = Some(Arc::new(crate::wrappers::WgpuWrapper::new(ib)));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.vertex_buffer = Some(vb);
-            self.index_buffer = Some(ib);
-        }
+        self.vertex_buffer = Some(vb);
+        self.index_buffer = Some(ib);
+
         self.vert_count = Some(mesh.vertices.len() as u32);
         self.tris_count = Some((mesh.indices.len() as u32) / 3u32);
         self.index_count = Some(mesh.indices.len() as u32);

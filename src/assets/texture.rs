@@ -21,13 +21,7 @@ pub struct Texture {
     sample_count: u8,
     adress_mode: wgpu::AddressMode,
     filter: wgpu::FilterMode,
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) sampler: Option<crate::wrappers::WgpuWrapper<wgpu::Sampler>>,
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) sampler: Option<wgpu::Sampler>,
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) texture: Option<crate::wrappers::WgpuWrapper<wgpu::Texture>>,
-    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) texture: Option<wgpu::Texture>,
 }
 
@@ -178,16 +172,8 @@ impl Texture {
             border_color: None,
         });
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.texture = Some(crate::wrappers::WgpuWrapper::new(texture));
-            self.sampler = Some(crate::wrappers::WgpuWrapper::new(sampler));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.texture = Some(texture);
-            self.sampler = Some(sampler);
-        }
+        self.texture = Some(texture);
+        self.sampler = Some(sampler);
     }
 
     // ///Sets the mip count of the texture and generates those mips
