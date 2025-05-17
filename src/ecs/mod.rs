@@ -196,7 +196,7 @@ impl Entity {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            id: rand::thread_rng().gen(),
+            id: rand::thread_rng().r#gen(),
             ..Default::default()
         }
     }
@@ -412,7 +412,7 @@ impl EntityBuilder {
     ///Note: component addition order matters in the builder, dependencies MUST be added first
     pub fn create(self) -> Result<Entity, Error> {
         let mut e = Entity {
-            id: rand::thread_rng().gen(),
+            id: rand::thread_rng().r#gen(),
             ..Default::default()
         };
 

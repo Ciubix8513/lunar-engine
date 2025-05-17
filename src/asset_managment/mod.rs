@@ -27,9 +27,9 @@ use std::thread;
 use rand::Rng;
 use vec_key_value_pair::map::VecMap;
 
+use crate::UUID;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::grimoire;
-use crate::UUID;
 
 #[cfg(test)]
 mod tests;
@@ -169,7 +169,7 @@ impl AssetStore {
     where
         T: Asset + 'static,
     {
-        let id = rand::thread_rng().gen();
+        let id = rand::thread_rng().r#gen();
         let mut asset = asset;
         asset.set_id(id).unwrap();
         self.assets.insert(
