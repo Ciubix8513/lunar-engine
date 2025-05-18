@@ -294,7 +294,12 @@ impl<T> State<T> {
         self.configure_surface();
 
         let device = DEVICE.get().unwrap();
-        *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+
+        //This is a false positive on wasm32, without the webgl feature
+        #[allow(clippy::uninhabited_references)]
+        {
+            *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
+        }
     }
 
     fn redraw(&mut self) {
