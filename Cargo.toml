@@ -37,7 +37,6 @@ wgpu_shader_checker = "0.1.0"
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 getrandom = {version = "0.2.15", features = ["js"]}
-send_wrapper = "0.6.0"
 web-sys = "0.3.64"
 wasm-bindgen = "0.2.92"
 

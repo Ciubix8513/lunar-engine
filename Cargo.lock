@@ -904,7 +904,6 @@ dependencies = [
  "lunar-png",
  "parking_lot",
  "rand",
- "send_wrapper",
  "tracy-client",
  "vec_key_value_pair",
  "wasm-bindgen",
@@ -1665,12 +1664,6 @@ dependencies = [
  "smithay-client-toolkit",
  "tiny-skia",
 ]
-
-[[package]]
-name = "send_wrapper"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73"
 
 [[package]]
 name = "serde"

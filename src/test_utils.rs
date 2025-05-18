@@ -10,7 +10,7 @@ async fn gen_gpu_async(instance: &wgpu::Instance) -> (wgpu::Device, wgpu::Queue)
         .expect("Unable to get an adapter");
 
     adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor::default())
         .await
         .expect("Can not get device and queue")
 }

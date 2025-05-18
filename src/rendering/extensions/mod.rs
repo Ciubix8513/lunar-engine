@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_lines)]
 
 use core::f32;
-use std::{cell::OnceCell, num::NonZeroU64, sync::Arc};
+use std::{cell::OnceCell, num::NonZeroU64};
 
 use log::{debug, trace};
 use vec_key_value_pair::set::VecSet;
