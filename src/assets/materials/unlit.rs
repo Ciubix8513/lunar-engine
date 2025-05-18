@@ -1,6 +1,5 @@
 #![allow(clippy::too_many_lines)]
 use std::num::NonZeroU64;
-use std::sync::Arc;
 
 use bytemuck::bytes_of;
 use wgpu::util::DeviceExt;
@@ -21,22 +20,11 @@ use super::helpers::vertex_binding;
 ///
 ///If neither the color nor the texture is  set, the material will be white
 pub struct Unlit {
-    #[cfg(target_arch = "wasm32")]
-    pipeline: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::RenderPipeline>>>,
-    #[cfg(not(target_arch = "wasm32"))]
-    pipeline: Option<Arc<wgpu::RenderPipeline>>,
-    #[cfg(target_arch = "wasm32")]
-    bind_group: Option<Arc<crate::wrappers::WgpuWrapper<wgpu::BindGroup>>>,
-    #[cfg(not(target_arch = "wasm32"))]
-    bind_group: Option<Arc<wgpu::BindGroup>>,
-    #[cfg(target_arch = "wasm32")]
-    bind_group_layout_f: Option<crate::wrappers::WgpuWrapper<wgpu::BindGroupLayout>>,
-    #[cfg(not(target_arch = "wasm32"))]
+    pipeline: Option<wgpu::RenderPipeline>,
+    bind_group: Option<wgpu::BindGroup>,
     bind_group_layout_f: Option<wgpu::BindGroupLayout>,
-    #[cfg(target_arch = "wasm32")]
-    uniform: Option<crate::wrappers::WgpuWrapper<wgpu::Buffer>>,
-    #[cfg(not(target_arch = "wasm32"))]
     uniform: Option<wgpu::Buffer>,
+
     color: Color,
     bindgroup_sate: BindgroupState,
     changed: bool,
@@ -105,23 +93,8 @@ impl MaterialTrait for Unlit {
     }
 
     fn render(&self, render_pass: &mut wgpu::RenderPass) {
-        //SHOULD BE FINE
-        //TODO: FIND A BETTER SOLUTION
-        //This is a big FUCK OFF to the borrow checker
-        let pipeline = unsafe {
-            Arc::as_ptr(self.pipeline.as_ref().unwrap())
-                .as_ref()
-                .unwrap()
-        };
-
-        render_pass.set_pipeline(pipeline);
-        let b = unsafe {
-            Arc::as_ptr(&self.bind_group.clone().unwrap())
-                .as_ref()
-                .unwrap()
-        };
-
-        render_pass.set_bind_group(1, b, &[]);
+        render_pass.set_pipeline(self.pipeline.as_ref().unwrap());
+        render_pass.set_bind_group(1, self.bind_group.as_ref().unwrap(), &[]);
     }
 
     fn intialize(&mut self) {
@@ -172,38 +145,17 @@ impl MaterialTrait for Unlit {
             push_constant_ranges: &[],
         });
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.bind_group_layout_f = Some(crate::wrappers::WgpuWrapper::new(bind_group_layout_f));
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.bind_group_layout_f = Some(bind_group_layout_f);
-        }
+        self.bind_group_layout_f = Some(bind_group_layout_f);
 
         let data = MaterialData { color: self.color };
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.uniform = Some(crate::wrappers::WgpuWrapper::new(
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: None,
-                    contents: bytemuck::bytes_of(&data),
-                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-                }),
-            ));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.uniform = Some(
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Material data"),
-                    contents: bytemuck::bytes_of(&data),
-                    usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-                }),
-            );
-        }
+        self.uniform = Some(
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Material data"),
+                contents: bytemuck::bytes_of(&data),
+                usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            }),
+        );
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
@@ -245,14 +197,7 @@ impl MaterialTrait for Unlit {
             cache: None,
         });
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.pipeline = Some(Arc::new(crate::wrappers::WgpuWrapper::new(pipeline)));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.pipeline = Some(Arc::new(pipeline));
-        }
+        self.pipeline = Some(pipeline);
     }
 
     fn dispose(&mut self) {
@@ -321,14 +266,7 @@ impl MaterialTrait for Unlit {
 
         drop(texture);
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.bind_group = Some(Arc::new(crate::wrappers::WgpuWrapper::new(bind_group_f)));
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.bind_group = Some(Arc::new(bind_group_f));
-        }
+        self.bind_group = Some(bind_group_f);
         self.bindgroup_sate = BindgroupState::Initialized;
     }
 

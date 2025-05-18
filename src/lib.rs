@@ -57,9 +57,6 @@ use internal::*;
 use wgpu::SurfaceConfiguration;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
 
-#[cfg(target_arch = "wasm32")]
-use crate::wrappers::WgpuWrapper;
-
 pub mod asset_managment;
 pub mod assets;
 pub mod components;
@@ -77,8 +74,6 @@ pub mod structures;
 #[cfg(test)]
 mod test_utils;
 mod windowing;
-#[cfg(target_arch = "wasm32")]
-mod wrappers;
 
 ///UUID of an asset or an entity
 pub type UUID = u128;
@@ -86,14 +81,7 @@ pub type UUID = u128;
 //TODO find a better way than just staticing it
 static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
 
-#[cfg(target_arch = "wasm32")]
-static SURFACE: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::Surface>>> = OnceLock::new();
-#[cfg(target_arch = "wasm32")]
-static DEPTH: OnceLock<RwLock<wrappers::WgpuWrapper<wgpu::Texture>>> = OnceLock::new();
-
-#[cfg(not(target_arch = "wasm32"))]
 static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
-#[cfg(not(target_arch = "wasm32"))]
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 
 static QUIT: OnceLock<bool> = OnceLock::new();
@@ -288,18 +276,8 @@ impl<T> State<T> {
 
         self.surface_config.set(config).unwrap();
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            SURFACE.set(RwLock::new(surface)).unwrap();
-            DEPTH.set(RwLock::new(depth_stencil)).unwrap();
-        }
-        #[cfg(target_arch = "wasm32")]
-        {
-            SURFACE.set(RwLock::new(WgpuWrapper::new(surface))).unwrap();
-            DEPTH
-                .set(RwLock::new(WgpuWrapper::new(depth_stencil)))
-                .unwrap();
-        }
+        SURFACE.set(RwLock::new(surface)).unwrap();
+        DEPTH.set(RwLock::new(depth_stencil)).unwrap();
 
         self.init.take().unwrap()(&mut self.contents);
 
@@ -317,12 +295,8 @@ impl<T> State<T> {
 
         let device = DEVICE.get().unwrap();
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            **DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
+        //This is a false positive on wasm32, without the webgl feature
+        #[allow(clippy::uninhabited_references)]
         {
             *DEPTH.get().unwrap().write().unwrap() = device.create_texture(&desc);
         }

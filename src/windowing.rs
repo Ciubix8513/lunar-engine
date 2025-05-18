@@ -58,19 +58,8 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
     };
     log::debug!("Created device and queue");
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        DEVICE
-            .set(crate::wrappers::WgpuWrapper::new(device))
-            .unwrap();
-        QUEUE.set(crate::wrappers::WgpuWrapper::new(queue)).unwrap();
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        DEVICE.set(device).unwrap();
-        QUEUE.set(queue).unwrap();
-    }
+    DEVICE.set(device).unwrap();
+    QUEUE.set(queue).unwrap();
 
     let device = DEVICE.get().unwrap();
 
@@ -122,24 +111,7 @@ pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Textur
 
     log::debug!("Created staging belt");
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        STAGING_BELT
-            .set(RwLock::new(crate::wrappers::WgpuWrapper::new(belt)))
-            .unwrap();
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        STAGING_BELT.set(RwLock::new(belt)).unwrap();
-    }
-
-    // let bpr = helpers::calculate_bpr(size.width, format);
-    // let screenshot_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    //     label: Some("Screenshot buffer"),
-    //     size: bpr * u64::from(size.height),
-    //     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-    //     mapped_at_creation: false,
-    // });
+    STAGING_BELT.set(RwLock::new(belt)).unwrap();
 
     super::input::INPUT
         .set(InputState {
