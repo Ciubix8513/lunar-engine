@@ -129,7 +129,7 @@ fn generate_scene(
         assets.register(assets::Mesh::new_from_static_obj(include_str!(
             "../../assets/blahaj.obj"
         ))),
-        assets.register(assets::Mesh::new_box(Vec3::new(1.0, 1.0, 1.0))),
+        assets.register(assets::Mesh::new_box(Vec3::new(1, 1, 1))),
         assets.register(assets::Mesh::new_sphere(SphereData {
             radius: 0.5,
             rings: 16,
@@ -165,8 +165,8 @@ fn generate_scene(
             .add_entity(
                 EntityBuilder::new()
                     .create_component(|| Transform {
-                        position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
-                        rotation: Vec3::random_with_rng(-180.0, 180.0, &mut rng),
+                        position: Vec3::random_with_rng(-20, 20, &mut rng),
+                        rotation: Vec3::random_with_rng(-180, 180, &mut rng),
                         scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
                         ..Default::default()
                     })
@@ -193,7 +193,7 @@ fn generate_scene(
             .add_entity(
                 EntityBuilder::new()
                     .create_component(|| Transform {
-                        position: Vec3::random_with_rng(-20.0, 20.0, &mut rng),
+                        position: Vec3::random_with_rng(-20, 20, &mut rng),
                         ..Default::default()
                     })
                     .create_component(|| {
@@ -240,8 +240,7 @@ fn init(state: &mut State) {
         .add_entity(
             EntityBuilder::new()
                 .create_component(|| Transform {
-                    position: (0.0, 0.0, -4.0).into(),
-                    rotation: (0.0, 0.0, 0.0).into(),
+                    position: (0, 0, -4).into(),
                     ..Default::default()
                 })
                 .add_component::<MainCamera>()
@@ -258,8 +257,8 @@ fn init(state: &mut State) {
                 //A  directional light no intensity, just so that there's some ambient light
                 .create_component(|| DirectionalLight {
                     color: Color::white(),
-                    direction: Vec3::new(0.0, -1.0, 0.0),
-                    ambient_color: Color::new(0.05, 0.05, 0.05, 1.0),
+                    direction: Vec3::new(0, -1, 0),
+                    ambient_color: Color::new(0.05, 0.05, 0.05, 1),
                     intensity: 0.0,
                 })
                 .create()
