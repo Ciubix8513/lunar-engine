@@ -4,7 +4,7 @@ use bytemuck::{Pod, Zeroable};
 
 pub use crate::math::traits::Vector;
 
-use super::vec3::Vec3;
+use super::{IntoFloat32, vec3::Vec3};
 
 #[repr(C)]
 #[allow(missing_docs)]
@@ -20,8 +20,19 @@ pub struct Vec4 {
 impl Vec4 {
     #[must_use]
     ///Creates a new vector
-    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
-        Self { x, y, z, w }
+    pub fn new<A, B, C, D>(x: A, y: B, z: C, w: D) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+        C: IntoFloat32,
+        D: IntoFloat32,
+    {
+        Self {
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
+            w: w.into(),
+        }
     }
 
     #[must_use]
@@ -64,17 +75,22 @@ impl Vector for Vec4 {
     }
 }
 
-impl Div<f32> for Vec4 {
+impl<T: IntoFloat32> Div<T> for Vec4 {
     type Output = Self;
 
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self::new(self.x / rhs, self.y / rhs, self.z / rhs, self.w / rhs)
     }
 }
-impl Mul<f32> for Vec4 {
+
+impl<T: IntoFloat32> Mul<T> for Vec4 {
     type Output = Self;
 
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self::new(self.x * rhs, self.y * rhs, self.z * rhs, self.w * rhs)
     }
 }
@@ -122,8 +138,10 @@ impl SubAssign<Self> for Vec4 {
     }
 }
 
-impl MulAssign<f32> for Vec4 {
-    fn mul_assign(&mut self, rhs: f32) {
+impl<T: IntoFloat32> MulAssign<T> for Vec4 {
+    fn mul_assign(&mut self, rhs: T) {
+        let rhs = rhs.into();
+
         self.x *= rhs;
         self.y *= rhs;
         self.z *= rhs;
@@ -131,8 +149,10 @@ impl MulAssign<f32> for Vec4 {
     }
 }
 
-impl DivAssign<f32> for Vec4 {
-    fn div_assign(&mut self, rhs: f32) {
+impl<T: IntoFloat32> DivAssign<T> for Vec4 {
+    fn div_assign(&mut self, rhs: T) {
+        let rhs = rhs.into();
+
         self.x /= rhs;
         self.y /= rhs;
         self.z /= rhs;
@@ -140,9 +160,11 @@ impl DivAssign<f32> for Vec4 {
     }
 }
 
-impl Add<f32> for Vec4 {
+impl<T: IntoFloat32> Add<T> for Vec4 {
     type Output = Self;
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self {
             x: self.x + rhs,
             y: self.y + rhs,
@@ -152,9 +174,12 @@ impl Add<f32> for Vec4 {
     }
 }
 
-impl Sub<f32> for Vec4 {
+impl<T: IntoFloat32> Sub<T> for Vec4 {
     type Output = Self;
-    fn sub(self, rhs: f32) -> Self::Output {
+
+    fn sub(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self {
             x: self.x - rhs,
             y: self.y - rhs,
@@ -164,30 +189,32 @@ impl Sub<f32> for Vec4 {
     }
 }
 
-impl From<(f32, f32, f32, f32)> for Vec4 {
-    fn from(value: (f32, f32, f32, f32)) -> Self {
+impl<A: IntoFloat32, B: IntoFloat32, C: IntoFloat32, D: IntoFloat32> From<(A, B, C, D)> for Vec4 {
+    fn from(value: (A, B, C, D)) -> Self {
         Self {
-            x: value.0,
-            y: value.1,
-            z: value.2,
-            w: value.3,
+            x: value.0.into(),
+            y: value.1.into(),
+            z: value.2.into(),
+            w: value.3.into(),
         }
     }
 }
 
-impl From<(Vec3, f32)> for Vec4 {
-    fn from(value: (Vec3, f32)) -> Self {
+impl<T: IntoFloat32> From<(Vec3, T)> for Vec4 {
+    fn from(value: (Vec3, T)) -> Self {
         Self {
             x: value.0.x,
             y: value.0.y,
             z: value.0.z,
-            w: value.1,
+            w: value.1.into(),
         }
     }
 }
 
-impl From<f32> for Vec4 {
-    fn from(value: f32) -> Self {
+impl<T: IntoFloat32> From<T> for Vec4 {
+    fn from(value: T) -> Self {
+        let value = value.into();
+
         Self {
             x: value,
             y: value,
