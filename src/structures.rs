@@ -2,7 +2,7 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::math::{Vec2, Vec3, Vec4};
+use crate::math::{IntoFloat32, Vec2, Vec3, Vec4};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd, Pod, Zeroable)]
@@ -84,14 +84,35 @@ pub(crate) struct LightBuffer {
 impl Color {
     ///Create new color from the 4 components
     #[must_use]
-    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Self { r, g, b, a }
+    pub fn new<A, B, C, D>(r: A, g: B, b: C, a: D) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+        C: IntoFloat32,
+        D: IntoFloat32,
+    {
+        Self {
+            r: r.into(),
+            g: g.into(),
+            b: b.into(),
+            a: a.into(),
+        }
     }
 
     ///Create new color from the 3 components, without the alpha channel
     #[must_use]
-    pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
-        Self { r, g, b, a: 1.0 }
+    pub fn rgb<A, B, C>(r: A, g: B, b: C) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+        C: IntoFloat32,
+    {
+        Self {
+            r: r.into(),
+            g: g.into(),
+            b: b.into(),
+            a: 1.0,
+        }
     }
 
     ///Create new color from the 4 components, maps the values [0; 255] to [0; 1]
@@ -117,7 +138,15 @@ impl Color {
 
     ///Creates a new color from hsl values
     #[must_use]
-    pub fn from_hsl(hue: f32, saturation: f32, lightness: f32) -> Self {
+    pub fn from_hsl<A, B, C>(hue: A, saturation: B, lightness: C) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+        C: IntoFloat32,
+    {
+        let hue = hue.into();
+        let saturation = saturation.into();
+        let lightness = lightness.into();
         //Hue : [0, 360)
         //Saturation: [0; 1]
         //Lightness: [0; 1]
