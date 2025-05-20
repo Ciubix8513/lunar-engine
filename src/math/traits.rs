@@ -47,3 +47,49 @@ pub trait Vector: Div<f32> + Sized + Copy + PartialEq + PartialOrd {
         }
     }
 }
+
+///Trait for types that can be converted into `f32`
+pub trait IntoFloat32 {
+    ///Converts `self` into an `f32`
+    fn into(self) -> f32;
+}
+
+impl IntoFloat32 for f32 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self
+    }
+}
+impl IntoFloat32 for u32 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self as f32
+    }
+}
+
+impl IntoFloat32 for i32 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self as f32
+    }
+}
+
+impl IntoFloat32 for i64 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self as f32
+    }
+}
+impl IntoFloat32 for u64 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self as f32
+    }
+}
+
+impl IntoFloat32 for f64 {
+    #[inline(always)]
+    fn into(self) -> f32 {
+        self as f32
+    }
+}

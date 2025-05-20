@@ -4,6 +4,8 @@ use bytemuck::{Pod, Zeroable};
 
 pub use crate::math::traits::Vector;
 
+use super::traits::IntoFloat32;
+
 #[repr(C)]
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
@@ -16,8 +18,15 @@ pub struct Vec2 {
 impl Vec2 {
     #[must_use]
     ///Creates a new vector
-    pub const fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
+    pub fn new<A, B>(x: A, y: B) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+    {
+        Self {
+            x: x.into(),
+            y: y.into(),
+        }
     }
 
     ///Returns the absolute vector
@@ -39,26 +48,33 @@ impl Vector for Vec2 {
     }
 }
 
-impl From<(f32, f32)> for Vec2 {
-    fn from(a: (f32, f32)) -> Self {
-        Self { x: a.0, y: a.1 }
+impl<A: IntoFloat32, B: IntoFloat32> From<(A, B)> for Vec2 {
+    fn from(a: (A, B)) -> Self {
+        Self {
+            x: a.0.into(),
+            y: a.1.into(),
+        }
     }
 }
 
-impl Div<f32> for Vec2 {
+impl<A: IntoFloat32> Div<A> for Vec2 {
     type Output = Self;
 
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: A) -> Self::Output {
+        let rhs = rhs.into();
         Self::new(self.x / rhs, self.y / rhs)
     }
 }
-impl Mul<f32> for Vec2 {
+
+impl<A: IntoFloat32> Mul<A> for Vec2 {
     type Output = Self;
 
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: A) -> Self::Output {
+        let rhs = rhs.into();
         Self::new(self.x * rhs, self.y * rhs)
     }
 }
+
 impl Sub<Self> for Vec2 {
     type Output = Self;
 
@@ -88,23 +104,28 @@ impl SubAssign<Self> for Vec2 {
     }
 }
 
-impl MulAssign<f32> for Vec2 {
-    fn mul_assign(&mut self, rhs: f32) {
+impl<A: IntoFloat32> MulAssign<A> for Vec2 {
+    fn mul_assign(&mut self, rhs: A) {
+        let rhs = rhs.into();
+
         self.x *= rhs;
         self.y *= rhs;
     }
 }
 
-impl DivAssign<f32> for Vec2 {
-    fn div_assign(&mut self, rhs: f32) {
+impl<A: IntoFloat32> DivAssign<A> for Vec2 {
+    fn div_assign(&mut self, rhs: A) {
+        let rhs = rhs.into();
+
         self.x /= rhs;
         self.y /= rhs;
     }
 }
 
-impl Add<f32> for Vec2 {
+impl<A: IntoFloat32> Add<A> for Vec2 {
     type Output = Self;
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: A) -> Self::Output {
+        let rhs = rhs.into();
         Self {
             x: self.x + rhs,
             y: self.y + rhs,
@@ -112,9 +133,10 @@ impl Add<f32> for Vec2 {
     }
 }
 
-impl Sub<f32> for Vec2 {
+impl<A: IntoFloat32> Sub<A> for Vec2 {
     type Output = Self;
-    fn sub(self, rhs: f32) -> Self::Output {
+    fn sub(self, rhs: A) -> Self::Output {
+        let rhs = rhs.into();
         Self {
             x: self.x - rhs,
             y: self.y - rhs,
@@ -122,8 +144,10 @@ impl Sub<f32> for Vec2 {
     }
 }
 
-impl From<f32> for Vec2 {
-    fn from(value: f32) -> Self {
+impl<A: IntoFloat32> From<A> for Vec2 {
+    fn from(value: A) -> Self {
+        let value = value.into();
+
         Self { x: value, y: value }
     }
 }

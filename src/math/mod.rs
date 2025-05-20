@@ -13,6 +13,7 @@ mod vec4;
 use std::ops::{Add, Mul, Sub};
 
 pub use mat4x4::Mat4x4;
+pub use traits::IntoFloat32;
 pub use traits::Vector;
 pub use vec2::Vec2;
 pub use vec3::Vec3;

@@ -5,7 +5,7 @@ use rand::Rng;
 
 pub use crate::math::traits::Vector;
 
-use super::Vec4;
+use super::{IntoFloat32, Vec4};
 
 #[repr(C)]
 #[allow(missing_docs)]
@@ -20,9 +20,19 @@ pub struct Vec3 {
 impl Vec3 {
     #[must_use]
     ///Creates a new vector
-    pub const fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
+    pub fn new<A, B, C>(x: A, y: B, z: C) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+        C: IntoFloat32,
+    {
+        Self {
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
+        }
     }
+
     #[must_use]
     ///Cross product of the vector and another vector
     pub fn cross(&self, other: &Self) -> Self {
@@ -35,7 +45,14 @@ impl Vec3 {
 
     #[must_use]
     ///Creates a random vector with values being in the given range
-    pub fn random(min: f32, max: f32) -> Self {
+    pub fn random<A, B>(min: A, max: B) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+    {
+        let min = min.into();
+        let max = max.into();
+
         let mut random = rand::thread_rng();
         Self {
             x: random.gen_range(min..max),
@@ -46,7 +63,14 @@ impl Vec3 {
 
     #[must_use]
     ///Creates a random vector with values being in the given range
-    pub fn random_with_rng(min: f32, max: f32, rng: &mut impl rand::Rng) -> Self {
+    pub fn random_with_rng<A, B>(min: A, max: B, rng: &mut impl rand::Rng) -> Self
+    where
+        A: IntoFloat32,
+        B: IntoFloat32,
+    {
+        let min = min.into();
+        let max = max.into();
+
         Self {
             x: rng.gen_range(min..max),
             y: rng.gen_range(min..max),
@@ -77,17 +101,21 @@ impl Vector for Vec3 {
     }
 }
 
-impl Div<f32> for Vec3 {
+impl<T: IntoFloat32> Div<T> for Vec3 {
     type Output = Self;
 
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
-impl Mul<f32> for Vec3 {
+impl<T: IntoFloat32> Mul<T> for Vec3 {
     type Output = Self;
 
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
@@ -122,25 +150,31 @@ impl SubAssign<Self> for Vec3 {
     }
 }
 
-impl MulAssign<f32> for Vec3 {
-    fn mul_assign(&mut self, rhs: f32) {
+impl<T: IntoFloat32> MulAssign<T> for Vec3 {
+    fn mul_assign(&mut self, rhs: T) {
+        let rhs = rhs.into();
+
         self.x *= rhs;
         self.y *= rhs;
         self.z *= rhs;
     }
 }
 
-impl DivAssign<f32> for Vec3 {
-    fn div_assign(&mut self, rhs: f32) {
+impl<T: IntoFloat32> DivAssign<T> for Vec3 {
+    fn div_assign(&mut self, rhs: T) {
+        let rhs = rhs.into();
+
         self.x /= rhs;
         self.y /= rhs;
         self.z /= rhs;
     }
 }
 
-impl Add<f32> for Vec3 {
+impl<T: IntoFloat32> Add<T> for Vec3 {
     type Output = Self;
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self {
             x: self.x + rhs,
             y: self.y + rhs,
@@ -149,9 +183,11 @@ impl Add<f32> for Vec3 {
     }
 }
 
-impl Sub<f32> for Vec3 {
+impl<T: IntoFloat32> Sub<T> for Vec3 {
     type Output = Self;
-    fn sub(self, rhs: f32) -> Self::Output {
+    fn sub(self, rhs: T) -> Self::Output {
+        let rhs = rhs.into();
+
         Self {
             x: self.x - rhs,
             y: self.y - rhs,
@@ -160,18 +196,20 @@ impl Sub<f32> for Vec3 {
     }
 }
 
-impl From<(f32, f32, f32)> for Vec3 {
-    fn from(a: (f32, f32, f32)) -> Self {
+impl<A: IntoFloat32, B: IntoFloat32, C: IntoFloat32> From<(A, B, C)> for Vec3 {
+    fn from(a: (A, B, C)) -> Self {
         Self {
-            x: a.0,
-            y: a.1,
-            z: a.2,
+            x: a.0.into(),
+            y: a.1.into(),
+            z: a.2.into(),
         }
     }
 }
 
-impl From<f32> for Vec3 {
-    fn from(value: f32) -> Self {
+impl<T: IntoFloat32> From<T> for Vec3 {
+    fn from(value: T) -> Self {
+        let value = value.into();
+
         Self {
             x: value,
             y: value,
