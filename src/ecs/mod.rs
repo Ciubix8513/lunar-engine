@@ -104,6 +104,7 @@ pub struct Entity {
 }
 
 ///A guard around the reference to the entity that contains this component
+#[derive(Debug, Clone)]
 pub struct SelfReferenceGuard {
     weak: Weak<RefCell<Entity>>,
 }
