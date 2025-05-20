@@ -7,6 +7,8 @@ pub mod fps;
 pub mod light;
 ///Mesh component
 pub mod mesh;
+///Physics simulation related components
+pub mod physics;
 #[cfg(test)]
 mod tests;
 ///Transformation component
