@@ -77,7 +77,7 @@ impl Component for TestComponent3 {
 
 #[derive(Debug)]
 struct TestComponent4 {
-    test_comp_3: Option<ComponentReference<TestComponent>>,
+    test_comp: Option<ComponentReference<TestComponent>>,
 }
 
 impl Component for TestComponent4 {
@@ -87,11 +87,11 @@ impl Component for TestComponent4 {
     where
         Self: Sized,
     {
-        Self { test_comp_3: None }
+        Self { test_comp: None }
     }
 
     fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
-        self.test_comp_3 = Some(reference.get_component().unwrap())
+        self.test_comp = Some(reference.get_component().unwrap())
     }
 }
 
@@ -479,7 +479,7 @@ fn get_unique_component() {
 }
 
 #[test]
-fn add_more_component() {
+fn component_addition() {
     let mut world = World::new();
 
     let e = world.add_entity(Entity::new()).unwrap();
