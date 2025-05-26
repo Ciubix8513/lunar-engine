@@ -75,6 +75,26 @@ impl Component for TestComponent3 {
     }
 }
 
+#[derive(Debug)]
+struct TestComponent4 {
+    test_comp_3: Option<ComponentReference<TestComponent>>,
+}
+
+impl Component for TestComponent4 {
+    #[dependencies(TestComponent)]
+
+    fn mew() -> Self
+    where
+        Self: Sized,
+    {
+        Self { test_comp_3: None }
+    }
+
+    fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
+        self.test_comp_3 = Some(reference.get_component().unwrap())
+    }
+}
+
 #[test]
 fn component_dependency_test() {
     let mut e = Entity::new();
@@ -456,4 +476,25 @@ fn get_unique_component() {
 
     let c = world.get_unique_component::<UniqueComponent>();
     assert!(c.is_some());
+}
+
+#[test]
+fn add_more_component() {
+    let mut world = World::new();
+
+    let e = world.add_entity(Entity::new()).unwrap();
+
+    //Add dependency
+    e.upgrade()
+        .unwrap()
+        .borrow_mut()
+        .add_component::<TestComponent>()
+        .unwrap();
+
+    //Add the component itself
+    e.upgrade()
+        .unwrap()
+        .borrow_mut()
+        .add_component::<TestComponent4>()
+        .unwrap();
 }
