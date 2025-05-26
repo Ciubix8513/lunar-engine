@@ -119,8 +119,14 @@ impl SelfReferenceGuard {
     {
         self.weak.upgrade().map_or_else(
             || Err(Error::EntityDoesNotExist),
+            //The problematic borrow
             |it| {
-                it.borrow()
+                //Circumvent the borrow check of the RefCell and get the value even if it's already
+                //mutably borrowed
+                //
+                //This SHOULD be fine, bc this call only happens when you add a component, or add
+                //the entity to the world, so it SHOULDN'T cause any problems
+                unsafe { it.as_ptr().as_ref().unwrap() }
                     .get_component::<T>()
                     .map_or_else(|| Err(Error::ComponentDoesNotExist), Ok)
             },
