@@ -68,6 +68,7 @@ pub mod input;
 pub mod internal;
 mod logging;
 pub mod math;
+pub mod physics;
 pub mod rendering;
 ///Various structures
 pub mod structures;
