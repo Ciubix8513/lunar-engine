@@ -6,7 +6,7 @@ use crate::{
     ecs::{EntityBuilder, World},
 };
 
-use super::check_collisions;
+use super::process_collisions;
 
 #[test]
 fn test_no_collisions() {
@@ -21,7 +21,7 @@ fn test_no_collisions() {
         .unwrap();
 
     //There's nothing physics related in the world so no collisions :3
-    let c = check_collisions(&world);
+    let c = process_collisions(&world);
     assert!(c.is_empty());
 
     e.upgrade()
@@ -31,7 +31,7 @@ fn test_no_collisions() {
         .unwrap();
 
     //There are no physics objects in the world, so no collisions
-    let c = check_collisions(&world);
+    let c = process_collisions(&world);
     assert!(c.is_empty());
 
     e.upgrade()
@@ -41,7 +41,7 @@ fn test_no_collisions() {
         .unwrap();
 
     //There's just one object in the  world, so  no collisions
-    let c = check_collisions(&world);
+    let c = process_collisions(&world);
     assert!(c.is_empty());
 
     let e1 = world
@@ -55,7 +55,7 @@ fn test_no_collisions() {
         .unwrap();
 
     //There's just one collider in the  world, so  no collisions
-    let c = check_collisions(&world);
+    let c = process_collisions(&world);
     assert!(c.is_empty());
 
     e1.upgrade()
@@ -65,6 +65,6 @@ fn test_no_collisions() {
         .unwrap();
 
     //Finally there are 2 objects, so there must be collisions
-    let c = check_collisions(&world);
+    let c = process_collisions(&world);
     assert!(!c.is_empty());
 }
