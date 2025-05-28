@@ -11,7 +11,7 @@ use crate::{
         transform::Transform,
     },
     ecs::{ComponentReference, Entity, EntityRefence, World},
-    math::{Mat4x4, Vec3},
+    math::{Mat4x4, Vec3, Vector},
 };
 
 #[cfg(test)]
@@ -33,7 +33,7 @@ pub struct PhysicsData {}
 ///Additional data about what should collide with what and how
 pub struct CollisionData {}
 
-fn triangular_num(a: u64) -> u64 {
+fn triangular_num(a: usize) -> usize {
     (a * (a + 1)) / 2
 }
 
@@ -49,11 +49,38 @@ struct Object {
     entity_id: UUID,
     collider: Collider,
     transform: ComponentReference<Transform>,
+    position: Vec3,
     transform_matrix: Mat4x4,
 }
 
+//For collision detection we only care about whether the objects collide, not where exactly they do
+//that, exact position only matters for raycasting
 fn check_collision(obj_a: &Object, obj_b: &Object) -> bool {
-    false
+    //this is awful and i hate it
+    match &obj_a.collider {
+        Collider::Box(component_reference) => match &obj_b.collider {
+            Collider::Box(component_reference) => todo!(),
+            Collider::Sphere(component_reference) => todo!(),
+            Collider::Capsule(component_reference) => todo!(),
+        },
+        Collider::Sphere(component_reference_a) => match &obj_b.collider {
+            Collider::Box(component_reference_b) => todo!(),
+            //The only simple  case
+            Collider::Sphere(component_reference_b) => {
+                let radii =
+                    component_reference_a.borrow().radius + component_reference_b.borrow().radius;
+
+                (obj_a.position - obj_b.position).length() - radii <= 0.0
+            }
+            Collider::Capsule(component_reference_b) => todo!(),
+        },
+
+        Collider::Capsule(component_reference) => match &obj_b.collider {
+            Collider::Box(component_reference) => todo!(),
+            Collider::Sphere(component_reference) => todo!(),
+            Collider::Capsule(component_reference) => todo!(),
+        },
+    }
 }
 
 ///Checks collisions in a world
@@ -118,6 +145,7 @@ pub fn process_collisions(world: &World) -> Vec<Collision> {
                 entity_id: i.1,
                 collider: i.2,
                 transform: t.clone(),
+                position: t.borrow().position_global(),
                 transform_matrix: t.borrow().matrix(),
             }
         });
@@ -155,9 +183,16 @@ pub fn process_collisions(world: &World) -> Vec<Collision> {
     //I think that covers all the simple cases...
     //Now the  actually difficult stuff
 
+    //
+    //T_(N - 1) + (M - N) *N
+    //
+    //N = Number of phys objects
+    //M = Total number of colliders
+    //
+    //but since we already separated objects and colliders we can just do T_(N - 1) + M *N
+
     //Total number of collision checks, without optimisations
-    let num_col = triangular_num(objs.len() as u64 - 1) as usize
-        + colliders.len().checked_sub(objs.len()).unwrap_or_default() * objs.len();
+    let num_col = triangular_num(objs.len() - 1) + colliders.len() * objs.len();
 
     let mut collisions = Vec::new();
 
