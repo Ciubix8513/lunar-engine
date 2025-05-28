@@ -50,6 +50,8 @@ struct Object {
     collider: Collider,
     transform: ComponentReference<Transform>,
     position: Vec3,
+    scale: Vec3,
+    rotation: Vec3,
     transform_matrix: Mat4x4,
 }
 
@@ -67,10 +69,19 @@ fn check_collision(obj_a: &Object, obj_b: &Object) -> bool {
             Collider::Box(component_reference_b) => todo!(),
             //The only simple  case
             Collider::Sphere(component_reference_b) => {
-                let radii =
-                    component_reference_a.borrow().radius + component_reference_b.borrow().radius;
+                let direction = obj_a.position - obj_b.position;
+                let len = direction.length();
 
-                (obj_a.position - obj_b.position).length() - radii <= 0.0
+                //Normalized direction towards the other sphere
+                let dir_normalized = direction / len;
+
+                //Now we multiply  it by the scale of the object and the  radius
+                let radius_a =
+                    (dir_normalized * obj_a.scale * component_reference_a.borrow().radius).length();
+                let radius_b =
+                    (dir_normalized * obj_b.scale * component_reference_b.borrow().radius).length();
+
+                len - (radius_a + radius_b) <= 0.0
             }
             Collider::Capsule(component_reference_b) => todo!(),
         },
@@ -145,7 +156,9 @@ pub fn process_collisions(world: &World) -> Vec<Collision> {
                 entity_id: i.1,
                 collider: i.2,
                 transform: t.clone(),
+                scale: t.borrow().scale_global(),
                 position: t.borrow().position_global(),
+                rotation: t.borrow().rotation;
                 transform_matrix: t.borrow().matrix(),
             }
         });
