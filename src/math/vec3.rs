@@ -219,6 +219,30 @@ impl<T: IntoFloat32> Sub<T> for Vec3 {
     }
 }
 
+impl Div<Vec3> for Vec3 {
+    type Output = Self;
+
+    fn div(self, rhs: Vec3) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
+        }
+    }
+}
+
+impl Mul<Vec3> for Vec3 {
+    type Output = Self;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
+}
+
 impl<A: IntoFloat32, B: IntoFloat32, C: IntoFloat32> From<(A, B, C)> for Vec3 {
     fn from(a: (A, B, C)) -> Self {
         Self {

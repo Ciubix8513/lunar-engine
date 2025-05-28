@@ -145,4 +145,12 @@ impl Transform {
             p.borrow().matrix().transform3(self.position)
         })
     }
+
+    #[must_use]
+    ///Returns global scale of the entity
+    pub fn scale_global(&self) -> Vec3 {
+        self.parent
+            .as_ref()
+            .map_or(self.scale, |p| p.borrow().scale_global() * self.scale)
+    }
 }

@@ -164,6 +164,28 @@ impl<A: IntoFloat32> Sub<A> for Vec2 {
     }
 }
 
+impl Div<Vec2> for Vec2 {
+    type Output = Self;
+
+    fn div(self, rhs: Vec2) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+        }
+    }
+}
+
+impl Mul<Vec2> for Vec2 {
+    type Output = Self;
+
+    fn mul(self, rhs: Vec2) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
 impl<A: IntoFloat32> From<A> for Vec2 {
     fn from(value: A) -> Self {
         let value = value.into();

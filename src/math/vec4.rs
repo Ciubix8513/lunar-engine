@@ -195,6 +195,32 @@ impl<T: IntoFloat32> Sub<T> for Vec4 {
     }
 }
 
+impl Div<Vec4> for Vec4 {
+    type Output = Self;
+
+    fn div(self, rhs: Vec4) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+            z: self.z / rhs.z,
+            w: self.w / rhs.w,
+        }
+    }
+}
+
+impl Mul<Vec4> for Vec4 {
+    type Output = Self;
+
+    fn mul(self, rhs: Vec4) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+            w: self.w * rhs.w,
+        }
+    }
+}
+
 impl<A: IntoFloat32, B: IntoFloat32, C: IntoFloat32, D: IntoFloat32> From<(A, B, C, D)> for Vec4 {
     fn from(value: (A, B, C, D)) -> Self {
         Self {
