@@ -1,4 +1,4 @@
-use super::*;
+use super::{quaternion::Quaternion, *};
 
 #[test]
 fn test_matrix_float_mul() {
@@ -255,4 +255,23 @@ fn test_transform_speed() {
             &Vec3::new(90.0, 10.0, 52.0),
         );
     }
+}
+
+#[test]
+fn quaternion_inversion() {
+    let a = Quaternion::new(1, 2, 3, 4);
+
+    let b = a.invert();
+
+    assert_eq!(b, Quaternion::new(0.033333, -0.066666, -0.1, -0.133333));
+}
+
+#[test]
+fn quaternion_multiplication() {
+    let a = Quaternion::new(1, 2, 3, 4);
+    let b = Quaternion::new(5, 6, 7, 8);
+
+    let c = a * b;
+
+    assert_eq!(c, Quaternion::new(-60, 12, 30, 24));
 }
