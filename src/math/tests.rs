@@ -263,7 +263,11 @@ fn quaternion_inversion() {
 
     let b = a.invert();
 
-    assert_eq!(b, Quaternion::new(0.033333, -0.066666, -0.1, -0.133333));
+    //Stupid float precision
+    assert_eq!(
+        b,
+        Quaternion::new(0.033333335, -0.06666667, -0.10000001, -0.13333334)
+    );
 }
 
 #[test]
