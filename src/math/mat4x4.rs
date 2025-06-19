@@ -97,6 +97,39 @@ impl Mat4x4 {
             m33,
         }
     }
+
+    ///Creates a matrix with all values being set to `value`
+    #[must_use]
+    pub const fn single_value_mat(value: f32) ->Self {
+        Self{
+            m00: value,
+            m01: value,
+            m02: value,
+            m03: value,
+            m10: value,
+            m11: value,
+            m12: value,
+            m13: value,
+            m20: value,
+            m21: value,
+            m22: value,
+            m23: value,
+            m30: value,
+            m31: value,
+            m32: value,
+            m33: value,
+        }
+    }
+
+    ///Makes all the values in the matrix positive
+    pub fn abs(&self) -> Self {
+        Self { m00: self.m00.abs(), m01: self.m01.abs(),m02: self.m02.abs(),m03: self.m03.abs(),
+               m10: self.m00.abs(), m11: self.m01.abs(),m12: self.m02.abs(),m13: self.m03.abs(),
+               m20: self.m00.abs(), m21: self.m01.abs(),m22: self.m02.abs(),m23: self.m03.abs(),
+               m30: self.m00.abs(), m31: self.m01.abs(),m32: self.m02.abs(),m33: self.m03.abs(),
+        }
+    }
+
     #[must_use]
     ///Transposes the matrix, consuming it in the process
     pub const fn transpose(self) -> Self {
