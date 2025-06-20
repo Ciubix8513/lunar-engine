@@ -368,6 +368,7 @@ fn euler_to_quaternion() {
 
 #[test]
 fn quaternion_to_euler() {
+    //This large delta is not idea, buuuut it's just degrees, so it's fine
     let delta = Vec3::from(0.1);
 
     let q = Quaternion::new(1, 0, 0, 0);

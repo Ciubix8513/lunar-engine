@@ -6,13 +6,25 @@ use std::{f32, ops::Mul};
 use super::{IntoFloat32, Mat4x4, Vec3, Vec4};
 
 ///A quaternion, for representing rotations
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 #[allow(missing_docs)]
 pub struct Quaternion {
     pub w: f32,
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+impl Default for Quaternion {
+    //Change default to 1, 0, 0, 0, so that rotations work properly
+    fn default() -> Self {
+        Self {
+            w: 1.0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
 }
 
 impl Quaternion {

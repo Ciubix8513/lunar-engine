@@ -1,4 +1,4 @@
-use crate::math::{Mat4x4, Vec3};
+use crate::math::{Mat4x4, Quaternion, Vec3};
 
 use crate::ecs::{Component, ComponentReference};
 
@@ -10,7 +10,7 @@ pub struct Transform {
     ///Position of the object
     pub position: Vec3,
     ///Rotation of the object
-    pub rotation: Vec3,
+    pub rotation: Quaternion,
     ///Scale of the object
     pub scale: Vec3,
     ///Parent transform of the object
@@ -21,7 +21,7 @@ impl Default for Transform {
     fn default() -> Self {
         Self {
             position: Vec3::default(),
-            rotation: Vec3::default(),
+            rotation: Quaternion::default(),
             scale: Vec3 {
                 x: 1.0,
                 y: 1.0,
@@ -38,7 +38,7 @@ impl Component for Transform {
         Self: Sized,
     {
         Self {
-            rotation: Vec3::default(),
+            rotation: Quaternion::default(),
             scale: Vec3::new(1.0, 1.0, 1.0),
             position: Vec3::default(),
             parent: None,
@@ -49,7 +49,7 @@ impl Component for Transform {
 impl Transform {
     ///Create a new transform instance
     #[must_use]
-    pub const fn new(position: Vec3, rotation: Vec3, scale: Vec3) -> Self {
+    pub const fn new(position: Vec3, rotation: Quaternion, scale: Vec3) -> Self {
         Self {
             position,
             rotation,
@@ -62,7 +62,7 @@ impl Transform {
     #[must_use]
     pub const fn with_parent(
         position: Vec3,
-        rotation: Vec3,
+        rotation: Quaternion,
         scale: Vec3,
         parent: ComponentReference<Self>,
     ) -> Self {

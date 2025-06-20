@@ -5,6 +5,7 @@ use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
 
 use super::traits::Vector;
+use super::Quaternion;
 
 #[allow(missing_docs)]
 #[repr(C)]
@@ -489,25 +490,20 @@ impl Mat4x4 {
     ///1. Scale
     ///2. Rotation
     ///3. Translation
-    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
-
-        let x = scale.x;
-        let y = scale.y;
-        let z = scale.z;
+    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Quaternion) -> Self {
+        let norm = rotation.norm();
+        let s = 2.0 / norm/norm;
 
         Self {
-            m00: cos_y * cos_z * x,
-            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
-            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
-            m10: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
-            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
-            m20: -sin_y * x,
-            m21: sin_x * cos_y * y,
-            m22: cos_x * cos_y * z,
+            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
+            m01: s * (rotation.x *rotation.y -rotation.z *rotation.w)* scale.y,
+            m02: s * (rotation.x *rotation.z +rotation.y *rotation.w)*scale.z,
+            m10: s * (rotation.x *rotation.y +rotation.z *rotation.w)* scale.x,
+            m11: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z))*scale.y,
+            m12: s * (rotation.y * rotation.z - rotation.x * rotation.w)* scale.z,
+            m20: s * (rotation.x * rotation.z - rotation.y * rotation.w)* scale. x,
+            m21: s * (rotation.y * rotation.z + rotation.x * rotation.w)* scale.y,
+            m22:  (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y))*scale.z,
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
@@ -525,28 +521,23 @@ impl Mat4x4 {
     pub fn transform_matrix_euler_transposed(
         translation: &Vec3,
         scale: &Vec3,
-        rotation: &Vec3,
+        rotation: &Quaternion,
     ) -> Self {
-        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
-
-        let x = scale.x;
-        let y = scale.y;
-        let z = scale.z;
+        let norm = rotation.norm();
+        let s = 2.0 / norm/norm;
 
         Self {
-            m00: cos_y * cos_z * x,
-            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
-            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
-            m30: translation.x,
-            m01: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
-            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
-            m31: translation.y,
-            m02: -sin_y * x,
-            m12: sin_x * cos_y * y,
-            m22: cos_x * cos_y * z,
+            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
+            m10: s * (rotation.x *rotation.y -rotation.z *rotation.w)* scale.y,
+            m20: s * (rotation.x *rotation.z +rotation.y *rotation.w)*scale.z,
+            m30: s * (rotation.x *rotation.y +rotation.z *rotation.w)* scale.x,
+            m01: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z))*scale.y,
+            m11: s * (rotation.y * rotation.z - rotation.x * rotation.w)* scale.z,
+            m21: s * (rotation.x * rotation.z - rotation.y * rotation.w)* scale. x,
+            m31: s * (rotation.y * rotation.z + rotation.x * rotation.w)* scale.y,
+            m02:  (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y))*scale.z,
+            m12: translation.x,
+            m22: translation.y,
             m32: translation.z,
             ..Default::default()
         }
