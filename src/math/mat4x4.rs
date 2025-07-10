@@ -536,6 +536,7 @@ impl Mat4x4 {
         scale: &Vec3,
         rotation: &Quaternion,
     ) -> Self {
+
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
 
@@ -543,17 +544,18 @@ impl Mat4x4 {
             m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
             m10: s * (rotation.x * rotation.y - rotation.z * rotation.w) * scale.y,
             m20: s * (rotation.x * rotation.z + rotation.y * rotation.w) * scale.z,
-            m30: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
-            m01: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
-            m11: s * (rotation.y * rotation.z - rotation.x * rotation.w) * scale.z,
-            m21: s * (rotation.x * rotation.z - rotation.y * rotation.w) * scale.x,
-            m31: s * (rotation.y * rotation.z + rotation.x * rotation.w) * scale.y,
-            m02: (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
-            m12: translation.x,
-            m22: translation.y,
+            m01: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
+            m11: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
+            m21: s * (rotation.y * rotation.z - rotation.x * rotation.w) * scale.z,
+            m02: s * (rotation.x * rotation.z - rotation.y * rotation.w) * scale.x,
+            m12: s * (rotation.y * rotation.z + rotation.x * rotation.w) * scale.y,
+            m22: (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
+            m30: translation.x,
+            m31: translation.y,
             m32: translation.z,
             ..Default::default()
         }
+        
     }
 
     #[must_use]
