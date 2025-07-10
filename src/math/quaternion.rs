@@ -65,40 +65,57 @@ impl Quaternion {
         //Deg 2 rad
         let a = angles * 0.5 * f32::consts::PI / 180.0;
 
-        println!("{a}");
-
-        let cz = f32::cos(a.z);
-        let sz = f32::sin(a.z);
-        let cy = f32::cos(a.y);
-        let sy = f32::sin(a.y);
-        let cx = f32::cos(a.x);
-        let sx = f32::sin(a.x);
+        let (sin_x, cos_x) = f32::sin_cos(a.x);
+        let (sin_y, cos_y) = f32::sin_cos(a.y);
+        let (sin_z, cos_z) = f32::sin_cos(a.z);
 
         Self {
-            w: cz * cy * cx + sz * sy * sx,
-            z: sz * cy * cx - cz * sy * sx,
-            y: cz * sy * cx + sz * cy * sx,
-            x: cz * cy * sx - sz * sy * cx,
+            w: cos_z * cos_y * cos_x + sin_z * sin_y * sin_x,
+            z: sin_z * cos_y * cos_x - cos_z * sin_y * sin_x,
+            y: cos_z * sin_y * cos_x + sin_z * cos_y * sin_x,
+            x: cos_z * cos_y * sin_x - sin_z * sin_y * cos_x,
         }
     }
 
     ///Converts the quaternion to Euler angles
     #[must_use]
     pub fn euler(&self) -> Vec3 {
-        let sinz_cosy = 2.0 * (self.w * self.x + self.y * self.z);
-        let cosz_cosy = 1.0 - 2.0 * (self.x * self.x + self.y * self.y);
+        let q = self.normalize();
 
-        let siny = f32::sqrt(1.0 + 2.0 * (self.w * self.y - self.x * self.z));
-        let cosy = f32::sqrt(1.0 - 2.0 * (self.w * self.y - self.x * self.z));
+        //Handle singularities
+        let test = q.x * q.y + q.z * q.w;
 
-        let sinx_cosy = 2.0 * (self.w * self.z + self.x * self.y);
-        let cosx_cosy = 1.0 - 2.0 * (self.y * self.y + self.z * self.z);
+        if test > 0.499 {
+            let x = (2.0 * f32::atan2(q.x, q.w)).to_degrees();
+            let y = f32::consts::FRAC_PI_2.to_degrees();
+            let z = 0.0;
 
-        Vec3 {
-            x: f32::atan2(sinz_cosy, cosz_cosy).to_degrees(),
-            y: (2.0 * f32::atan2(siny, cosy) - f32::consts::PI / 2.0).to_degrees(),
-            z: f32::atan2(sinx_cosy, cosx_cosy).to_degrees(),
+            return Vec3 { x, y, z };
         }
+
+        if test < -0.499 {
+            let x = (-2.0 * f32::atan2(q.x, q.w)).to_degrees();
+            let y = (-f32::consts::FRAC_PI_2).to_degrees();
+            let z = 0.0;
+
+            return Vec3 { x, y, z };
+        }
+
+        let sinz_cosy = 2.0 * (q.w * q.x + q.y * q.z);
+        let cosz_cosy = 1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+
+        let siny = f32::sqrt(1.0 + 2.0 * (q.z * q.x - q.w * q.y));
+        let cosy = f32::sqrt(1.0 - 2.0 * (q.z * q.x - q.w * q.y));
+
+        let sinx_cosy = 2.0 * (q.w * q.z + q.x * q.y);
+        let cosx_cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+
+        let x = f32::atan2(sinz_cosy, cosz_cosy).to_degrees();
+        let y = ((2.0 * f32::atan2(siny, cosy)) - f32::consts::FRAC_PI_2).to_degrees();
+        // let y = f32::asin(2.0 * (q.z * q.x - q.w * q.y)).to_degr
+        let z = f32::atan2(sinx_cosy, cosx_cosy).to_degrees();
+
+        Vec3 { x, y, z }
     }
 
     ///Converts the quaternion to a rotation matrix
@@ -125,6 +142,19 @@ impl Quaternion {
     #[must_use]
     pub fn norm(&self) -> f32 {
         f32::sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
+    }
+
+    #[must_use]
+    ///Normalizes the quaternion
+    pub fn normalize(&self) -> Self {
+        let norm = self.norm();
+
+        Self {
+            w: self.w / norm,
+            x: self.x / norm,
+            y: self.y / norm,
+            z: self.z / norm,
+        }
     }
 
     #[cfg(test)]
