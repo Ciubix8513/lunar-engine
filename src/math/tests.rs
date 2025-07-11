@@ -357,6 +357,10 @@ fn euler_to_quaternion() {
     let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
     let r = Vec3::new(0, 100, 0);
     assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.490376, 0.749361, -0.290667, 0.336899);
+    let r = Vec3::new(123, 20, 50);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
 }
 
 #[test]
@@ -384,9 +388,12 @@ fn quaternion_to_euler() {
     let r = Vec3::new(90, 90, 0);
     assert_approx_eq!(q.euler(), r, delta);
 
-    println!("LAST TEST");
-
     let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
     let r = Vec3::new(0, 100, 0);
+    assert_approx_eq!(q.euler(), r, delta);
+
+    let r = Vec3::new(123, 20, 50);
+    let q = Quaternion::from_euler(r);
+
     assert_approx_eq!(q.euler(), r, delta);
 }
