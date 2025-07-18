@@ -144,19 +144,24 @@ impl Quaternion {
     fn get_angles(symetric: bool, sign: f32, lamb: f32, a: f32, b: f32, c: f32, d: f32) -> Vec3 {
         let mut angles = Vec3::default();
 
-        angles.y = 2.0 * f32::atan2(f32::hypot(b, a), f32::hypot(d, c));
+        // angles.y = 2.0 * f32::atan2(f32::hypot(b, a), f32::hypot(d, c));
+        angles.y = f32::acos((2.0 * ((a * a + b * b) / (a * a + b * b + c * c + d * d))) - 1.0);
+
         let half_sum = f32::atan2(b, a);
-        let half_diff = f32::atan2(d, c);
+        let half_diff = f32::atan2(-d, c);
 
         if angles.y.abs() <= f32::EPSILON {
+            log::warn!("SINGULARITY A");
             angles.x = 0.0;
             angles.z = 2.0 * half_sum;
         } else if (angles.y - f32::consts::PI).abs() <= f32::EPSILON {
+            log::warn!("SINGULARITY B");
+            // println!("Singularity B");
             angles.x = 0.0;
             angles.z = -2.0 * half_diff;
         } else {
-            angles.x = half_sum - half_diff;
-            angles.z = half_sum + half_diff;
+            angles.x = half_sum + half_diff;
+            angles.z = half_sum - half_diff;
         }
 
         if !symetric {
