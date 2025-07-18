@@ -387,6 +387,10 @@ fn quaternion_to_euler() {
     let q = Quaternion::new(0.5, 0.5, 0.5, 0.5);
     let r = Vec3::new(90, 90, 0);
     assert_approx_eq!(q.euler(), r, delta);
+}
+#[test]
+fn quaternion_to_euler_arbitrary_rotations() {
+    let delta = Vec3::from(0.1);
 
     let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
     let r = Vec3::new(0, 100, 0);
