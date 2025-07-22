@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_arguments, dead_code)]
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Index, Mul, Sub};
 
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
@@ -169,6 +169,81 @@ impl Mat4x4 {
             m33: self.m33,
         }
     }
+
+    ///Creates a new vector out of a given row
+    ///
+    ///Panics:
+    ///
+    ///Will panic if the index is out of bounds
+    pub const fn row(&self, index: u32) -> Vec4 {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => Vec4 {
+                x: self.m00,
+                y: self.m01,
+                z: self.m02,
+                w: self.m03,
+            },
+            1 => Vec4 {
+                x: self.m10,
+                y: self.m11,
+                z: self.m12,
+                w: self.m13,
+            },
+            2 => Vec4 {
+                x: self.m20,
+                y: self.m21,
+                z: self.m22,
+                w: self.m23,
+            },
+            3 => Vec4 {
+                x: self.m30,
+                y: self.m31,
+                z: self.m32,
+                w: self.m33,
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    ///Creates a new vector out of a given column
+    ///
+    ///Panics:
+    ///
+    ///Will panic if the index is out of bounds
+    pub const fn col(&self, index: u32) -> Vec4 {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => Vec4 {
+                x: self.m00,
+                y: self.m10,
+                z: self.m20,
+                w: self.m30,
+            },
+            1 => Vec4 {
+                x: self.m01,
+                y: self.m11,
+                z: self.m21,
+                w: self.m31,
+            },
+            2 => Vec4 {
+                x: self.m02,
+                y: self.m12,
+                z: self.m22,
+                w: self.m32,
+            },
+            3 => Vec4 {
+                x: self.m03,
+                y: self.m13,
+                z: self.m23,
+                w: self.m33,
+            },
+            _ => unreachable!(),
+        }
+    }
+
     // [1 , 2] . [1] _ [1 * 1 + 2 * 2] _ [ 5]
     // [3 , 4]   [2] - [3 * 1 + 4 * 2] - [11]
     ///Transforms `other` using `self` matrix
@@ -536,7 +611,6 @@ impl Mat4x4 {
         scale: &Vec3,
         rotation: &Quaternion,
     ) -> Self {
-
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
 
@@ -555,7 +629,6 @@ impl Mat4x4 {
             m32: translation.z,
             ..Default::default()
         }
-        
     }
 
     #[must_use]

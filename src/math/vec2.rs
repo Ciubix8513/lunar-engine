@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use bytemuck::{Pod, Zeroable};
 
@@ -155,5 +155,31 @@ impl<A: IntoFloat32> From<A> for Vec2 {
 impl std::fmt::Display for Vec2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl IndexMut<u32> for Vec2 {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        assert!(index < 2, "Index out of bounds");
+
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Index<u32> for Vec2 {
+    type Output = f32;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        assert!(index < 2, "Index out of bounds");
+
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            _ => unreachable!(),
+        }
     }
 }

@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use bytemuck::{Pod, Zeroable};
 use rand::Rng;
@@ -227,5 +227,33 @@ impl From<Vec4> for Vec3 {
 impl std::fmt::Display for Vec3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {}, {})", self.x, self.y, self.z)
+    }
+}
+
+impl IndexMut<u32> for Vec3 {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        assert!(index < 3, "Index out of bounds");
+
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Index<u32> for Vec3 {
+    type Output = f32;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        assert!(index < 3, "Index out of bounds");
+
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => unreachable!(),
+        }
     }
 }
