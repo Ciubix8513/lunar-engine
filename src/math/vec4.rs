@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use std::ops::Index;
 
@@ -269,6 +269,19 @@ impl Index<u32> for Vec4 {
             2 => &self.z,
             3 => &self.w,
             _ => unreachable!(),
+        }
+    }
+}
+
+impl Neg for Vec4 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: -self.w,
         }
     }
 }
