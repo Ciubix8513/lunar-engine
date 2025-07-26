@@ -210,6 +210,34 @@ fn test_vec4_length() {
 }
 
 #[test]
+fn test_mat_indexing() {
+    let m = Mat4x4 {
+        m00: 1.0,
+        m01: 2.0,
+        m02: 3.0,
+        m03: 4.0,
+        m10: 5.0,
+        m11: 6.0,
+        m12: 7.0,
+        m13: 8.0,
+        m20: 9.0,
+        m21: 10.0,
+        m22: 11.0,
+        m23: 12.0,
+        m30: 13.0,
+        m31: 14.0,
+        m32: 15.0,
+        m33: 16.0,
+    };
+
+    let col = m.col(2);
+    assert_eq!(col, Vec4::new(3, 7, 11, 15));
+
+    let row = m.row(1);
+    assert_eq!(row, Vec4::new(5, 6, 7, 8));
+}
+
+#[test]
 fn test_lerp() {
     let a = 0.0;
     let b = 1.0;
@@ -388,6 +416,7 @@ fn quaternion_to_euler() {
     let r = Vec3::new(90, 90, 0);
     assert_approx_eq!(q.euler(), r, delta);
 }
+
 #[test]
 fn quaternion_to_euler_arbitrary_rotations() {
     let delta = Vec3::from(0.1);
@@ -395,9 +424,15 @@ fn quaternion_to_euler_arbitrary_rotations() {
     let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
     let r = Vec3::new(0, 100, 0);
     assert_approx_eq!(q.euler(), r, delta);
+}
 
+#[test]
+fn quaternion_to_euler_arbitrary_rotations_1() {
+    let delta = Vec3::from(0.1);
     let r = Vec3::new(123, 20, 50);
     let q = Quaternion::from_euler(r);
+
+    println!("{q:?}");
 
     assert_approx_eq!(q.euler(), r, delta);
 }
