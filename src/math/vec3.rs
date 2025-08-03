@@ -11,26 +11,12 @@ use super::{IntoFloat32, Vec4};
 
 #[repr(C)]
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, Pod, Zeroable)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 3 dimensions
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-}
-
-impl PartialOrd for Vec3 {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.x.partial_cmp(&other.x) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.y.partial_cmp(&other.y) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        self.z.partial_cmp(&other.z)
-    }
 }
 
 impl Vec3 {
