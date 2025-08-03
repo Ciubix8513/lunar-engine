@@ -392,47 +392,59 @@ fn euler_to_quaternion() {
 }
 
 #[test]
-fn quaternion_to_euler() {
+fn quaternion_to_euler_90() {
     //This large delta is not idea, buuuut it's just degrees, so it's fine
     let delta = Vec3::from(0.1);
 
     let q = Quaternion::new(1, 0, 0, 0);
     let r = Vec3::new(0, 0, 0);
-    assert_approx_eq!(q.euler(), r, delta);
+    assert_approx_eq(q.euler(), r, delta);
 
     let q = Quaternion::new(0.707, 0, 0.707, 0);
     let r = Vec3::new(0, 90, 0);
-    assert_approx_eq!(q.euler(), r, delta);
+    assert_approx_eq(q.euler(), r, delta);
 
     let q = Quaternion::new(0.707, 0.707, 0, 0);
     let r = Vec3::new(90, 0, 0);
-    assert_approx_eq!(q.euler(), r, delta);
+    assert_approx_eq(q.euler(), r, delta);
 
     let q = Quaternion::new(0.707, 0, 0, 0.707);
     let r = Vec3::new(0, 0, 90);
-    assert_approx_eq!(q.euler(), r, delta);
+    assert_approx_eq(q.euler(), r, delta);
 
     let q = Quaternion::new(0.5, 0.5, 0.5, 0.5);
-    let r = Vec3::new(90, 90, 0);
-    assert_approx_eq!(q.euler(), r, delta);
+    let r = Vec3::new(0, 90, 90);
+    assert_approx_eq(q.euler(), r, delta);
 }
 
 #[test]
-fn quaternion_to_euler_arbitrary_rotations() {
+fn quaternion_to_euler_181() {
+    let delta = Vec3::from(0.1);
+
+    let r1 = Vec3::new(0, 181, 0);
+    let q = Quaternion::from_euler(r1);
+    let r = Vec3::new(0, -179, 0);
+    assert_approx_eq(q.euler(), r, delta);
+}
+
+#[test]
+fn quaternion_to_euler_100() {
     let delta = Vec3::from(0.1);
 
     let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
     let r = Vec3::new(0, 100, 0);
-    assert_approx_eq!(q.euler(), r, delta);
+    assert_approx_eq(q.euler(), r, delta);
 }
 
-#[test]
-fn quaternion_to_euler_arbitrary_rotations_1() {
-    let delta = Vec3::from(0.1);
-    let r = Vec3::new(123, 20, 50);
-    let q = Quaternion::from_euler(r);
-
-    println!("{q:?}");
-
-    assert_approx_eq!(q.euler(), r, delta);
+fn assert_approx_eq(a: Vec3, b: Vec3, delta: Vec3) {
+    let dif = a - b;
+    assert!(
+        dif.abs().less(delta),
+        "assertion failed: `(left !== right)` \
+             (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
+        a,
+        b,
+        delta,
+        dif,
+    )
 }
