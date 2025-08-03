@@ -56,12 +56,8 @@ impl Component for CameraControls {
         let sensetivity = 800.0;
         let delta = input::cursor_delta() * delta_time * sensetivity;
         let mut trans = self.transform.get().unwrap().borrow_mut();
-        let rot = trans.rotation.euler();
 
-        let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
-        let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
-
-        trans.rotation = Quaternion::from_euler((rot_x, rot_y, rot.z).into());
+        trans.rotate((delta.y * 0.1, delta.x * -0.1, 0.0).into());
 
         //Movement
         let mut speed = 400.0;

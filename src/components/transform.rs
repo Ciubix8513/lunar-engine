@@ -74,6 +74,16 @@ impl Transform {
         }
     }
 
+    ///Rotates the object using a given rotation
+    pub fn rotate_quat(&mut self, rotation: Quaternion) {
+        self.rotation *= rotation;
+    }
+
+    ///Rotates the object using a given rotation in euler angles
+    pub fn rotate(&mut self, rotation: Vec3) {
+        self.rotation *= Quaternion::from_euler(rotation);
+    }
+
     ///Returns transformation of the entity taking transform of the parent into account
     #[must_use]
     pub fn matrix(&self) -> Mat4x4 {

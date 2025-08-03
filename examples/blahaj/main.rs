@@ -58,15 +58,7 @@ impl Component for Spiny {
 
     fn update(&mut self) {
         let mut t = self.transform.get().unwrap().borrow_mut();
-        let r = t.rotation.euler();
-
-        println!("rot = {r}");
-
-        let r1 = (r.x, r.y + self.speed * lunar_engine::delta_time(), r.z).into();
-
-        println!("rot1 = {r1}");
-
-        t.rotation = Quaternion::from_euler(r1);
+        t.rotate((0, self.speed * lunar_engine::delta_time(), 0).into());
     }
 }
 
