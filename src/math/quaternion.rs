@@ -3,7 +3,7 @@
 
 use std::{
     f32,
-    ops::{Index, Mul},
+    ops::{Index, Mul, MulAssign},
 };
 
 use super::{IntoFloat32, Mat4x4, Vec3, Vec4};
@@ -83,91 +83,32 @@ impl Quaternion {
     ///Converts the quaternion to Euler angles
     #[must_use]
     pub fn euler(&self) -> Vec3 {
-        let q = *self;
+        //Bernardes, E., & Viollet, S. (2022). Quaternion to Euler angles conversion: a direct, general and computationally efficient method (Version 1.0.0) [Computer software]
 
-        //x = 1 y = 2 z = 3
+        // let (i, j, k) = (3, 1, 2);
 
-        //Adjust this potentially
-        let (i, j, mut k) = (3, 2, 3);
-        let symetrical = i == k;
+        let a = self.w - self.x;
+        let b = self.z + self.y;
+        let c = self.x + self.w;
+        let d = self.y - self.z;
 
-        if symetrical {
-            k = 6 - i - j;
-        }
-
-        let sign = ((i - j) * (j - k) * (k - i) / 2) as f32;
-
-        let (a, b, c, d);
-
-        if symetrical {
-            a = q[0];
-            b = q[i];
-            c = q[j];
-            d = q[k] * sign;
-        } else {
-            a = q[0] - q[j];
-            b = q[i] + q[k] * sign;
-            c = q[j] + q[0];
-            d = q[k] * sign - q[i];
-        }
-
-        // let mut rotation = Vec3::default();
-        // rotation.y = f32::acos(2.0 * ((a * a + b * b) / (a * a + b * b + c * c + d * d)) - 1.0);
-        // let theta_p = f32::atan2(b, a);
-        // let theta_m = f32::atan2(d, c);
-
-        // if rotation.y == 0.0 {
-        //     rotation.x = 0.0;
-        //     rotation.z = 2.0 * theta_p - rotation.x;
-        // } else if rotation.y == std::f32::consts::FRAC_PI_2 {
-        //     rotation.x = 0.0;
-        //     rotation.z = 2.0 * theta_m + rotation.x;
-        // } else {
-        //     rotation.x = theta_p - theta_m;
-        //     rotation.z = theta_p + theta_m;
-        // }
-
-        // if symetrical {
-        //     rotation.z *= sign;
-        //     rotation.y -= f32::consts::FRAC_PI_2;
-        // }
-
-        let mut rotation = Self::get_angles(symetrical, sign, f32::consts::FRAC_PI_2, a, b, c, d);
-
-        rotation.x = rotation.x.to_degrees();
-        rotation.y = rotation.y.to_degrees();
-        rotation.z = rotation.z.to_degrees();
-
-        rotation
-    }
-
-    fn get_angles(symetric: bool, sign: f32, lamb: f32, a: f32, b: f32, c: f32, d: f32) -> Vec3 {
         let mut angles = Vec3::default();
 
-        // angles.y = 2.0 * f32::atan2(f32::hypot(b, a), f32::hypot(d, c));
         angles.y = f32::acos((2.0 * ((a * a + b * b) / (a * a + b * b + c * c + d * d))) - 1.0);
 
         let half_sum = f32::atan2(b, a);
         let half_diff = f32::atan2(-d, c);
 
         if angles.y.abs() <= f32::EPSILON {
-            log::warn!("SINGULARITY A");
-            angles.x = 0.0;
             angles.z = 2.0 * half_sum;
         } else if (angles.y - f32::consts::PI).abs() <= f32::EPSILON {
-            log::warn!("SINGULARITY B");
-            // println!("Singularity B");
-            angles.x = 0.0;
-            angles.z = -2.0 * half_diff;
+            angles.z = 2.0 * half_diff;
         } else {
             angles.x = half_sum + half_diff;
             angles.z = half_sum - half_diff;
         }
 
-        if !symetric {
-            angles.x *= sign;
-            angles.y -= lamb;
-        }
+        angles.y -= f32::consts::FRAC_PI_2;
 
         if angles.x < -f32::consts::PI {
             angles.x += f32::consts::PI * 2.0;
@@ -184,6 +125,12 @@ impl Quaternion {
         } else if angles.z > f32::consts::PI {
             angles.z -= f32::consts::PI * 2.0;
         }
+
+        let a = angles;
+
+        angles.x = a.y.to_degrees();
+        angles.y = a.z.to_degrees();
+        angles.z = a.x.to_degrees();
 
         angles
     }
@@ -291,5 +238,11 @@ impl Index<i32> for Quaternion {
                 unreachable!()
             }
         }
+    }
+}
+
+impl MulAssign<Self> for Quaternion {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
     }
 }
