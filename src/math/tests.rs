@@ -441,10 +441,6 @@ fn assert_approx_eq(a: Vec3, b: Vec3, delta: Vec3) {
     assert!(
         dif.abs().less(delta),
         "assertion failed: `(left !== right)` \
-             (left: `{:?}`, right: `{:?}`, expect diff: `{:?}`, real diff: `{:?}`)",
-        a,
-        b,
-        delta,
-        dif,
+             (left: `{a:?}`, right: `{b:?}`, expect diff: `{delta:?}`, real diff: `{dif:?}`)",
     )
 }

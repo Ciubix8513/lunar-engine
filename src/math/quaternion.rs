@@ -1,6 +1,4 @@
-//The time has COME
-//
-
+#![allow(clippy::suboptimal_flops)]
 use std::{
     f32,
     ops::{Index, Mul, MulAssign},
@@ -92,9 +90,10 @@ impl Quaternion {
         let c = self.x + self.w;
         let d = self.y - self.z;
 
-        let mut angles = Vec3::default();
-
-        angles.y = f32::acos((2.0 * ((a * a + b * b) / (a * a + b * b + c * c + d * d))) - 1.0);
+        let mut angles = Vec3 {
+            y: f32::acos((2.0 * ((a * a + b * b) / (a * a + b * b + c * c + d * d))) - 1.0),
+            ..Default::default()
+        };
 
         let half_sum = f32::atan2(b, a);
         let half_diff = f32::atan2(-d, c);
@@ -228,7 +227,7 @@ impl Index<i32> for Quaternion {
     type Output = f32;
 
     fn index(&self, index: i32) -> &Self::Output {
-        assert!(index >= 0 && index < 4, "Index out of bounds");
+        assert!((0..4).contains(&index), "Index out of bounds");
         match index {
             0 => &self.w,
             1 => &self.x,

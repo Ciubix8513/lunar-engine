@@ -15,7 +15,7 @@ use lunar_engine::{
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
-    math::{Mat4x4, Quaternion, Vec3, Vector, lerp},
+    math::{Quaternion, Vec3, Vector},
     rendering::{extensions::Base, render},
     structures::Color,
 };
@@ -112,7 +112,7 @@ struct State {
     delta: f32,
 }
 
-fn end(_state: &mut State) {}
+const fn end(_state: &mut State) {}
 
 fn generate_scene(
     world: &mut World,

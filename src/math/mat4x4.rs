@@ -1,5 +1,5 @@
 #![allow(clippy::too_many_arguments, dead_code)]
-use std::ops::{Add, Index, Mul, Sub};
+use std::ops::{Add, Mul, Sub};
 
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
@@ -123,7 +123,8 @@ impl Mat4x4 {
     }
 
     ///Makes all the values in the matrix positive
-    pub fn abs(&self) -> Self {
+    #[must_use]
+    pub const fn abs(&self) -> Self {
         Self {
             m00: self.m00.abs(),
             m01: self.m01.abs(),
@@ -175,6 +176,7 @@ impl Mat4x4 {
     ///Panics:
     ///
     ///Will panic if the index is out of bounds
+    #[must_use]
     pub const fn row(&self, index: u32) -> Vec4 {
         assert!(index < 4, "Index out of bounds");
 
@@ -212,6 +214,7 @@ impl Mat4x4 {
     ///Panics:
     ///
     ///Will panic if the index is out of bounds
+    #[must_use]
     pub const fn col(&self, index: u32) -> Vec4 {
         assert!(index < 4, "Index out of bounds");
 
@@ -578,6 +581,7 @@ impl Mat4x4 {
     ///1. Scale
     ///2. Rotation
     ///3. Translation
+    #[allow(clippy::suboptimal_flops)]
     pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Quaternion) -> Self {
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
@@ -606,6 +610,7 @@ impl Mat4x4 {
     ///3. Translation
     ///
     ///This matrix is transposed
+    #[allow(clippy::suboptimal_flops)]
     pub fn transform_matrix_euler_transposed(
         translation: &Vec3,
         scale: &Vec3,

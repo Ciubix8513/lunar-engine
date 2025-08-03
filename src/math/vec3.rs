@@ -106,6 +106,7 @@ impl Vec3 {
 
     ///Compares self to rhs, returns true only if all compenents of the vector are smaller than
     ///rhs
+    #[must_use]
     pub const fn less(self, rhs: Self) -> bool {
         self.x < rhs.x && self.y < rhs.y && self.z < rhs.z
     }
