@@ -4,6 +4,7 @@ use std::ops::{Add, Mul, Sub};
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
 
+use super::Quaternion;
 use super::traits::Vector;
 
 #[allow(missing_docs)]
@@ -97,6 +98,53 @@ impl Mat4x4 {
             m33,
         }
     }
+
+    ///Creates a matrix with all values being set to `value`
+    #[must_use]
+    pub const fn single_value_mat(value: f32) -> Self {
+        Self {
+            m00: value,
+            m01: value,
+            m02: value,
+            m03: value,
+            m10: value,
+            m11: value,
+            m12: value,
+            m13: value,
+            m20: value,
+            m21: value,
+            m22: value,
+            m23: value,
+            m30: value,
+            m31: value,
+            m32: value,
+            m33: value,
+        }
+    }
+
+    ///Makes all the values in the matrix positive
+    #[must_use]
+    pub const fn abs(&self) -> Self {
+        Self {
+            m00: self.m00.abs(),
+            m01: self.m01.abs(),
+            m02: self.m02.abs(),
+            m03: self.m03.abs(),
+            m10: self.m00.abs(),
+            m11: self.m01.abs(),
+            m12: self.m02.abs(),
+            m13: self.m03.abs(),
+            m20: self.m00.abs(),
+            m21: self.m01.abs(),
+            m22: self.m02.abs(),
+            m23: self.m03.abs(),
+            m30: self.m00.abs(),
+            m31: self.m01.abs(),
+            m32: self.m02.abs(),
+            m33: self.m03.abs(),
+        }
+    }
+
     #[must_use]
     ///Transposes the matrix, consuming it in the process
     pub const fn transpose(self) -> Self {
@@ -122,6 +170,83 @@ impl Mat4x4 {
             m33: self.m33,
         }
     }
+
+    ///Creates a new vector out of a given row
+    ///
+    ///Panics:
+    ///
+    ///Will panic if the index is out of bounds
+    #[must_use]
+    pub const fn row(&self, index: u32) -> Vec4 {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => Vec4 {
+                x: self.m00,
+                y: self.m01,
+                z: self.m02,
+                w: self.m03,
+            },
+            1 => Vec4 {
+                x: self.m10,
+                y: self.m11,
+                z: self.m12,
+                w: self.m13,
+            },
+            2 => Vec4 {
+                x: self.m20,
+                y: self.m21,
+                z: self.m22,
+                w: self.m23,
+            },
+            3 => Vec4 {
+                x: self.m30,
+                y: self.m31,
+                z: self.m32,
+                w: self.m33,
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    ///Creates a new vector out of a given column
+    ///
+    ///Panics:
+    ///
+    ///Will panic if the index is out of bounds
+    #[must_use]
+    pub const fn col(&self, index: u32) -> Vec4 {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => Vec4 {
+                x: self.m00,
+                y: self.m10,
+                z: self.m20,
+                w: self.m30,
+            },
+            1 => Vec4 {
+                x: self.m01,
+                y: self.m11,
+                z: self.m21,
+                w: self.m31,
+            },
+            2 => Vec4 {
+                x: self.m02,
+                y: self.m12,
+                z: self.m22,
+                w: self.m32,
+            },
+            3 => Vec4 {
+                x: self.m03,
+                y: self.m13,
+                z: self.m23,
+                w: self.m33,
+            },
+            _ => unreachable!(),
+        }
+    }
+
     // [1 , 2] . [1] _ [1 * 1 + 2 * 2] _ [ 5]
     // [3 , 4]   [2] - [3 * 1 + 4 * 2] - [11]
     ///Transforms `other` using `self` matrix
@@ -456,25 +581,21 @@ impl Mat4x4 {
     ///1. Scale
     ///2. Rotation
     ///3. Translation
-    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Vec3) -> Self {
-        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
-
-        let x = scale.x;
-        let y = scale.y;
-        let z = scale.z;
+    #[allow(clippy::suboptimal_flops)]
+    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Quaternion) -> Self {
+        let norm = rotation.norm();
+        let s = 2.0 / norm / norm;
 
         Self {
-            m00: cos_y * cos_z * x,
-            m01: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
-            m02: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
-            m10: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
-            m12: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
-            m20: -sin_y * x,
-            m21: sin_x * cos_y * y,
-            m22: cos_x * cos_y * z,
+            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
+            m01: s * (rotation.x * rotation.y - rotation.z * rotation.w) * scale.y,
+            m02: s * (rotation.x * rotation.z + rotation.y * rotation.w) * scale.z,
+            m10: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
+            m11: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
+            m12: s * (rotation.y * rotation.z - rotation.x * rotation.w) * scale.z,
+            m20: s * (rotation.x * rotation.z - rotation.y * rotation.w) * scale.x,
+            m21: s * (rotation.y * rotation.z + rotation.x * rotation.w) * scale.y,
+            m22: (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
             m03: translation.x,
             m13: translation.y,
             m23: translation.z,
@@ -489,31 +610,27 @@ impl Mat4x4 {
     ///3. Translation
     ///
     ///This matrix is transposed
+    #[allow(clippy::suboptimal_flops)]
     pub fn transform_matrix_euler_transposed(
         translation: &Vec3,
         scale: &Vec3,
-        rotation: &Vec3,
+        rotation: &Quaternion,
     ) -> Self {
-        let (sin_x, cos_x) = f32::sin_cos(rotation.x.to_radians());
-        let (sin_y, cos_y) = f32::sin_cos(rotation.y.to_radians());
-        let (sin_z, cos_z) = f32::sin_cos(rotation.z.to_radians());
-
-        let x = scale.x;
-        let y = scale.y;
-        let z = scale.z;
+        let norm = rotation.norm();
+        let s = 2.0 / norm / norm;
 
         Self {
-            m00: cos_y * cos_z * x,
-            m10: (sin_x * sin_y).mul_add(cos_z, -cos_x * sin_z) * y,
-            m20: (cos_x * sin_y).mul_add(cos_z, sin_x * sin_z) * z,
+            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
+            m10: s * (rotation.x * rotation.y - rotation.z * rotation.w) * scale.y,
+            m20: s * (rotation.x * rotation.z + rotation.y * rotation.w) * scale.z,
+            m01: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
+            m11: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
+            m21: s * (rotation.y * rotation.z - rotation.x * rotation.w) * scale.z,
+            m02: s * (rotation.x * rotation.z - rotation.y * rotation.w) * scale.x,
+            m12: s * (rotation.y * rotation.z + rotation.x * rotation.w) * scale.y,
+            m22: (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
             m30: translation.x,
-            m01: cos_y * sin_z * x,
-            m11: (sin_x * sin_y).mul_add(sin_z, cos_x * cos_z) * y,
-            m21: (cos_x * sin_y).mul_add(sin_z, -sin_x * cos_z) * z,
             m31: translation.y,
-            m02: -sin_y * x,
-            m12: sin_x * cos_y * y,
-            m22: cos_x * cos_y * z,
             m32: translation.z,
             ..Default::default()
         }

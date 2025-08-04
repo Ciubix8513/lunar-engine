@@ -1,4 +1,6 @@
-use super::*;
+use assert_approx_eq::assert_approx_eq;
+
+use super::{quaternion::Quaternion, *};
 
 #[test]
 fn test_matrix_float_mul() {
@@ -208,6 +210,34 @@ fn test_vec4_length() {
 }
 
 #[test]
+fn test_mat_indexing() {
+    let m = Mat4x4 {
+        m00: 1.0,
+        m01: 2.0,
+        m02: 3.0,
+        m03: 4.0,
+        m10: 5.0,
+        m11: 6.0,
+        m12: 7.0,
+        m13: 8.0,
+        m20: 9.0,
+        m21: 10.0,
+        m22: 11.0,
+        m23: 12.0,
+        m30: 13.0,
+        m31: 14.0,
+        m32: 15.0,
+        m33: 16.0,
+    };
+
+    let col = m.col(2);
+    assert_eq!(col, Vec4::new(3, 7, 11, 15));
+
+    let row = m.row(1);
+    assert_eq!(row, Vec4::new(5, 6, 7, 8));
+}
+
+#[test]
 fn test_lerp() {
     let a = 0.0;
     let b = 1.0;
@@ -247,12 +277,170 @@ fn test_lerp() {
 }
 
 #[test]
-fn test_transform_speed() {
-    for _ in 0..10000000 {
-        let _ = Mat4x4::transform_matrix_euler(
-            &Vec3::new(1.0, 2.0, 3.0),
-            &Vec3::new(2.0, 3.0, 5.0),
-            &Vec3::new(90.0, 10.0, 52.0),
-        );
-    }
+fn quaternion_inversion() {
+    let a = Quaternion::new(1, 2, 3, 4);
+
+    let b = a.invert();
+
+    //Stupid float precision
+    assert_eq!(
+        b,
+        Quaternion::new(0.033333335, -0.06666667, -0.10000001, -0.13333334)
+    );
+}
+
+#[test]
+fn quaternion_multiplication() {
+    let a = Quaternion::new(1, 2, 3, 4);
+    let b = Quaternion::new(5, 6, 7, 8);
+
+    let c = a * b;
+
+    assert_eq!(c, Quaternion::new(-60, 12, 30, 24));
+}
+
+#[test]
+fn quaternion_to_matrix() {
+    let delta = 0.000001;
+
+    let q = Quaternion::new(1, 0, 0, 0);
+    let r = Vec3::new(0, 0, 0);
+
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+
+    let q = Quaternion::new(0.707, 0, 0.707, 0);
+    let r = Vec3::new(0, 90, 0);
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+
+    let q = Quaternion::new(0.707, 0.707, 0, 0);
+    let r = Vec3::new(90, 0, 0);
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+
+    let q = Quaternion::new(0.707, 0, 0, 0.707);
+    let r = Vec3::new(0, 0, 90);
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+
+    let q = Quaternion::new(0.5, 0.5, 0.5, 0.5);
+    let r = Vec3::new(90, 90, 0);
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+
+    let q = Quaternion::new(0.707, 0, 0, 0.707);
+    let r = Vec3::new(90, 90, 90);
+    assert_approx_eq!(
+        q.matrix(),
+        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::single_value_mat(delta)
+    );
+}
+
+#[test]
+fn euler_to_quaternion() {
+    let delta = Into::<vec4::Vec4>::into(0.00015).into();
+
+    let q = Quaternion::new(1, 0, 0, 0);
+    let r = Vec3::new(0, 0, 0);
+
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.707, 0, 0.707, 0);
+    let r = Vec3::new(0, 90, 0);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.707, 0.707, 0, 0);
+    let r = Vec3::new(90, 0, 0);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.707, 0, 0, 0.707);
+    let r = Vec3::new(0, 0, 90);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.5, 0.5, 0.5, 0.5);
+    let r = Vec3::new(90, 90, 0);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.707, 0, 0, 0.707);
+    let r = Vec3::new(90, 90, 90);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
+    let r = Vec3::new(0, 100, 0);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+
+    let q = Quaternion::new(0.490376, 0.749361, -0.290667, 0.336899);
+    let r = Vec3::new(123, 20, 50);
+    assert_approx_eq!(q, Quaternion::from_euler(r), delta);
+}
+
+#[test]
+fn quaternion_to_euler_90() {
+    //This large delta is not idea, buuuut it's just degrees, so it's fine
+    let delta = Vec3::from(0.1);
+
+    let q = Quaternion::new(1, 0, 0, 0);
+    let r = Vec3::new(0, 0, 0);
+    assert_approx_eq(q.euler(), r, delta);
+
+    let q = Quaternion::new(0.707, 0, 0.707, 0);
+    let r = Vec3::new(0, 90, 0);
+    assert_approx_eq(q.euler(), r, delta);
+
+    let q = Quaternion::new(0.707, 0.707, 0, 0);
+    let r = Vec3::new(90, 0, 0);
+    assert_approx_eq(q.euler(), r, delta);
+
+    let q = Quaternion::new(0.707, 0, 0, 0.707);
+    let r = Vec3::new(0, 0, 90);
+    assert_approx_eq(q.euler(), r, delta);
+
+    let q = Quaternion::new(0.5, 0.5, 0.5, 0.5);
+    let r = Vec3::new(0, 90, 90);
+    assert_approx_eq(q.euler(), r, delta);
+}
+
+#[test]
+fn quaternion_to_euler_181() {
+    let delta = Vec3::from(0.1);
+
+    let r1 = Vec3::new(0, 181, 0);
+    let q = Quaternion::from_euler(r1);
+    let r = Vec3::new(0, -179, 0);
+    assert_approx_eq(q.euler(), r, delta);
+}
+
+#[test]
+fn quaternion_to_euler_100() {
+    let delta = Vec3::from(0.1);
+
+    let q = Quaternion::new(0.642788, 0, 0.766, 0.0);
+    let r = Vec3::new(0, 100, 0);
+    assert_approx_eq(q.euler(), r, delta);
+}
+
+fn assert_approx_eq(a: Vec3, b: Vec3, delta: Vec3) {
+    let dif = a - b;
+    assert!(
+        dif.abs().less(delta),
+        "assertion failed: `(left !== right)` \
+             (left: `{a:?}`, right: `{b:?}`, expect diff: `{delta:?}`, real diff: `{dif:?}`)",
+    )
 }

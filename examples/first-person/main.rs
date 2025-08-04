@@ -15,7 +15,7 @@ use lunar_engine::{
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
-    math::{Mat4x4, Vec3, Vector, lerp},
+    math::{Quaternion, Vec3, Vector},
     rendering::{extensions::Base, render},
     structures::Color,
 };
@@ -56,12 +56,8 @@ impl Component for CameraControls {
         let sensetivity = 800.0;
         let delta = input::cursor_delta() * delta_time * sensetivity;
         let mut trans = self.transform.get().unwrap().borrow_mut();
-        let rot = trans.rotation;
 
-        let rot_y = lerp(rot.y, rot.y - delta.x, 0.1);
-        let rot_x = lerp(rot.x, rot.x + delta.y, 0.1);
-        trans.rotation.y = rot_y;
-        trans.rotation.x = rot_x;
+        trans.rotate((delta.y * 0.1, delta.x * -0.1, 0.0).into());
 
         //Movement
         let mut speed = 400.0;
@@ -95,7 +91,7 @@ impl Component for CameraControls {
 
         movement_vec *= 0.01 * speed * delta_time;
 
-        let mat = Mat4x4::rotation_matrix_euler(&trans.rotation);
+        let mat = trans.rotation.matrix();
         movement_vec = mat.transform3(movement_vec);
         trans.position += movement_vec;
     }
@@ -116,7 +112,7 @@ struct State {
     delta: f32,
 }
 
-fn end(_state: &mut State) {}
+const fn end(_state: &mut State) {}
 
 fn generate_scene(
     world: &mut World,
@@ -166,7 +162,9 @@ fn generate_scene(
                 EntityBuilder::new()
                     .create_component(|| Transform {
                         position: Vec3::random_with_rng(-20, 20, &mut rng),
-                        rotation: Vec3::random_with_rng(-180, 180, &mut rng),
+                        rotation: Quaternion::from_euler(Vec3::random_with_rng(
+                            -180, 180, &mut rng,
+                        )),
                         scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
                         ..Default::default()
                     })

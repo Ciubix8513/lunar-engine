@@ -12,7 +12,7 @@ use lunar_engine::{
     },
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input,
-    math::Vec3,
+    math::{Quaternion, Vec3},
     rendering::{self, extensions::Base},
     structures::Color,
 };
@@ -57,12 +57,15 @@ impl Component for Spiny {
     }
 
     fn update(&mut self) {
-        self.transform.get().unwrap().borrow_mut().rotation.y +=
-            self.speed * lunar_engine::delta_time();
+        let mut t = self.transform.get().unwrap().borrow_mut();
+        t.rotate((0, self.speed * lunar_engine::delta_time(), 0).into());
     }
 }
 
 fn init(state: &mut MyState) {
+    //Set Vsync
+    lunar_engine::set_vsync(lunar_engine::Vsync::Vsync);
+
     log::info!("Initializing scene");
 
     state.extension = Base::new_with_color(
@@ -91,7 +94,7 @@ fn init(state: &mut MyState) {
         EntityBuilder::new()
             .create_component(|| Transform {
                 position: Vec3::new(0, 2, -10),
-                rotation: Vec3::new(15, 0, 0),
+                rotation: Quaternion::from_euler(Vec3::new(15, 0, 0)),
                 ..Default::default()
             })
             .create_component(|| {
@@ -137,7 +140,7 @@ fn run(state: &mut MyState) {
                 EntityBuilder::new()
                     .create_component(|| Transform {
                         // scale: Vec3::random(0.3, 3.0),
-                        rotation: Vec3::random(0, 360),
+                        rotation: Quaternion::from_euler(Vec3::random(0, 360)),
                         position: Vec3::random(-5, 5),
                         ..Default::default()
                     })

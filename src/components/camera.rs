@@ -127,7 +127,7 @@ impl Camera {
     pub fn matrix(&self) -> Mat4x4 {
         let binding = self.transorm_reference.get().unwrap();
         let transform = binding.borrow();
-        let rotation_matrix = Mat4x4::rotation_matrix_euler(&transform.rotation);
+        let rotation_matrix = transform.rotation.matrix();
 
         let up = (rotation_matrix * Vec4::new(0.0, 1.0, 0.0, 1.0)).xyz();
         let forward = (rotation_matrix * Vec4::new(0.0, 0.0, 1.0, 1.0)).xyz() + transform.position;
@@ -232,7 +232,7 @@ impl Camera {
     ///Returns the rotated forwrard vector of the camera
     pub fn view_direction(&self) -> Vec3 {
         let t = self.transorm_reference.get().unwrap().borrow();
-        let matrix = Mat4x4::rotation_matrix_euler(&t.rotation);
+        let matrix = t.rotation.matrix();
         drop(t);
         let forward = Vec4::new(0.0, 0.0, 1.0, 1.0);
 

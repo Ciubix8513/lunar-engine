@@ -1,4 +1,6 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
 
 use bytemuck::{Pod, Zeroable};
 use rand::Rng;
@@ -86,6 +88,13 @@ impl Vec3 {
             y: self.y.abs(),
             z: self.z.abs(),
         }
+    }
+
+    ///Compares self to rhs, returns true only if all compenents of the vector are smaller than
+    ///rhs
+    #[must_use]
+    pub const fn less(self, rhs: Self) -> bool {
+        self.x < rhs.x && self.y < rhs.y && self.z < rhs.z
     }
 }
 
@@ -227,5 +236,45 @@ impl From<Vec4> for Vec3 {
 impl std::fmt::Display for Vec3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {}, {})", self.x, self.y, self.z)
+    }
+}
+
+impl IndexMut<u32> for Vec3 {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        assert!(index < 3, "Index out of bounds");
+
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Index<u32> for Vec3 {
+    type Output = f32;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        assert!(index < 3, "Index out of bounds");
+
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
 }

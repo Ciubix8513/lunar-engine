@@ -1,4 +1,6 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign};
+
+use std::ops::Index;
 
 use bytemuck::{Pod, Zeroable};
 
@@ -238,5 +240,48 @@ impl From<Vec3> for Vec4 {
 impl std::fmt::Display for Vec4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {}, {}, {})", self.x, self.y, self.z, self.w)
+    }
+}
+
+impl IndexMut<u32> for Vec4 {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Index<u32> for Vec4 {
+    type Output = f32;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        assert!(index < 4, "Index out of bounds");
+
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Neg for Vec4 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+            w: -self.w,
+        }
     }
 }
