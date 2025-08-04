@@ -143,7 +143,7 @@ impl MaterialTrait for Lit {
         let storage_buf_available = storage_buffer_available();
         let device = DEVICE.get().unwrap();
 
-        let v_shader = device.create_shader_module(include_wgsl!("src/shaders/vertex.wgsl"));
+        let v_shader = device.create_shader_module(include_wgsl!("../../shaders/vertex.wgsl"));
 
         let f_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,

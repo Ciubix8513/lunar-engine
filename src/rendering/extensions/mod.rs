@@ -722,6 +722,8 @@ impl RenderingExtension for Base {
                     load: wgpu::LoadOp::Clear(self.clear_color.into()),
                     store: wgpu::StoreOp::Store,
                 },
+                //I hope this is fine, i can't find any info on this
+                depth_slice: None,
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                 view: &attachments.depth_stencil,
