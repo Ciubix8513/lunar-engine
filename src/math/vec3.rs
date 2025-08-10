@@ -9,7 +9,7 @@ use swizzle_gen::gen_swizzle;
 
 pub use crate::math::traits::Vector;
 
-use super::{IntoFloat32, Vec2, Vec4};
+use super::{IntoFloat32, Vec2, Vec4, Vec4Swizzles};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]

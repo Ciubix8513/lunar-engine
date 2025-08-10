@@ -5,7 +5,7 @@ use lunar_engine_derive::{alias, dependencies};
 use wgpu::BufferUsages;
 
 use crate as lunar_engine;
-use crate::math::Vec3;
+use crate::math::{Vec3, Vec4Swizzles};
 
 use crate::{
     DEVICE, RESOLUTION, STAGING_BELT,
