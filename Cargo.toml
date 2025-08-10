@@ -19,6 +19,7 @@ wasm = ["wgpu/fragile-send-sync-non-atomic-wasm"]
 
 [dependencies]
 lunar-engine-derive= {path = "./lunar-engine-derive", version="0.1.0"}
+swizzle-gen= {path = "./swizzle-gen", version="0.1.0"}
 bytemuck = { version = "1.14.0", features = ["derive"] }
 chrono = "0.4.31"
 futures = "0.3.30"
@@ -34,7 +35,6 @@ lunar-png = "0.1.2"
 tracy-client={version = "0.18.0", default-features=false}
 wgpu_shader_checker = "0.2.0"
 
-
 [target.'cfg(target_arch="wasm32")'.dependencies]
 getrandom = {version = "0.2.15", features = ["js"]}
 web-sys = "0.3.64"
@@ -47,6 +47,7 @@ assert_approx_eq = "1.1.0"
 
 members = [
   "lunar-engine-derive",
+  "swizzle-gen"
 ]
 
 [profile.release]
