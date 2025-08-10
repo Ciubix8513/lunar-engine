@@ -1,8 +1,10 @@
+use std::fmt::Write as _;
+
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
 #[proc_macro_attribute]
+#[allow(clippy::missing_panics_doc)]
 pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
     //Get struct name, generate a new trait from that -> NAMESwizzles {}
     //Get struct compoenent names and generate the variations of them
@@ -15,17 +17,16 @@ pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
     let s = match input.data {
         syn::Data::Struct(data_struct) => data_struct,
         syn::Data::Union(_) | syn::Data::Enum(_) => {
-            return quote! {
-                compile_error!("Must be a struct")
-            }
-            .into();
+            return "compile_error!(\"Must be a struct\")".parse().unwrap();
         }
     };
 
     let fields = match s.fields {
         syn::Fields::Named(fields_named) => fields_named.named,
         syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-            return quote! { compile_error!("Must have named fields") }.into();
+            return "compile_error!(\"Must have named fields\")"
+                .parse()
+                .unwrap();
         }
     }
     .iter()
@@ -115,8 +116,8 @@ pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
         .zip(bodies)
         .map(|((x, y), z)| (x, y, z))
     {
-        trait_def.push_str(&format!("fn {name}(self) -> {ret};"));
-        trait_impl.push_str(&format!("fn {name}(self) -> {ret} {{ {body} }}"));
+        _ = write!(trait_def, "fn {name}(self) -> {ret};");
+        _ = write!(trait_impl, "fn {name}(self) -> {ret} {{ {body} }}");
     }
 
     trait_def.push('}');
