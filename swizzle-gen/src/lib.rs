@@ -116,8 +116,8 @@ pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
         .zip(bodies)
         .map(|((x, y), z)| (x, y, z))
     {
-        _ = write!(trait_def, "fn {name}(self) -> {ret};\n");
-        _ = write!(trait_impl, "fn {name}(self) -> {ret} {{ {body} }}");
+        _ = writeln!(trait_def, "fn {name}(self) -> {ret};");
+        _ = writeln!(trait_impl, "fn {name}(self) -> {ret} {{ {body} }}");
     }
 
     trait_def.push('}');
