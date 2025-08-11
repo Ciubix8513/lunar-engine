@@ -7,7 +7,7 @@ use winit::window::Window;
 
 use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT, input::InputState, math::Vec2};
 
-pub fn initialize_gpu(window: &Window) -> (Surface, SurfaceConfiguration, Texture) {
+pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();
     size.width = size.width.max(1);
     size.height = size.width.max(1);

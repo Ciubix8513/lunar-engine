@@ -236,17 +236,17 @@ impl Entity {
         }
 
         //Check if component is unique
-        if T::unique() {
-            if let Some(u) = &self.unique_components {
-                let map = &mut u.borrow_mut();
+        if T::unique()
+            && let Some(u) = &self.unique_components
+        {
+            let map = &mut u.borrow_mut();
 
-                //Returns an error if there already is a instance of a component
-                if map.contains(&TypeId::of::<T>()) {
-                    return Err(Error::UniqueComponentExists);
-                }
-
-                map.insert(TypeId::of::<T>());
+            //Returns an error if there already is a instance of a component
+            if map.contains(&TypeId::of::<T>()) {
+                return Err(Error::UniqueComponentExists);
             }
+
+            map.insert(TypeId::of::<T>());
         }
 
         if let Err(e) = T::check_dependencies(self) {
@@ -322,13 +322,13 @@ impl Entity {
         for (i, c) in self.components.iter_mut().enumerate() {
             let mut c = c.borrow_mut();
 
-            if c.unique_instanced() {
-                if let Some(u) = &self.unique_components {
-                    let u = &mut u.borrow_mut();
-                    let type_id = self.comoponent_types[i];
+            if c.unique_instanced()
+                && let Some(u) = &self.unique_components
+            {
+                let u = &mut u.borrow_mut();
+                let type_id = self.comoponent_types[i];
 
-                    u.remove(&type_id);
-                }
+                u.remove(&type_id);
             }
 
             c.decatification();
@@ -642,7 +642,7 @@ impl World {
     /// Returns a vector of all components of type T
     ///
     /// Will return None if no components are found
-    #[allow(clippy::missing_panics_doc)]
+    #[allow(clippy::missing_panics_doc, clippy::coerce_container_to_any)]
     #[must_use]
     pub fn get_all_components<T>(&self) -> Option<Vec<ComponentReference<T>>>
     where
@@ -675,7 +675,7 @@ impl World {
     /// Returns a vector of all components of type T
     ///
     /// Will return None, if no entities are found
-    #[allow(clippy::missing_panics_doc)]
+    #[allow(clippy::missing_panics_doc, clippy::coerce_container_to_any)]
     #[must_use]
     pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
     where
@@ -706,6 +706,7 @@ impl World {
     ///Returns a reference to the unique component
     ///
     ///Always returns none if the component is not unique
+    #[allow(clippy::coerce_container_to_any)]
     pub fn get_unique_component<T>(&self) -> Option<ComponentReference<T>>
     where
         T: 'static + Component,
