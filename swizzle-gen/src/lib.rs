@@ -107,7 +107,7 @@ pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
     }
 
     //For easer handling
-    let mut trait_def = format!("pub trait {trait_name} {{");
+    let mut trait_def = format!("///Swizzle functions for {name}\npub trait {trait_name} {{\n");
     let mut trait_impl = format!("impl {trait_name} for {name} {{");
 
     for (name, ret, body) in func_names
@@ -116,7 +116,7 @@ pub fn gen_swizzle(_: TokenStream, item: TokenStream) -> TokenStream {
         .zip(bodies)
         .map(|((x, y), z)| (x, y, z))
     {
-        _ = write!(trait_def, "fn {name}(self) -> {ret};");
+        _ = write!(trait_def, "fn {name}(self) -> {ret};\n");
         _ = write!(trait_impl, "fn {name}(self) -> {ret} {{ {body} }}");
     }
 
