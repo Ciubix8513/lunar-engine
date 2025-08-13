@@ -146,6 +146,15 @@ impl Transform {
         })
     }
 
+    ///Returns global rotation of the entity
+    //hope this  works
+    #[must_use]
+    pub fn rotation_global(&self) -> Quaternion {
+        self.parent.as_ref().map_or(self.rotation, |p| {
+            p.borrow().rotation_global() * self.rotation
+        })
+    }
+
     #[must_use]
     ///Returns global scale of the entity
     pub fn scale_global(&self) -> Vec3 {

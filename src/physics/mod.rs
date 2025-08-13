@@ -11,7 +11,7 @@ use crate::{
         transform::Transform,
     },
     ecs::{ComponentReference, Entity, EntityRefence, World},
-    math::{Mat4x4, Vec3, Vector},
+    math::{Mat4x4, Quaternion, Vec3, Vector},
 };
 
 #[cfg(test)]
@@ -51,7 +51,7 @@ struct Object {
     transform: ComponentReference<Transform>,
     position: Vec3,
     scale: Vec3,
-    rotation: Vec3,
+    rotation: Quaternion,
     transform_matrix: Mat4x4,
 }
 
@@ -68,18 +68,17 @@ fn check_collision(obj_a: &Object, obj_b: &Object) -> bool {
         Collider::Sphere(component_reference_a) => match &obj_b.collider {
             Collider::Box(component_reference_b) => todo!(),
             //The only simple  case
+            //This is so simple....
             Collider::Sphere(component_reference_b) => {
+                let scale_a = obj_a.scale.max();
+                let scale_b = obj_a.scale.max();
+
                 let direction = obj_a.position - obj_b.position;
                 let len = direction.length();
 
-                //Normalized direction towards the other sphere
-                let dir_normalized = direction / len;
-
                 //Now we multiply  it by the scale of the object and the  radius
-                let radius_a =
-                    (dir_normalized * obj_a.scale * component_reference_a.borrow().radius).length();
-                let radius_b =
-                    (dir_normalized * obj_b.scale * component_reference_b.borrow().radius).length();
+                let radius_a = scale_a * component_reference_a.borrow().radius;
+                let radius_b = scale_b * component_reference_b.borrow().radius;
 
                 len - (radius_a + radius_b) <= 0.0
             }
@@ -158,7 +157,7 @@ pub fn process_collisions(world: &World) -> Vec<Collision> {
                 transform: t.clone(),
                 scale: t.borrow().scale_global(),
                 position: t.borrow().position_global(),
-                rotation: t.borrow().rotation;
+                rotation: t.borrow().rotation_global(),
                 transform_matrix: t.borrow().matrix(),
             }
         });
