@@ -10,6 +10,7 @@ use lunar_engine::{
         fps::FpsRecorder,
         light::{DirectionalLight, PointLight},
         mesh::Mesh,
+        physics::colliders,
         transform::Transform,
     },
     delta_time,
@@ -174,6 +175,7 @@ fn generate_scene(
                         ..Default::default()
                     })
                     .create_component(|| Mesh::new(obj_id, mat_id))
+                    .create_component(|| colliders::Sphere::new(0.5))
                     .create()
                     .unwrap(),
             )
