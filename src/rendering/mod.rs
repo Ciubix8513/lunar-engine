@@ -85,6 +85,11 @@ pub fn render(
     let _span = tracy_client::span!("Rendering extensions");
 
     for e in extensions {
+        if !e.is_initialized() {
+            trace!("Initializing an extension");
+            e.initialize();
+        }
+
         trace!("Calling render on an extension");
         e.render(&mut encoder, world, assets, &attachments);
     }

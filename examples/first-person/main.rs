@@ -10,13 +10,17 @@ use lunar_engine::{
         fps::FpsRecorder,
         light::{DirectionalLight, PointLight},
         mesh::Mesh,
+        physics::colliders,
         transform::Transform,
     },
     delta_time,
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{Quaternion, Vec3, Vector},
-    rendering::{extensions::Base, render},
+    rendering::{
+        extensions::{self, Base},
+        render,
+    },
     structures::Color,
 };
 use rand::Rng;
@@ -106,6 +110,8 @@ impl Component for CameraControls {
 #[derive(Default)]
 struct State {
     extension: Base,
+    collision_ext: extensions::Collider,
+    rendering_colliders: bool,
     asset_store: AssetStore,
     world: World,
     frames: u64,
@@ -169,6 +175,7 @@ fn generate_scene(
                         ..Default::default()
                     })
                     .create_component(|| Mesh::new(obj_id, mat_id))
+                    .create_component(|| colliders::Sphere::new(0.5))
                     .create()
                     .unwrap(),
             )
@@ -269,11 +276,24 @@ fn init(state: &mut State) {
 
 fn run(state: &mut State) {
     state.world.update();
-    render(
-        &state.world,
-        &mut state.asset_store,
-        &mut [&mut state.extension],
-    );
+
+    if lunar_engine::input::key(KeyCode::KeyC) == KeyState::Down {
+        state.rendering_colliders = !state.rendering_colliders;
+    }
+
+    if !state.rendering_colliders {
+        render(
+            &state.world,
+            &mut state.asset_store,
+            &mut [&mut state.extension],
+        );
+    } else {
+        render(
+            &state.world,
+            &mut state.asset_store,
+            &mut [&mut state.extension, &mut state.collision_ext],
+        );
+    }
     state.frames += 1;
     state.delta += delta_time();
 }

@@ -21,6 +21,10 @@ use crate::{
     structures::{Color, LightBuffer},
 };
 
+mod colliders;
+
+pub use colliders::Collider;
+
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
     ///Color buffer
@@ -44,6 +48,14 @@ pub trait RenderingExtension {
 
     ///Returns the priority of the extension, extensions with smaller priorities are rendered first.
     fn get_priority(&self) -> u32;
+
+    ///Returns wether or not this extension is initialized
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    ///Initializes the extension
+    fn initialize(&mut self) {}
 }
 
 impl std::cmp::PartialEq for dyn RenderingExtension {
