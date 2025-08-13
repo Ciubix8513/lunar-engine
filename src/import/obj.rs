@@ -61,6 +61,14 @@ fn test_loading_single() {
     parse(include_str!("../../assets/cube_triangulated.obj")).unwrap();
 }
 
+#[test]
+fn load_wireframe_mesh() {
+    parse(include_str!(
+        "../rendering/extensions/colliders/Sphere_wireframe.obj"
+    ))
+    .unwrap();
+}
+
 ///Parses the given string as a wavefront obj file
 pub fn parse(file: &str) -> Option<Vec<Mesh>> {
     let mut meshes = Vec::new();
@@ -70,7 +78,9 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
 
     let mut vertices_indecies = Vec::new();
     let mut vertices = Vec::new();
-    let mut indecies = Vec::new();
+    let mut indices = Vec::new();
+
+    let mut lines = Vec::new();
 
     let mut first = true;
     for l in file.lines() {
@@ -81,14 +91,11 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
                 continue;
             }
             //Insert into the out vector
-            meshes.push(Mesh {
-                vertices,
-                indices: indecies,
-            });
+            meshes.push(Mesh { vertices, indices });
 
             //Clear data
             vertices = Vec::new();
-            indecies = Vec::new();
+            indices = Vec::new();
             vertices_indecies = Vec::new();
             positions = Vec::new();
             normals = Vec::new();
@@ -117,7 +124,7 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
                 for (j, item) in vertices_indecies.iter().enumerate() {
                     if item == &i {
                         //If found an existing vertex, push it's index
-                        indecies.push(j as u32);
+                        indices.push(j as u32);
                         found = true;
                         break;
                     }
@@ -134,15 +141,32 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
                     normal: normals[(i.2 - 1) as usize],
                 });
 
-                indecies.push((vertices.len() - 1) as u32);
+                indices.push((vertices.len() - 1) as u32);
             }
+        }
+        if let Some(stripped) = l.strip_prefix("l ") {
+            let line = read_vec2(stripped)?;
+            lines.push(line.x as u32);
+            lines.push(line.y as u32);
         }
     }
 
-    meshes.push(Mesh {
-        vertices,
-        indices: indecies,
-    });
+    //Ignore lines if there are some polygons
+    if vertices.is_empty() {
+        for i in positions {
+            vertices.push(Vertex {
+                coords: i,
+                texture: Vec2::default(),
+                normal: Vec3::default(),
+            });
+        }
+        meshes.push(Mesh {
+            vertices: vertices,
+            indices: lines,
+        });
+    } else {
+        meshes.push(Mesh { vertices, indices });
+    }
 
     log::info!("Read {} meshes", meshes.len());
     for i in &meshes {
