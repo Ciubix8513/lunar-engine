@@ -1,18 +1,20 @@
+#![allow(missing_docs)]
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
 use bytemuck::{Pod, Zeroable};
 use rand::Rng;
+use swizzle_gen::gen_swizzle;
 
 pub use crate::math::traits::Vector;
 
-use super::{IntoFloat32, Vec4};
+use super::{IntoFloat32, Vec2, Vec4, Vec4Swizzles};
 
 #[repr(C)]
-#[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 3 dimensions
+#[gen_swizzle]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -88,6 +90,18 @@ impl Vec3 {
             y: self.y.abs(),
             z: self.z.abs(),
         }
+    }
+
+    #[must_use]
+    ///Returns the smallest vector component
+    pub const fn min(self) -> f32 {
+        self.x.min(self.y.min(self.z))
+    }
+
+    #[must_use]
+    ///Returns the largest vector component
+    pub const fn max(self) -> f32 {
+        self.x.max(self.y.max(self.z))
     }
 
     ///Compares self to rhs, returns true only if all compenents of the vector are smaller than

@@ -1,17 +1,23 @@
+#![allow(missing_docs)]
+
 use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 
+use super::Vec3;
+use super::Vec4;
+
 use bytemuck::{Pod, Zeroable};
+use swizzle_gen::gen_swizzle;
 
 pub use crate::math::traits::Vector;
 
 use super::traits::IntoFloat32;
 
 #[repr(C)]
-#[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 2 dimensions
+#[gen_swizzle]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -38,6 +44,18 @@ impl Vec2 {
             x: self.x.abs(),
             y: self.y.abs(),
         }
+    }
+
+    #[must_use]
+    ///Returns the smallest vector component
+    pub const fn min(self) -> f32 {
+        self.x.min(self.y)
+    }
+
+    #[must_use]
+    ///Returns the largest vector component
+    pub const fn max(self) -> f32 {
+        self.x.max(self.y)
     }
 }
 

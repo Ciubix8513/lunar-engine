@@ -296,7 +296,7 @@ impl AssetStore {
     ///# Errors
     ///Returns an error if the object with the given id doesn't exist
     #[inline(always)]
-    pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<T>, Error> {
+    pub fn borrow_by_id<T: Asset>(&self, id: UUID) -> Result<AssetGuard<'_, T>, Error> {
         let this = self.assets.get(&id);
         match this {
             Some(x) => {
@@ -329,7 +329,7 @@ impl AssetStore {
     ///# Errors
     ///Returns an error if the object with the given id doesn't exist
     #[inline(always)]
-    pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<T>, Error> {
+    pub fn borrow_by_id_mut<T: Asset>(&self, id: UUID) -> Result<AssetGuardMut<'_, T>, Error> {
         let this = self.assets.get(&id);
         match this {
             Some(x) => {

@@ -1,17 +1,19 @@
+#![allow(missing_docs)]
 use std::ops::{Add, AddAssign, Div, DivAssign, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use std::ops::Index;
 
 use bytemuck::{Pod, Zeroable};
+use swizzle_gen::gen_swizzle;
 
 pub use crate::math::traits::Vector;
 
-use super::{IntoFloat32, vec3::Vec3};
+use super::{IntoFloat32, vec2::Vec2, vec3::Vec3};
 
 #[repr(C)]
-#[allow(missing_docs)]
 #[derive(Clone, Copy, Default, Debug, PartialEq, PartialOrd, Pod, Zeroable)]
 ///A generic vector with 4 dimensions
+#[gen_swizzle]
 pub struct Vec4 {
     pub x: f32,
     pub y: f32,
@@ -37,16 +39,6 @@ impl Vec4 {
         }
     }
 
-    #[must_use]
-    ///Returns the x,y,z as a [`Vec3`]
-    pub const fn xyz(self) -> Vec3 {
-        Vec3 {
-            x: self.x,
-            y: self.y,
-            z: self.z,
-        }
-    }
-
     ///Returns the absolute vector
     #[must_use]
     pub const fn abs(self) -> Self {
@@ -56,6 +48,18 @@ impl Vec4 {
             z: self.z.abs(),
             w: self.w.abs(),
         }
+    }
+
+    #[must_use]
+    ///Returns the smallest vector component
+    pub const fn min(self) -> f32 {
+        self.x.min(self.y.min(self.z.min(self.w)))
+    }
+
+    #[must_use]
+    ///Returns the largest vector component
+    pub const fn max(self) -> f32 {
+        self.x.max(self.y.max(self.z.max(self.w)))
     }
 }
 

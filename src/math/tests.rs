@@ -444,3 +444,16 @@ fn assert_approx_eq(a: Vec3, b: Vec3, delta: Vec3) {
              (left: `{a:?}`, right: `{b:?}`, expect diff: `{delta:?}`, real diff: `{dif:?}`)",
     )
 }
+
+#[test]
+fn vec_min_max() {
+    let v = Vec4::new(1, 2, 3, 4);
+    assert_eq!(v.min(), 1.0);
+    assert_eq!(v.max(), 4.0);
+
+    assert_eq!(v.xyz().min(), 1.0);
+    assert_eq!(v.xyz().max(), 3.0);
+
+    assert_eq!(v.xyz().min(), 1.0);
+    assert_eq!(v.xy().max(), 2.0);
+}

@@ -17,7 +17,7 @@ use crate::{
     },
     ecs::{ComponentReference, World},
     grimoire::{self, point_light_bind_group_layout_descriptor},
-    math::{Mat4x4, Vec3, Vec4, Vector as _},
+    math::{Mat4x4, Vec3, Vec4, Vec4Swizzles, Vector as _},
     structures::{Color, LightBuffer},
 };
 

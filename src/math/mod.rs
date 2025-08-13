@@ -17,8 +17,11 @@ pub use quaternion::Quaternion;
 pub use traits::IntoFloat32;
 pub use traits::Vector;
 pub use vec2::Vec2;
+pub use vec2::Vec2Swizzles;
 pub use vec3::Vec3;
+pub use vec3::Vec3Swizzles;
 pub use vec4::Vec4;
+pub use vec4::Vec4Swizzles;
 
 ///Perform linear interpolation between a and b, using t
 ///

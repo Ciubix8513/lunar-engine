@@ -3,6 +3,7 @@ use std::ops::{Add, Mul, Sub};
 
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
+use crate::math::vec4::Vec4Swizzles;
 
 use super::Quaternion;
 use super::traits::Vector;

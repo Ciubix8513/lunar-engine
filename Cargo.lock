@@ -915,6 +915,7 @@ dependencies = [
  "lunar-png",
  "parking_lot",
  "rand",
+ "swizzle-gen",
  "tracy-client",
  "vec_key_value_pair",
  "wasm-bindgen",
@@ -1820,6 +1821,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
+ "syn",
+]
+
+[[package]]
+name = "swizzle-gen"
+version = "0.1.0"
+dependencies = [
  "syn",
 ]
 
