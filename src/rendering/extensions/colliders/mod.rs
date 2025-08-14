@@ -10,6 +10,7 @@ use crate::{
     grimoire::CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR,
     import,
     internal::{DEVICE, FORMAT, STAGING_BELT},
+    math::{Mat4x4, Vec3},
     rendering::extensions::RenderingExtension,
     structures::Color,
 };
@@ -30,6 +31,7 @@ pub struct Collider {
     matrix_bufers: Vec<wgpu::Buffer>,
     matrix_buf_lens: Vec<u64>,
     supported: bool,
+    colliders_only: bool,
 }
 
 impl Default for Collider {
@@ -48,6 +50,7 @@ impl Default for Collider {
             matrix_bufers: Default::default(),
             matrix_buf_lens: Default::default(),
             supported: true,
+            colliders_only: false,
         }
     }
 }
@@ -69,7 +72,19 @@ impl Collider {
             pipeline: None,
             color_bg: None,
             matrix_bufers: Vec::new(),
+            colliders_only: false,
         }
+    }
+
+    ///Sets the color of the colliders
+    pub fn set_color(&mut self, color: Color) {
+        self.collider_color = color;
+        self.changed = true;
+    }
+
+    ///Sets whether the extension only renders colliders, or renders them on top of scene geometry
+    pub fn only_render_colliders(&mut self, value: bool) {
+        self.colliders_only = value;
     }
 }
 
@@ -263,12 +278,13 @@ impl RenderingExtension for Collider {
         let transforms = spheres
             .iter()
             .map(|i| {
-                i.borrow()
-                    .transform
-                    .get()
-                    .unwrap()
-                    .borrow()
-                    .matrix_transposed()
+                let binding = i.borrow();
+                let t = binding.transform.get().unwrap().borrow();
+
+                let s = t.scale_global().max() * binding.radius;
+                let p = t.position_global();
+                let r = t.rotation_global();
+                Mat4x4::transform_matrix_transposed(p, Vec3::new(s, s, s), r)
             })
             .collect::<Vec<_>>();
 
@@ -289,20 +305,27 @@ impl RenderingExtension for Collider {
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        // load: wgpu::LoadOp::Clear(wgpu::Color {
-                        //     r: 0.0,
-                        //     g: 0.0,
-                        //     b: 0.0,
-                        //     a: 0.0,
-                        // }),
-                        load: wgpu::LoadOp::Load,
+                        load: if self.colliders_only {
+                            wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.0,
+                                g: 0.0,
+                                b: 0.0,
+                                a: 0.0,
+                            })
+                        } else {
+                            wgpu::LoadOp::Load
+                        },
                         store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &attachments.depth_stencil,
                     depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
+                        load: if self.colliders_only {
+                            wgpu::LoadOp::Clear(1.0)
+                        } else {
+                            wgpu::LoadOp::Load
+                        },
                         store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: None,

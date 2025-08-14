@@ -112,6 +112,7 @@ struct State {
     extension: Base,
     collision_ext: extensions::Collider,
     rendering_colliders: bool,
+    only_render_colliders: bool,
     asset_store: AssetStore,
     world: World,
     frames: u64,
@@ -279,6 +280,13 @@ fn run(state: &mut State) {
 
     if lunar_engine::input::key(KeyCode::KeyC) == KeyState::Down {
         state.rendering_colliders = !state.rendering_colliders;
+    }
+
+    if lunar_engine::input::key(KeyCode::KeyH) == KeyState::Down {
+        state.only_render_colliders = !state.only_render_colliders;
+        state
+            .collision_ext
+            .only_render_colliders(state.only_render_colliders);
     }
 
     if !state.rendering_colliders {
