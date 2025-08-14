@@ -64,7 +64,7 @@ impl Vec4 {
 }
 
 impl Vector for Vec4 {
-    fn square_length(&self) -> f32 {
+    fn square_length(self) -> f32 {
         self.w.mul_add(
             self.w,
             self.z
@@ -72,7 +72,7 @@ impl Vector for Vec4 {
         )
     }
 
-    fn dot_product(&self, other: &Self) -> f32 {
+    fn dot_product(self, other: Self) -> f32 {
         self.w.mul_add(
             other.w,
             self.z

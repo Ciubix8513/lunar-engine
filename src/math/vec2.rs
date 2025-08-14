@@ -60,10 +60,10 @@ impl Vec2 {
 }
 
 impl Vector for Vec2 {
-    fn square_length(&self) -> f32 {
+    fn square_length(self) -> f32 {
         self.x.mul_add(self.x, self.y * self.y)
     }
-    fn dot_product(&self, other: &Self) -> f32 {
+    fn dot_product(self, other: Self) -> f32 {
         self.x.mul_add(other.x, self.y * other.y)
     }
 }

@@ -39,7 +39,7 @@ impl Vec3 {
 
     #[must_use]
     ///Cross product of the vector and another vector
-    pub fn cross(&self, other: &Self) -> Self {
+    pub fn cross(self, other: Self) -> Self {
         Self::new(
             self.y.mul_add(other.z, -self.z * other.y),
             self.z.mul_add(other.x, -self.x * other.z),
@@ -113,12 +113,12 @@ impl Vec3 {
 }
 
 impl Vector for Vec3 {
-    fn square_length(&self) -> f32 {
+    fn square_length(self) -> f32 {
         self.z
             .mul_add(self.z, self.x.mul_add(self.x, self.y * self.y))
     }
 
-    fn dot_product(&self, other: &Self) -> f32 {
+    fn dot_product(self, other: Self) -> f32 {
         self.z
             .mul_add(other.z, self.x.mul_add(other.x, self.y * other.y))
     }
