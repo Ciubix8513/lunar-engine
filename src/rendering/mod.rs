@@ -84,6 +84,8 @@ pub fn render(
     #[cfg(feature = "tracy")]
     let _span = tracy_client::span!("Rendering extensions");
 
+    trace!("Rendering {} extensions", extensions.len());
+
     for e in extensions {
         if !e.is_initialized() {
             trace!("Initializing an extension");

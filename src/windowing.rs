@@ -42,11 +42,17 @@ pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Te
     #[cfg(not(feature = "webgl"))]
     let limits = wgpu::Limits::default();
 
+    let required_features =
+        wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY | wgpu::Features::POLYGON_MODE_LINE;
+
+    let available_features = adapter.features() & required_features;
+
     let (device, queue): (wgpu::Device, wgpu::Queue) = {
         let r = futures::executor::block_on(req_device(
             &adapter,
             &wgpu::DeviceDescriptor {
                 required_limits: limits,
+                required_features: available_features | wgpu::Features::default(),
                 ..Default::default()
             },
         ));
