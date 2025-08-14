@@ -815,9 +815,9 @@ fn calculate_frustum(near: f32, far: f32, fov: f32) -> Vec3 {
 }
 
 fn calculate_frustum_matrix(frustum: Vec3, camera_transform: Mat4x4) -> Mat4x4 {
-    let scale = Mat4x4::scale_matrix(&(Vec3::new(1.0 / frustum.x, 1.0, 1.0 / frustum.y)));
-    let translation = Mat4x4::translation_matrix(&Vec3::new(0.0, frustum.z, 0.0));
-    let rotation = Mat4x4::rotation_matrix_euler(&Vec3::new(90.0, 90.0, 0.0));
+    let scale = Mat4x4::scale_matrix((Vec3::new(1.0 / frustum.x, 1.0, 1.0 / frustum.y)));
+    let translation = Mat4x4::translation_matrix(Vec3::new(0.0, frustum.z, 0.0));
+    let rotation = Mat4x4::rotation_matrix_euler(Vec3::new(90.0, 90.0, 0.0));
 
     translation * scale * rotation * camera_transform.inverted().unwrap()
 }

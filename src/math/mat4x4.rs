@@ -125,7 +125,7 @@ impl Mat4x4 {
 
     ///Makes all the values in the matrix positive
     #[must_use]
-    pub const fn abs(&self) -> Self {
+    pub const fn abs(self) -> Self {
         Self {
             m00: self.m00.abs(),
             m01: self.m01.abs(),
@@ -178,7 +178,7 @@ impl Mat4x4 {
     ///
     ///Will panic if the index is out of bounds
     #[must_use]
-    pub const fn row(&self, index: u32) -> Vec4 {
+    pub const fn row(self, index: u32) -> Vec4 {
         assert!(index < 4, "Index out of bounds");
 
         match index {
@@ -216,7 +216,7 @@ impl Mat4x4 {
     ///
     ///Will panic if the index is out of bounds
     #[must_use]
-    pub const fn col(&self, index: u32) -> Vec4 {
+    pub const fn col(self, index: u32) -> Vec4 {
         assert!(index < 4, "Index out of bounds");
 
         match index {
@@ -253,7 +253,7 @@ impl Mat4x4 {
     ///Transforms `other` using `self` matrix
     //TODO: SIMD THE SHIT OUT THIS
     #[must_use]
-    pub fn transform(&self, other: Vec4) -> Vec4 {
+    pub fn transform(self, other: Vec4) -> Vec4 {
         Vec4 {
             x: self.m03.mul_add(
                 other.w,
@@ -280,7 +280,7 @@ impl Mat4x4 {
 
     ///Transforms `other` using `self` matrix
     #[must_use]
-    pub fn transform3(&self, other: Vec3) -> Vec3 {
+    pub fn transform3(self, other: Vec3) -> Vec3 {
         self.transform((other, 1.0).into()).xyz()
     }
 
@@ -288,7 +288,7 @@ impl Mat4x4 {
     //[3 , 4]   [3 , 4] -
     ///Performs matrix multiplication `self` * `other`
     #[must_use]
-    pub fn multiply(&self, other: Self) -> Self {
+    pub fn multiply(self, other: Self) -> Self {
         Self {
             m00: self.m03.mul_add(
                 other.m30,
@@ -375,7 +375,7 @@ impl Mat4x4 {
 
     #[must_use]
     ///Returns the determinant of the matrix
-    pub fn determinant(&self) -> f32 {
+    pub fn determinant(self) -> f32 {
         (self.m00 * self.m11 * self.m22).mul_add(self.m33, (self.m01 * self.m10 * self.m22).mul_add(-self.m33, (self.m00 * self.m12 * self.m21).mul_add(-self.m33, (self.m02 * self.m10 * self.m21).mul_add(self.m33, (self.m01 * self.m12 * self.m20).mul_add(self.m33, (self.m02 * self.m11 * self.m20).mul_add(-self.m33, (self.m00 * self.m11 * self.m23).mul_add(-self.m32, (self.m01 * self.m10 * self.m23).mul_add(self.m32, (self.m00 * self.m13 * self.m21).mul_add(self.m32, (self.m03 * self.m10 * self.m21).mul_add(-self.m32, (self.m01 * self.m13 * self.m20).mul_add(-self.m32, (self.m03 * self.m11 * self.m20).mul_add( self.m32,
             (self.m00 * self.m12 * self.m23).mul_add(
                 self.m31,
@@ -416,21 +416,21 @@ impl Mat4x4 {
 
     ///Returns the trace of the matrix
     #[must_use]
-    pub const fn trace(&self) -> f32 {
+    pub const fn trace(self) -> f32 {
         self.m00 + self.m11 + self.m22 + self.m33
     }
 
     #[must_use]
     ///Inverts the matrix does not consume the matrix
     ///Returns None if the Matrix can not be inverted i.e. if the determenant is equal to zero
-    pub fn inverted(&self) -> Option<Self> {
+    pub fn inverted(self) -> Option<Self> {
         let det = self.determinant();
         if det == 0.0 {
             return None;
         }
 
-        let squared = *self * *self;
-        let cubed = squared * *self;
+        let squared = self * self;
+        let cubed = squared * self;
         let trace = self.trace();
 
         let a = Self::identity()
@@ -439,7 +439,7 @@ impl Mat4x4 {
                     cubed.trace(),
                     (3.0 * trace).mul_add(-squared.trace(), trace.powi(3)),
                 ));
-        let b = *self * (0.5 * trace.mul_add(trace, -squared.trace()));
+        let b = self * (0.5 * trace.mul_add(trace, -squared.trace()));
         let c = squared * trace;
 
         Some((a - b + c - cubed) * (1.0 / det))
@@ -532,7 +532,7 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a scale matrix for the given vector
-    pub const fn scale_matrix(scale: &Vec3) -> Self {
+    pub const fn scale_matrix(scale: Vec3) -> Self {
         Self {
             m00: scale.x,
             m11: scale.y,
@@ -543,7 +543,7 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a translation matrix for the given vector
-    pub const fn translation_matrix(translation: &Vec3) -> Self {
+    pub const fn translation_matrix(translation: Vec3) -> Self {
         Self {
             m03: translation.x,
             m13: translation.y,
@@ -554,7 +554,7 @@ impl Mat4x4 {
 
     #[must_use]
     ///Creates a rotation matrix for the given euler angles
-    pub fn rotation_matrix_euler(rotation: &Vec3) -> Self {
+    pub fn rotation_matrix_euler(rotation: Vec3) -> Self {
         if rotation.x == 0.0 && rotation.y == 0.0 && rotation.z == 0.0 {
             return Self::identity();
         }
@@ -583,7 +583,7 @@ impl Mat4x4 {
     ///2. Rotation
     ///3. Translation
     #[allow(clippy::suboptimal_flops)]
-    pub fn transform_matrix_euler(translation: &Vec3, scale: &Vec3, rotation: &Quaternion) -> Self {
+    pub fn transform_matrix(translation: Vec3, scale: Vec3, rotation: Quaternion) -> Self {
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
 
@@ -612,10 +612,10 @@ impl Mat4x4 {
     ///
     ///This matrix is transposed
     #[allow(clippy::suboptimal_flops)]
-    pub fn transform_matrix_euler_transposed(
-        translation: &Vec3,
-        scale: &Vec3,
-        rotation: &Quaternion,
+    pub fn transform_matrix_transposed(
+        translation: Vec3,
+        scale: Vec3,
+        rotation: Quaternion,
     ) -> Self {
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
@@ -642,7 +642,7 @@ impl Mat4x4 {
     pub fn look_at_matrix(camera_position: Vec3, camera_up: Vec3, camera_forward: Vec3) -> Self {
         let z_axis = (camera_forward - camera_position).normalized();
         let x_axis = camera_up.normalized();
-        let y_axis = z_axis.cross(&x_axis).normalized();
+        let y_axis = z_axis.cross(x_axis).normalized();
         Self {
             m00: y_axis.x,
             m10: y_axis.y,
@@ -653,9 +653,9 @@ impl Mat4x4 {
             m12: -z_axis.y,
             m02: -z_axis.x,
             m22: -z_axis.z,
-            m30: -(y_axis.dot_product(&camera_position)),
-            m31: -(x_axis.dot_product(&camera_position)),
-            m32: (z_axis.dot_product(&camera_position)),
+            m30: -(y_axis.dot_product(camera_position)),
+            m31: -(x_axis.dot_product(camera_position)),
+            m32: (z_axis.dot_product(camera_position)),
             ..Default::default()
         }
     }

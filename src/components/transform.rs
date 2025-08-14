@@ -88,11 +88,10 @@ impl Transform {
     #[must_use]
     pub fn matrix(&self) -> Mat4x4 {
         self.parent.as_ref().map_or_else(
-            || Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation),
+            || Mat4x4::transform_matrix(self.position, self.scale, self.rotation),
             |p| {
                 let parent_mat = p.borrow().matrix();
-                parent_mat
-                    * Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
+                parent_mat * Mat4x4::transform_matrix(self.position, self.scale, self.rotation)
             },
         )
     }
@@ -102,20 +101,11 @@ impl Transform {
     #[must_use]
     pub fn matrix_transposed(&self) -> Mat4x4 {
         self.parent.as_ref().map_or_else(
-            || {
-                Mat4x4::transform_matrix_euler_transposed(
-                    &self.position,
-                    &self.scale,
-                    &self.rotation,
-                )
-            },
+            || Mat4x4::transform_matrix_transposed(self.position, self.scale, self.rotation),
             |p| {
                 let parent_mat = p.borrow().matrix_transposed();
-                Mat4x4::transform_matrix_euler_transposed(
-                    &self.position,
-                    &self.scale,
-                    &self.rotation,
-                ) * parent_mat
+                Mat4x4::transform_matrix_transposed(self.position, self.scale, self.rotation)
+                    * parent_mat
             },
         )
     }
@@ -123,14 +113,14 @@ impl Transform {
     ///account, this matrix is transposed
     #[must_use]
     pub fn matrix_local_transposed(&self) -> Mat4x4 {
-        Mat4x4::transform_matrix_euler_transposed(&self.position, &self.scale, &self.rotation)
+        Mat4x4::transform_matrix_transposed(self.position, self.scale, self.rotation)
     }
 
     ///Returns transformation matrix of the entity, without taking the parent transformation into
     ///account
     #[must_use]
     pub fn matrix_local(&self) -> Mat4x4 {
-        Mat4x4::transform_matrix_euler(&self.position, &self.scale, &self.rotation)
+        Mat4x4::transform_matrix(self.position, self.scale, self.rotation)
     }
 
     ///Sets the parent of the entity, applying all parent transformations to this entity
