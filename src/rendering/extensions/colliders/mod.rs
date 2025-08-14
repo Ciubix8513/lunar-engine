@@ -1,6 +1,7 @@
 use std::num::NonZero;
 
 use bytemuck::cast_slice;
+use log::trace;
 use wgpu::{BufferUsages, ColorWrites, ShaderStages, util::DeviceExt};
 use wgpu_shader_checker::include_wgsl;
 
@@ -46,7 +47,7 @@ impl Default for Collider {
             color_bg: Default::default(),
             matrix_bufers: Default::default(),
             matrix_buf_lens: Default::default(),
-            supported: Default::default(),
+            supported: true,
         }
     }
 }
@@ -78,6 +79,8 @@ impl RenderingExtension for Collider {
     }
 
     fn initialize(&mut self) {
+        log::info!("Initialized Collider extension");
+
         self.initialzed = true;
 
         //Check features
@@ -170,7 +173,7 @@ impl RenderingExtension for Collider {
                 conservative: false,
             },
             depth_stencil: Some(wgpu::DepthStencilState {
-                format: wgpu::TextureFormat::R32Float,
+                format: wgpu::TextureFormat::Depth32Float,
                 depth_write_enabled: false,
                 depth_compare: wgpu::CompareFunction::LessEqual,
                 stencil: wgpu::StencilState::default(),
@@ -245,7 +248,7 @@ impl RenderingExtension for Collider {
             let buf = device.create_buffer(&wgpu::wgt::BufferDescriptor {
                 label: None,
                 size: 64 * spheres.len() as u64,
-                usage: BufferUsages::MAP_WRITE | BufferUsages::VERTEX,
+                usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
             if self.matrix_buf_lens.is_empty() {
@@ -286,6 +289,12 @@ impl RenderingExtension for Collider {
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
+                        // load: wgpu::LoadOp::Clear(wgpu::Color {
+                        //     r: 0.0,
+                        //     g: 0.0,
+                        //     b: 0.0,
+                        //     a: 0.0,
+                        // }),
                         load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,
                     },
@@ -314,7 +323,7 @@ impl RenderingExtension for Collider {
             wgpu::IndexFormat::Uint32,
         );
 
-        rp.set_vertex_buffer(0, self.matrix_bufers.get(0).unwrap().slice(..));
+        rp.set_vertex_buffer(1, self.matrix_bufers.get(0).unwrap().slice(..));
 
         rp.draw_indexed(
             0..self.sphere_ind_count,
