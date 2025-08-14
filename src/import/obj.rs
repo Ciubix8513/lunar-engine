@@ -146,8 +146,8 @@ pub fn parse(file: &str) -> Option<Vec<Mesh>> {
         }
         if let Some(stripped) = l.strip_prefix("l ") {
             let line = read_vec2(stripped)?;
-            lines.push(line.x as u32);
-            lines.push(line.y as u32);
+            lines.push(line.x as u32 - 1);
+            lines.push(line.y as u32 - 1);
         }
     }
 
