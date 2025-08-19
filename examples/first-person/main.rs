@@ -14,7 +14,7 @@ use lunar_engine::{
         transform::Transform,
     },
     delta_time,
-    ecs::{Component, ComponentReference, EntityBuilder, World},
+    ecs::{Component, ComponentReference, Entity, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{Quaternion, Vec3, Vector},
     rendering::{
@@ -61,7 +61,17 @@ impl Component for CameraControls {
         let delta = input::cursor_delta() * delta_time * sensetivity;
         let mut trans = self.transform.get().unwrap().borrow_mut();
 
-        trans.rotate((delta.y * 0.1, delta.x * -0.1, 0.0).into());
+        //Using a parent for y axis rotation...
+        //
+        //kinda scuffed but eh, should work
+        let parent = trans.parent.clone().unwrap();
+        let mut p = parent.borrow_mut();
+
+        // trans.rotate((delta.y * 0.1, delta.x * -0.1, 0.0).into());
+        trans.rotate((delta.y * 0.1, 0.0, 0).into());
+        p.rotate((0, delta.x * -0.1, 0).into());
+
+        drop(p);
 
         //Movement
         let mut speed = 400.0;
@@ -95,9 +105,10 @@ impl Component for CameraControls {
 
         movement_vec *= 0.01 * speed * delta_time;
 
-        let mat = trans.rotation.matrix();
+        let mat = trans.rotation_global().matrix();
         movement_vec = mat.transform3(movement_vec);
-        trans.position += movement_vec;
+
+        parent.borrow_mut().position += movement_vec;
     }
 
     fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {
@@ -242,11 +253,28 @@ fn init(state: &mut State) {
 
     generate_scene(world, assets, num_objects, num_colors, 8);
 
-    world
+    let e = world
         .add_entity(
             EntityBuilder::new()
                 .create_component(|| Transform {
                     position: (0, 0, -4).into(),
+                    ..Default::default()
+                })
+                .create()
+                .unwrap(),
+        )
+        .unwrap()
+        .upgrade()
+        .unwrap();
+    let t = e.borrow().get_component::<Transform>().unwrap();
+
+    drop(e);
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .create_component(|| Transform {
+                    parent: Some(t),
                     ..Default::default()
                 })
                 .add_component::<MainCamera>()

@@ -127,12 +127,14 @@ impl Camera {
     pub fn matrix(&self) -> Mat4x4 {
         let binding = self.transorm_reference.get().unwrap();
         let transform = binding.borrow();
-        let rotation_matrix = transform.rotation.matrix();
+        let rotation_matrix = transform.rotation_global().matrix();
+
+        let pos = transform.position_global();
 
         let up = (rotation_matrix * Vec4::new(0.0, 1.0, 0.0, 1.0)).xyz();
-        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, 1.0, 1.0)).xyz() + transform.position;
+        let forward = (rotation_matrix * Vec4::new(0.0, 0.0, 1.0, 1.0)).xyz() + pos;
 
-        let camera_matrix = Mat4x4::look_at_matrix(transform.position, up, forward);
+        let camera_matrix = Mat4x4::look_at_matrix(pos, up, forward);
 
         let resolution = RESOLUTION.read().unwrap();
         let aspect = resolution.width as f32 / resolution.height as f32;
