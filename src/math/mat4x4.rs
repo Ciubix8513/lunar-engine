@@ -520,11 +520,11 @@ impl Mat4x4 {
         far: f32,
     ) -> Self {
         Self {
-            m00: 2.0 / (right - left),
-            m03: -((left + right) / (right - left)),
-            m11: 2.0 / (top - bottom),
-            m13: -((top + bottom) / (top - bottom)),
-            m22: -2.0 / (far - near),
+            m00: -2.0 / (right - left),
+            m03: ((left + right) / (right - left)),
+            m11: -2.0 / (top - bottom),
+            m13: ((top + bottom) / (top - bottom)),
+            m22: 2.0 / (far - near),
             m32: ((far + near) / (far - near)),
             ..Self::identity()
         }
