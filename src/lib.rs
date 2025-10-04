@@ -113,6 +113,11 @@ pub fn set_vsync(vsync: Vsync) {
     *VSYNC_CHANGE.write().unwrap() = Some(vsync);
 }
 
+///Sets the title of the game window
+pub fn set_window_title(title: &str) {
+    WINDOW.get().unwrap().set_title(title);
+}
+
 ///Contains main state of the app
 #[allow(clippy::type_complexity)]
 pub struct State<T> {
