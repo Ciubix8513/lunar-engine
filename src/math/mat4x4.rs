@@ -759,3 +759,16 @@ impl Mul<Mat4x4> for Vec4 {
         rhs.transform(self)
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<Mat4x4> for nalgebra::Matrix4<f32> {
+    fn from(value: Mat4x4) -> Self {
+        Self::new(
+            value.m00, value.m01, value.m02, value.m03,
+            value.m10, value.m11, value.m12, value.m13,
+            value.m20, value.m21, value.m22, value.m23,
+            value.m30, value.m31, value.m32, value.m33,
+
+        )
+    }
+}

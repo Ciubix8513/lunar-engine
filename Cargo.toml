@@ -10,9 +10,11 @@ path="./src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+default = ["physics"]
 webgl = ["wgpu/webgl", "wasm"]
 gles = ["wgpu/gles"]
 tracy = ["tracy-client/default"]
+physics = ["dep:rapier3d", "dep:nalgebra"]
 
 # Needed for wasm builds
 wasm = ["wgpu/fragile-send-sync-non-atomic-wasm"]
@@ -35,6 +37,8 @@ lunar-png = "0.2.1"
 tracy-client={version = "0.18.0", default-features=false}
 wgpu_shader_checker = "0.2.0"
 directories = "6.0.0"
+rapier3d = {version = "0.29.0", optional = true, features = ["simd-stable"]}
+nalgebra = {version = "0.34.1", optional = true}
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 clipboard-rs = { git = "https://github.com/ciubix8513/clipboard-rs", default-features = false}
@@ -47,6 +51,7 @@ getrandom = {version = "0.2.15", features = ["js"]}
 web-sys = "0.3.64"
 wasm-bindgen = "0.2.92"
 
+
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
 
@@ -58,4 +63,4 @@ members = [
 ]
 
 [profile.release]
-debug=true
+# debug=true

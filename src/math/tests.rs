@@ -141,14 +141,14 @@ fn test_vec2_dot_product() {
     let b = Vec2::new(0.0, 1.0);
 
     let expected = 0.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
     let a = Vec2::new(1.0, 0.0);
     let b = Vec2::new(1.0, 0.0);
 
     let expected = 1.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
 }
@@ -165,14 +165,14 @@ fn test_vec3_dot_product() {
     let b = Vec3::new(0.0, 1.0, 0.0);
 
     let expected = 0.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
     let a = Vec3::new(1.0, 0.0, 0.0);
     let b = Vec3::new(1.0, 0.0, 0.0);
 
     let expected = 1.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
 }
@@ -190,14 +190,14 @@ fn test_vec4_dot_product() {
     let b = Vec4::new(0.0, 1.0, 0.0, 0.0);
 
     let expected = 0.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
     let a = Vec4::new(1.0, 0.0, 0.0, 0.0);
     let b = Vec4::new(1.0, 0.0, 0.0, 0.0);
 
     let expected = 1.0;
-    let result = a.dot_product(&b);
+    let result = a.dot_product(b);
 
     assert_eq!(expected, result);
 }
@@ -308,7 +308,7 @@ fn quaternion_to_matrix() {
 
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 
@@ -316,7 +316,7 @@ fn quaternion_to_matrix() {
     let r = Vec3::new(0, 90, 0);
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 
@@ -324,7 +324,7 @@ fn quaternion_to_matrix() {
     let r = Vec3::new(90, 0, 0);
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 
@@ -332,7 +332,7 @@ fn quaternion_to_matrix() {
     let r = Vec3::new(0, 0, 90);
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 
@@ -340,7 +340,7 @@ fn quaternion_to_matrix() {
     let r = Vec3::new(90, 90, 0);
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 
@@ -348,7 +348,7 @@ fn quaternion_to_matrix() {
     let r = Vec3::new(90, 90, 90);
     assert_approx_eq!(
         q.matrix(),
-        Mat4x4::rotation_matrix_euler(&r),
+        Mat4x4::rotation_matrix_euler(r),
         Mat4x4::single_value_mat(delta)
     );
 }
@@ -454,6 +454,16 @@ fn vec_min_max() {
     assert_eq!(v.xyz().min(), 1.0);
     assert_eq!(v.xyz().max(), 3.0);
 
-    assert_eq!(v.xyz().min(), 1.0);
+    assert_eq!(v.xy().min(), 1.0);
     assert_eq!(v.xy().max(), 2.0);
+
+    let v = Vec4::new(4, 3, 2, 1);
+    assert_eq!(v.min(), 1.0);
+    assert_eq!(v.max(), 4.0);
+
+    assert_eq!(v.xyz().min(), 2.0);
+    assert_eq!(v.xyz().max(), 4.0);
+
+    assert_eq!(v.xy().min(), 3.0);
+    assert_eq!(v.xy().max(), 4.0);
 }
