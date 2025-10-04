@@ -1,4 +1,4 @@
-use std::{cell::OnceCell, path::Path};
+use std::cell::OnceCell;
 
 use log::{debug, info};
 use lunar_engine::{
@@ -65,6 +65,7 @@ impl Component for Spiny {
 fn init(state: &mut MyState) {
     //Set Vsync
     lunar_engine::set_vsync(lunar_engine::Vsync::Vsync);
+    lunar_engine::set_window_title("Spinny shork :3");
 
     log::info!("Initializing scene");
 
@@ -82,20 +83,26 @@ fn init(state: &mut MyState) {
     state.frame = 0;
     let mesh = state
         .assset_store
-        .register(assets::Mesh::new_from_obj(Path::new("assets/blahaj.obj")).unwrap());
+        .register(assets::Mesh::new_from_static_obj(include_str!(
+            "../../assets/blahaj.obj"
+        )));
     let texture = state
         .assset_store
-        .register(assets::Texture::new_png(Path::new("assets/blahaj.png")));
+        .register(assets::Texture::static_png(include_bytes!(
+            "../../assets/blahaj.png"
+        )));
     let material = state.assset_store.register(Unlit::new(Some(texture), None));
 
     state.blahaj_mat = material;
     state.blahaj_mesh = mesh;
     let _e = state.world.add_entity(
         EntityBuilder::new()
-            .create_component(|| Transform {
-                position: Vec3::new(0, 2, -10),
-                rotation: Quaternion::from_euler(Vec3::new(15, 0, 0)),
-                ..Default::default()
+            .create_component(|| {
+                Transform::new(
+                    Vec3::new(0, 2, -10),
+                    Quaternion::from_euler(Vec3::new(15, 0, 0)),
+                    1.into(),
+                )
             })
             .create_component(|| {
                 let mut c = MainCamera::mew();
@@ -138,11 +145,12 @@ fn run(state: &mut MyState) {
             .world
             .add_entity(
                 EntityBuilder::new()
-                    .create_component(|| Transform {
-                        // scale: Vec3::random(0.3, 3.0),
-                        rotation: Quaternion::from_euler(Vec3::random(0, 360)),
-                        position: Vec3::random(-5, 5),
-                        ..Default::default()
+                    .create_component(|| {
+                        Transform::new(
+                            Vec3::random(-5, 5),
+                            Quaternion::from_euler(Vec3::random(0, 360)),
+                            1.into(),
+                        )
                     })
                     .create_component(|| Mesh::new(state.blahaj_mesh, state.blahaj_mat))
                     .add_component::<Blahaj>()
