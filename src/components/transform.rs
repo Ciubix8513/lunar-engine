@@ -1,6 +1,8 @@
+use std::cell::OnceCell;
+
 use crate::math::{Mat4x4, Quaternion, Vec3};
 
-use crate::ecs::{Component, ComponentReference};
+use crate::ecs::{Component, ComponentReference, SelfReferenceGuard};
 
 ///Transform  component contains function and data to determine the position of the entity
 ///
@@ -14,7 +16,10 @@ pub struct Transform {
     ///Scale of the object
     pub scale: Vec3,
     ///Parent transform of the object
-    pub parent: Option<ComponentReference<Self>>,
+    parent: Option<ComponentReference<Self>>,
+    children: Vec<ComponentReference<Self>>,
+    self_reference: OnceCell<SelfReferenceGuard>,
+    self_comp_ref: OnceCell<ComponentReference<Transform>>,
 }
 
 impl Default for Transform {
@@ -28,6 +33,9 @@ impl Default for Transform {
                 z: 1.0,
             },
             parent: None,
+            children: Vec::new(),
+            self_reference: OnceCell::new(),
+            self_comp_ref: OnceCell::new(),
         }
     }
 }
@@ -42,7 +50,21 @@ impl Component for Transform {
             scale: Vec3::new(1.0, 1.0, 1.0),
             position: Vec3::default(),
             parent: None,
+            children: Vec::new(),
+            self_reference: OnceCell::new(),
+            self_comp_ref: OnceCell::new(),
         }
+    }
+
+    fn set_self_reference(&mut self, reference: SelfReferenceGuard) {
+        let c_ref = reference.get_component().unwrap();
+
+        if let Some(p) = self.parent.clone() {
+            p.borrow_mut().add_child(c_ref.clone());
+        }
+
+        self.self_comp_ref.set(c_ref).unwrap();
+        self.self_reference.set(reference).unwrap();
     }
 }
 
@@ -55,6 +77,9 @@ impl Transform {
             rotation,
             scale,
             parent: None,
+            children: Vec::new(),
+            self_reference: OnceCell::new(),
+            self_comp_ref: OnceCell::new(),
         }
     }
 
@@ -71,7 +96,29 @@ impl Transform {
             rotation,
             scale,
             parent: Some(parent),
+            children: Vec::new(),
+            self_reference: OnceCell::new(),
+            self_comp_ref: OnceCell::new(),
         }
+    }
+
+    fn add_child(&mut self, child: ComponentReference<Self>) {
+        self.children.push(child);
+    }
+
+    ///Returns the children of this object
+    pub fn get_children(&self) -> &[ComponentReference<Self>] {
+        &self.children
+    }
+
+    ///Returns the parent of this object
+    pub fn get_parent(&self) -> Option<ComponentReference<Self>> {
+        self.parent.clone()
+    }
+
+    ///Returns a reference to the entity this component is on
+    pub fn enity(&self) -> SelfReferenceGuard {
+        self.self_reference.get().unwrap().clone()
     }
 
     ///Rotates the object using a given rotation
@@ -124,7 +171,11 @@ impl Transform {
     }
 
     ///Sets the parent of the entity, applying all parent transformations to this entity
-    pub fn set_parent(mut self, p: ComponentReference<Self>) {
+    pub fn set_parent(&mut self, p: ComponentReference<Self>) {
+        if let Some(s) = self.self_comp_ref.get() {
+            p.borrow_mut().add_child(s.clone());
+        }
+
         self.parent = Some(p);
     }
 
