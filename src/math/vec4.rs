@@ -315,3 +315,10 @@ impl Neg for Vec4 {
         }
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<Vec4> for nalgebra::Vector4<f32> {
+    fn from(value: Vec4) -> Self {
+        Self::new(value.x, value.y, value.z, value.w)
+    }
+}

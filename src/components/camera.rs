@@ -244,4 +244,5 @@ impl Camera {
 
 // #[derive(Debug, Default)]
 #[alias(Camera)]
+#[derive(Default)]
 pub struct MainCamera;

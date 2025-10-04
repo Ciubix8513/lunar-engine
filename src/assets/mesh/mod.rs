@@ -142,6 +142,7 @@ impl Mesh {
     }
 
     ///Creates a new mesh that is a box with given dimensions
+    ///The dimensions are the size of the box on x, y and z axes
     #[must_use]
     pub fn new_box(dimensions: Vec3) -> Self {
         Self {

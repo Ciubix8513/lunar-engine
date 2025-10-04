@@ -10,11 +10,10 @@ use lunar_engine::{
         fps::FpsRecorder,
         light::{DirectionalLight, PointLight},
         mesh::Mesh,
-        physics::colliders,
         transform::Transform,
     },
     delta_time,
-    ecs::{Component, ComponentReference, Entity, EntityBuilder, World},
+    ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{Quaternion, Vec3, Vector},
     rendering::{
@@ -64,7 +63,7 @@ impl Component for CameraControls {
         //Using a parent for y axis rotation...
         //
         //kinda scuffed but eh, should work
-        let parent = trans.parent.clone().unwrap();
+        let parent = trans.get_parent().clone().unwrap();
         let mut p = parent.borrow_mut();
 
         // trans.rotate((delta.y * 0.1, delta.x * -0.1, 0.0).into());
@@ -121,7 +120,6 @@ impl Component for CameraControls {
 #[derive(Default)]
 struct State {
     extension: Base,
-    collision_ext: extensions::Collider,
     rendering_colliders: bool,
     only_render_colliders: bool,
     asset_store: AssetStore,
@@ -178,16 +176,14 @@ fn generate_scene(
         world
             .add_entity(
                 EntityBuilder::new()
-                    .create_component(|| Transform {
-                        position: Vec3::random_with_rng(-20, 20, &mut rng),
-                        rotation: Quaternion::from_euler(Vec3::random_with_rng(
-                            -180, 180, &mut rng,
-                        )),
-                        scale: Vec3::random_with_rng(0.3, 1.5, &mut rng),
-                        ..Default::default()
+                    .create_component(|| {
+                        Transform::new(
+                            Vec3::random_with_rng(-20, 20, &mut rng),
+                            Quaternion::from_euler(Vec3::random_with_rng(-180, 180, &mut rng)),
+                            Vec3::random_with_rng(0.3, 1.5, &mut rng),
+                        )
                     })
                     .create_component(|| Mesh::new(obj_id, mat_id))
-                    .create_component(|| colliders::Sphere::new(0.5))
                     .create()
                     .unwrap(),
             )
@@ -209,9 +205,12 @@ fn generate_scene(
         world
             .add_entity(
                 EntityBuilder::new()
-                    .create_component(|| Transform {
-                        position: Vec3::random_with_rng(-20, 20, &mut rng),
-                        ..Default::default()
+                    .create_component(|| {
+                        Transform::new(
+                            Vec3::random_with_rng(-20, 20, &mut rng),
+                            Quaternion::default(),
+                            1.0.into(),
+                        )
                     })
                     .create_component(|| {
                         PointLight::new(
@@ -256,9 +255,8 @@ fn init(state: &mut State) {
     let e = world
         .add_entity(
             EntityBuilder::new()
-                .create_component(|| Transform {
-                    position: (0, 0, -4).into(),
-                    ..Default::default()
+                .create_component(|| {
+                    Transform::new((0, 0, -4).into(), Quaternion::default(), 1.0.into())
                 })
                 .create()
                 .unwrap(),
@@ -273,9 +271,8 @@ fn init(state: &mut State) {
     world
         .add_entity(
             EntityBuilder::new()
-                .create_component(|| Transform {
-                    parent: Some(t),
-                    ..Default::default()
+                .create_component(|| {
+                    Transform::with_parent(0.0.into(), Quaternion::default(), 1.0.into(), t)
                 })
                 .add_component::<MainCamera>()
                 .add_component::<CameraControls>()
@@ -310,13 +307,6 @@ fn run(state: &mut State) {
         state.rendering_colliders = !state.rendering_colliders;
     }
 
-    if lunar_engine::input::key(KeyCode::KeyH) == KeyState::Down {
-        state.only_render_colliders = !state.only_render_colliders;
-        state
-            .collision_ext
-            .only_render_colliders(state.only_render_colliders);
-    }
-
     if !state.rendering_colliders {
         render(
             &state.world,
@@ -327,7 +317,7 @@ fn run(state: &mut State) {
         render(
             &state.world,
             &mut state.asset_store,
-            &mut [&mut state.extension, &mut state.collision_ext],
+            &mut [&mut state.extension],
         );
     }
     state.frames += 1;

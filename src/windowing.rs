@@ -42,8 +42,7 @@ pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Te
     #[cfg(not(feature = "webgl"))]
     let limits = wgpu::Limits::default();
 
-    let required_features =
-        wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY | wgpu::Features::POLYGON_MODE_LINE;
+    let required_features = wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY; //| wgpu::Features::POLYGON_MODE_LINE;
 
     let available_features = adapter.features() & required_features;
 

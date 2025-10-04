@@ -10,7 +10,7 @@ use crate::{
     grimoire::CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR,
     import,
     internal::{DEVICE, FORMAT, STAGING_BELT},
-    math::{Mat4x4, Vec3},
+    math::{Mat4x4, Quaternion, Vec3},
     rendering::extensions::RenderingExtension,
     structures::Color,
 };
@@ -184,7 +184,7 @@ impl RenderingExtension for Collider {
                 front_face: wgpu::FrontFace::Cw,
                 cull_mode: None,
                 unclipped_depth: false,
-                polygon_mode: wgpu::PolygonMode::Line,
+                polygon_mode: wgpu::PolygonMode::Fill,
                 conservative: false,
             },
             depth_stencil: Some(wgpu::DepthStencilState {
@@ -278,13 +278,17 @@ impl RenderingExtension for Collider {
         let transforms = spheres
             .iter()
             .map(|i| {
-                let binding = i.borrow();
-                let t = binding.transform.get().unwrap().borrow();
+                let collider = i.borrow();
+                let t = collider.transform.get().unwrap().borrow();
 
-                let s = t.scale_global().max() * binding.radius;
+                let s = t.scale_global().max() * collider.radius;
                 let p = t.position_global();
                 let r = t.rotation_global();
-                Mat4x4::transform_matrix_transposed(p, Vec3::new(s, s, s), r)
+
+                // log::info!("pos: {p} rot: {r} scale: {s}");
+
+                Mat4x4::transform_matrix_transposed(p, s.into(), Quaternion::default())
+                // Mat4x4::trans_matrix_weird(p, s.into(), r).transpose()
             })
             .collect::<Vec<_>>();
 
