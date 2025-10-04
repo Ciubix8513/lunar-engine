@@ -1,5 +1,5 @@
 use super::{mesh::Mesh, transform::Transform};
-use crate::ecs::*;
+use crate::{ecs::*, math::Quaternion};
 
 #[test]
 fn test_mesh() {
@@ -21,4 +21,59 @@ fn test_transform() {
 
     let t = e.get_component::<Transform>().unwrap();
     _ = t.borrow_mut().matrix();
+}
+
+#[test]
+fn parent_child() {
+    let mut world = World::new();
+
+    let p = EntityBuilder::new()
+        .add_component::<Transform>()
+        .create()
+        .unwrap();
+    let p_t = p.get_component().unwrap();
+
+    let p_ref = world.add_entity(p).unwrap();
+
+    let c = EntityBuilder::new()
+        .create_component(|| {
+            Transform::with_parent(0.into(), Quaternion::default(), 1.0.into(), p_t.clone())
+        })
+        .create()
+        .unwrap();
+
+    let c0_ref = world.add_entity(c).unwrap();
+
+    let c = EntityBuilder::new()
+        .add_component::<Transform>()
+        .create()
+        .unwrap();
+
+    c.get_component::<Transform>()
+        .unwrap()
+        .borrow_mut()
+        .set_parent(p_t.clone());
+
+    let c1_ref = world.add_entity(c).unwrap();
+
+    let c = EntityBuilder::new()
+        .add_component::<Transform>()
+        .create()
+        .unwrap();
+
+    let c2_ref = world.add_entity(c).unwrap();
+
+    c2_ref
+        .upgrade()
+        .unwrap()
+        .borrow()
+        .get_component::<Transform>()
+        .unwrap()
+        .borrow_mut()
+        .set_parent(p_t.clone());
+
+    let binding = p_t.borrow();
+    let c = binding.get_children();
+
+    assert_eq!(c.len(), 3);
 }
