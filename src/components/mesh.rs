@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use crate::{
     UUID,
@@ -18,7 +18,7 @@ pub struct Mesh {
     mesh_id: Option<UUID>,
 
     material_id: Option<UUID>,
-    transform_reference: OnceCell<ComponentReference<Transform>>,
+    transform_reference: OnceLock<ComponentReference<Transform>>,
 }
 
 impl Default for Mesh {
@@ -27,7 +27,7 @@ impl Default for Mesh {
             visible: true,
             mesh_id: None,
             material_id: None,
-            transform_reference: OnceCell::new(),
+            transform_reference: OnceLock::new(),
         }
     }
 }
@@ -56,7 +56,7 @@ impl Mesh {
             visible: true,
             mesh_id: Some(mesh),
             material_id: Some(material),
-            transform_reference: OnceCell::new(),
+            transform_reference: OnceLock::new(),
         }
     }
     ///Whether or not this mesh is rendered

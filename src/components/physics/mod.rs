@@ -2,7 +2,7 @@
 //! - Box
 //! - Sphere
 //! - Capsule
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use crate::{
     self as lunar_engine,
@@ -18,8 +18,8 @@ use super::transform::Transform;
 
 ///Designates this entity as a physics object
 pub struct PhysObject {
-    entity: OnceCell<SelfReferenceGuard>,
-    transform: OnceCell<ComponentReference<Transform>>,
+    entity: OnceLock<SelfReferenceGuard>,
+    transform: OnceLock<ComponentReference<Transform>>,
 }
 
 impl Component for PhysObject {
@@ -30,8 +30,8 @@ impl Component for PhysObject {
         Self: Sized,
     {
         Self {
-            entity: OnceCell::new(),
-            transform: OnceCell::new(),
+            entity: OnceLock::new(),
+            transform: OnceLock::new(),
         }
     }
 
@@ -47,7 +47,7 @@ impl Component for PhysObject {
 ///A collider used for physics simulation
 pub struct Collider {
     ///Transform component of the collider
-    pub transform: OnceCell<ComponentReference<Transform>>,
+    pub transform: OnceLock<ComponentReference<Transform>>,
     ///Shape of the collider
     pub shape: Shape,
 }
@@ -60,7 +60,7 @@ impl Component for Collider {
         Self: Sized,
     {
         Self {
-            transform: OnceCell::new(),
+            transform: OnceLock::new(),
             shape: Shape::Sphere { radius: 1.0 },
         }
     }
@@ -76,7 +76,7 @@ impl Collider {
     ///Creates a new collider with a given shape
     pub fn new(shape: Shape) -> Self {
         Self {
-            transform: OnceCell::new(),
+            transform: OnceLock::new(),
             shape,
         }
     }

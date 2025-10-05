@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use crate as lunar_engine;
 use crate::ecs::ComponentReference;
@@ -71,7 +71,7 @@ pub struct PointLight {
     intensity: f32,
     ///Range of the light
     range: f32,
-    pub(crate) transform_ref: OnceCell<ComponentReference<Transform>>,
+    pub(crate) transform_ref: OnceLock<ComponentReference<Transform>>,
     pub(crate) modified: bool,
 }
 
@@ -83,7 +83,7 @@ impl PointLight {
             color,
             intensity,
             range,
-            transform_ref: OnceCell::new(),
+            transform_ref: OnceLock::new(),
             modified: false,
         }
     }
@@ -131,7 +131,7 @@ impl Component for PointLight {
             color: Color::white(),
             intensity: 10.0,
             range: 10.0,
-            transform_ref: OnceCell::new(),
+            transform_ref: OnceLock::new(),
             modified: true,
         }
     }

@@ -1,5 +1,5 @@
-use std::cell::OnceCell;
 use std::num::NonZeroU64;
+use std::sync::OnceLock;
 
 use lunar_engine_derive::{alias, dependencies};
 use wgpu::BufferUsages;
@@ -60,7 +60,7 @@ pub struct Camera {
     pub near: f32,
     ///Far plane of the camera
     pub far: f32,
-    transorm_reference: OnceCell<ComponentReference<Transform>>,
+    transorm_reference: OnceLock<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
     bind_group: Option<wgpu::BindGroup>,
 }
@@ -77,7 +77,7 @@ impl Default for Camera {
             },
             near: 0.1,
             far: 100.0,
-            transorm_reference: OnceCell::new(),
+            transorm_reference: OnceLock::new(),
             buffer: None,
             bind_group: None,
         }
