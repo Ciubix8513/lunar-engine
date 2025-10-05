@@ -2,14 +2,6 @@
 //! - Box
 //! - Sphere
 //! - Capsule
-//!
-//! ```
-//! let mut entity = Entity::new();
-//! entity.add_component::<Transform>();
-//! entity.add_existing_component(Collider:new(Shapes::Sphere { radius: 2.0 }));
-//!
-//! ```
-
 use std::cell::OnceCell;
 
 use crate::{

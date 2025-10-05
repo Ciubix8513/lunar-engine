@@ -66,7 +66,7 @@ fn parent_child() {
     c2_ref
         .upgrade()
         .unwrap()
-        .borrow()
+        .read()
         .get_component::<Transform>()
         .unwrap()
         .borrow_mut()

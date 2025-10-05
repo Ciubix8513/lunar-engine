@@ -166,7 +166,7 @@ fn run(state: &mut MyState) {
             .get_all_entities_with_component::<Blahaj>()
             .unwrap_or_default();
         for b in e {
-            let id = b.borrow().get_id();
+            let id = b.read().get_id();
             state.world.remove_entity_by_id(id).unwrap();
         }
     }

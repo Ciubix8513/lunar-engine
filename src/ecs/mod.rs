@@ -79,15 +79,18 @@ pub trait Component: std::any::Any {
     }
 }
 
+use lock_api::{MappedRwLockReadGuard, RawRwLock};
+use parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use rand::Rng;
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefMut};
+use std::sync::{Arc, Weak};
 use vec_key_value_pair::set::VecSet;
 
 ///A reference to an [Entity] in a world intended for uses with short lifetimes
-pub type EntityRefence = Rc<RefCell<Entity>>;
+pub type EntityRefence = Arc<RwLock<Entity>>;
 ///A weak reference to an [Entity] in a world intended for use with longer lifetimes
-pub type WeakEntityRefence = Weak<RefCell<Entity>>;
+pub type WeakEntityRefence = Weak<RwLock<Entity>>;
 
 ///A container for components
 #[derive(Default)]
@@ -97,16 +100,16 @@ pub struct Entity {
     comoponent_types: Vec<std::any::TypeId>,
     //It makes total sense i swear, you need an RC to share the refcell and a refcell to borrow the
     //stuff, I SWEAR IT MAKES SENSE
-    components: Vec<Rc<RefCell<dyn Component + 'static>>>,
-    self_reference: Option<Weak<RefCell<Self>>>,
-    pub(crate) world_modified: Option<Rc<RefCell<ComponentsModified>>>,
-    pub(crate) unique_components: Option<Rc<RefCell<VecSet<TypeId>>>>,
+    components: Vec<Arc<RwLock<dyn Component + 'static>>>,
+    self_reference: Option<Weak<RwLock<Self>>>,
+    pub(crate) world_modified: Option<Arc<RwLock<ComponentsModified>>>,
+    pub(crate) unique_components: Option<Arc<RwLock<VecSet<TypeId>>>>,
 }
 
 ///A guard around the reference to the entity that contains this component
 #[derive(Debug, Clone)]
 pub struct SelfReferenceGuard {
-    weak: Weak<RefCell<Entity>>,
+    weak: Weak<RwLock<Entity>>,
 }
 
 impl SelfReferenceGuard {
@@ -127,7 +130,7 @@ impl SelfReferenceGuard {
                 //
                 //This SHOULD be fine, bc this call only happens when you add a component, or add
                 //the entity to the world, so it SHOULDN'T cause any problems
-                unsafe { it.as_ptr().as_ref().unwrap() }
+                unsafe { it.data_ptr().as_ref().unwrap() }
                     .get_component::<T>()
                     .map_or_else(|| Err(Error::ComponentDoesNotExist), Ok)
             },
@@ -154,7 +157,7 @@ pub enum Error {
 #[derive(Debug)]
 pub struct ComponentReference<T> {
     phantom: std::marker::PhantomData<T>,
-    cell: Weak<RefCell<dyn Component + 'static>>,
+    cell: Weak<RwLock<dyn Component + 'static>>,
 }
 
 //Have to use the manual implementation, so that it doesn't require T to implement clone
@@ -176,9 +179,9 @@ impl<T: 'static> ComponentReference<T> {
     #[must_use]
     #[inline(always)]
     #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
-    pub fn borrow(&self) -> Ref<'_, T> {
-        Ref::map(
-            unsafe { self.cell.as_ptr().as_ref().unwrap().borrow() },
+    pub fn borrow(&self) -> MappedRwLockReadGuard<'_, parking_lot::RawRwLock, T> {
+        RwLockReadGuard::map(
+            unsafe { self.cell.as_ptr().as_ref().unwrap().read() },
             |c| unsafe { &*(c as *const dyn Any as *const T) },
         )
     }
@@ -190,9 +193,9 @@ impl<T: 'static> ComponentReference<T> {
     #[must_use]
     #[inline(always)]
     #[allow(clippy::ref_as_ptr, clippy::ptr_as_ptr)]
-    pub fn borrow_mut(&self) -> RefMut<'_, T> {
-        RefMut::map(
-            unsafe { self.cell.as_ptr().as_ref().unwrap().borrow_mut() },
+    pub fn borrow_mut(&self) -> MappedRwLockWriteGuard<'_, T> {
+        RwLockWriteGuard::map(
+            unsafe { self.cell.as_ptr().as_ref().unwrap().write() },
             |c| unsafe { &mut *(c as *mut dyn Any as *mut T) },
         )
     }
@@ -218,7 +221,7 @@ impl Entity {
     #[must_use]
     pub fn has_component<T: 'static>(&self) -> bool {
         for c in &self.components {
-            let ptr = c.as_ptr() as *mut dyn Any;
+            let ptr = c.data_ptr() as *mut dyn Any;
             if unsafe { ptr.as_ref().unwrap().is::<T>() } {
                 return true;
             }
@@ -240,19 +243,23 @@ impl Entity {
         if T::unique()
             && let Some(u) = &self.unique_components
         {
-            let map = &mut u.borrow_mut();
+            // let map = &mut u.write();
+            let map = u.read();
 
             //Returns an error if there already is a instance of a component
             if map.contains(&TypeId::of::<T>()) {
                 return Err(Error::UniqueComponentExists);
             }
 
-            map.insert(TypeId::of::<T>());
+            drop(map);
+
+            u.write().insert(TypeId::of::<T>());
         }
 
         if let Err(e) = T::check_dependencies(self) {
             return Err(Error::MissingDependency(e));
         }
+
         let mut c = T::mew();
         c.awawa();
 
@@ -262,10 +269,10 @@ impl Entity {
 
         //Add component type ID
         self.comoponent_types.push(std::any::TypeId::of::<T>());
-        self.components.push(Rc::new(RefCell::new(c)));
+        self.components.push(Arc::new(RwLock::new(c)));
 
         if let Some(w) = &self.world_modified {
-            w.borrow_mut().component_changed::<T>();
+            w.write().component_changed::<T>();
         }
 
         Ok(())
@@ -278,7 +285,7 @@ impl Entity {
     pub fn remove_component<T: 'static + Component>(&mut self) -> Result<(), Error> {
         let mut ind = None;
         for (index, c) in self.components.iter().enumerate() {
-            if unsafe { (c.as_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
+            if unsafe { (c.data_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
                 ind = Some(index);
                 break;
             }
@@ -288,7 +295,7 @@ impl Entity {
             self.components.remove(ind);
 
             if let Some(w) = &self.world_modified {
-                w.borrow_mut().component_changed::<T>();
+                w.write().component_changed::<T>();
             }
 
             Ok(())
@@ -303,7 +310,7 @@ impl Entity {
         for (component, comp_type) in self.components.iter().zip(self.comoponent_types.iter()) {
             if &std::any::TypeId::of::<T>() == comp_type {
                 return Some(ComponentReference {
-                    cell: Rc::downgrade(component),
+                    cell: Arc::downgrade(component),
                     phantom: std::marker::PhantomData,
                 });
             }
@@ -314,19 +321,19 @@ impl Entity {
     ///Performs update on all components of the entity
     pub fn update(&mut self) {
         for c in &mut self.components {
-            c.borrow_mut().update();
+            c.write().update();
         }
     }
 
     ///Destroys the entity and calls decatification on all of it components
-    pub fn decatify(mut self) {
+    pub fn decatify(&mut self) {
         for (i, c) in self.components.iter_mut().enumerate() {
-            let mut c = c.borrow_mut();
+            let mut c = c.write();
 
             if c.unique_instanced()
                 && let Some(u) = &self.unique_components
             {
-                let u = &mut u.borrow_mut();
+                let u = &mut u.write();
                 let type_id = self.comoponent_types[i];
 
                 u.remove(&type_id);
@@ -344,7 +351,7 @@ impl Entity {
 #[derive(Default)]
 #[allow(clippy::module_name_repetitions)]
 pub struct EntityBuilder {
-    components: Vec<Rc<RefCell<dyn Component + 'static>>>,
+    components: Vec<Arc<RwLock<dyn Component + 'static>>>,
     component_types: Vec<std::any::TypeId>,
 }
 
@@ -361,12 +368,12 @@ impl EntityBuilder {
         T: 'static + Component,
     {
         for i in &self.components {
-            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
+            if unsafe { (i.data_ptr() as *mut dyn Any).as_ref().unwrap().is::<T>() } {
                 return self;
             }
         }
         let c = T::mew();
-        self.components.push(Rc::new(RefCell::new(c)));
+        self.components.push(Arc::new(RwLock::new(c)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -379,12 +386,12 @@ impl EntityBuilder {
         T: Component + 'static,
     {
         for i in &self.components {
-            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
+            if unsafe { (i.data_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
                 return self;
             }
         }
 
-        self.components.push(Rc::new(RefCell::new(component)));
+        self.components.push(Arc::new(RwLock::new(component)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -400,12 +407,12 @@ impl EntityBuilder {
         let c = f();
 
         for i in &self.components {
-            if unsafe { (i.as_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
+            if unsafe { (i.data_ptr() as *mut dyn Any).as_ref().unwrap() }.is::<T>() {
                 return self;
             }
         }
 
-        self.components.push(Rc::new(RefCell::new(c)));
+        self.components.push(Arc::new(RwLock::new(c)));
         self.component_types.push(std::any::TypeId::of::<T>());
 
         self
@@ -424,7 +431,7 @@ impl EntityBuilder {
         };
 
         for (component, comp_type) in self.components.into_iter().zip(self.component_types) {
-            if let Err(e) = component.borrow().check_dependencies_instanced(&e) {
+            if let Err(e) = component.read().check_dependencies_instanced(&e) {
                 return Err(Error::MissingDependency(e));
             }
             e.components.push(component);
@@ -432,15 +439,12 @@ impl EntityBuilder {
         }
 
         for c in &e.components {
-            c.borrow_mut().awawa();
+            c.write().awawa();
         }
 
         Ok(e)
     }
 }
-
-use std::rc::Weak;
-use std::{cell::RefCell, rc::Rc};
 
 use vec_key_value_pair::map::VecMap;
 
@@ -474,11 +478,11 @@ impl ComponentsModified {
 ///Manages all the entities
 pub struct World {
     entities: Vec<EntityRefence>,
-    modified: Rc<RefCell<ComponentsModified>>,
+    modified: Arc<RwLock<ComponentsModified>>,
     //Gotta box it, this is so stupid
-    component_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
-    entity_cache: RefCell<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
-    unique_components: Rc<RefCell<VecSet<std::any::TypeId>>>,
+    component_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
+    entity_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
+    unique_components: Arc<RwLock<VecSet<std::any::TypeId>>>,
 }
 
 impl Drop for World {
@@ -491,10 +495,10 @@ impl Default for World {
     fn default() -> Self {
         Self {
             entities: Vec::new(),
-            modified: Rc::new(RefCell::new(ComponentsModified::default())),
-            component_cache: RefCell::new(VecMap::new()),
-            entity_cache: RefCell::new(VecMap::new()),
-            unique_components: Rc::new(RefCell::new(VecSet::new())),
+            modified: Arc::new(RwLock::new(ComponentsModified::default())),
+            component_cache: RwLock::new(VecMap::new()),
+            entity_cache: RwLock::new(VecMap::new()),
+            unique_components: Arc::new(RwLock::new(VecSet::new())),
         }
     }
 }
@@ -509,7 +513,8 @@ impl World {
     ///Destroys all entities in the world
     pub fn destroy_all(&mut self) {
         for e in &self.entities {
-            e.take().decatify();
+            //Doubt this will work
+            e.write().decatify();
         }
     }
 
@@ -518,39 +523,38 @@ impl World {
     ///# Errors
     ///Returns an error if the entity contains an instance of a unique component that already
     ///exists in the world
-    pub fn add_entity(&mut self, entity: Entity) -> Result<WeakEntityRefence, Error> {
-        let mut e = entity;
-        e.world_modified = Some(self.modified.clone());
-        e.unique_components = Some(self.unique_components.clone());
+    pub fn add_entity(&mut self, mut entity: Entity) -> Result<WeakEntityRefence, Error> {
+        entity.world_modified = Some(self.modified.clone());
+        entity.unique_components = Some(self.unique_components.clone());
 
         //Check every component for whether or not it's unique
-        for (i, c) in e.components.iter().enumerate() {
-            if c.borrow().unique_instanced() {
-                let u = &mut self.unique_components.borrow_mut();
+        for (i, c) in entity.components.iter().enumerate() {
+            if c.read().unique_instanced() {
+                let u = &mut self.unique_components.write();
 
-                if u.contains(&e.comoponent_types[i]) {
+                if u.contains(&entity.comoponent_types[i]) {
                     return Err(Error::UniqueComponentExists);
                 }
 
-                u.insert(e.comoponent_types[i]);
+                u.insert(entity.comoponent_types[i]);
             }
         }
 
-        let rc = Rc::new(RefCell::new(e));
+        let rc = Arc::new(RwLock::new(entity));
         //Add a self reference
 
-        let weak = Rc::downgrade(&rc);
+        let weak = Arc::downgrade(&rc);
 
-        rc.borrow_mut().self_reference = Some(weak.clone());
+        rc.write().self_reference = Some(weak.clone());
 
-        for c in &rc.borrow().components {
-            c.borrow_mut().set_self_reference(SelfReferenceGuard {
-                weak: Rc::downgrade(&rc),
+        for c in &rc.read().components {
+            c.write().set_self_reference(SelfReferenceGuard {
+                weak: Arc::downgrade(&rc),
             });
         }
         self.entities.push(rc);
 
-        (*self.modified).borrow_mut().entity_changed();
+        (*self.modified).write().entity_changed();
 
         Ok(weak)
     }
@@ -563,15 +567,18 @@ impl World {
         let mut id = None;
 
         for (index, e) in self.entities.iter().enumerate() {
-            if e.borrow().get_id() == entity.get_id() {
+            if e.read().get_id() == entity.get_id() {
                 id = Some(index);
                 break;
             }
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).take().decatify();
-            (*self.modified).borrow_mut().entity_changed();
+            Arc::into_inner(self.entities.remove(id))
+                .unwrap()
+                .into_inner()
+                .decatify();
+            (*self.modified).write().entity_changed();
 
             Ok(())
         } else {
@@ -586,15 +593,15 @@ impl World {
     pub fn remove_entity_by_id(&mut self, entity_id: UUID) -> Result<(), Error> {
         let mut id = None;
         for (index, e) in self.entities.iter().enumerate() {
-            if e.borrow().get_id() == entity_id {
+            if e.read().get_id() == entity_id {
                 id = Some(index);
                 break;
             }
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).take().decatify();
-            (*self.modified).borrow_mut().entity_changed();
+            self.entities.remove(id).write().decatify();
+            (*self.modified).write().entity_changed();
             Ok(())
         } else {
             Err(Error::EntityDoesNotExist)
@@ -615,22 +622,22 @@ impl World {
     pub fn get_entity_by_id(&self, id: UUID) -> Option<EntityRefence> {
         self.entities
             .iter()
-            .find(|e| e.borrow().get_id() == id)
+            .find(|e| e.read().get_id() == id)
             .cloned()
     }
     ///Checks the modified data and deletes all modified caches;
     fn upate_caches(&self) {
-        let mut modified = (*self.modified).borrow_mut();
+        let mut modified = (*self.modified).write();
         if modified.entity_modified {
             modified.reset();
-            self.component_cache.borrow_mut().clear();
-            self.entity_cache.borrow_mut().clear();
+            self.component_cache.write().clear();
+            self.entity_cache.write().clear();
             return;
         }
 
         if !modified.modified_components.is_empty() {
-            let mut c_cache = self.component_cache.borrow_mut();
-            let mut e_cache = self.entity_cache.borrow_mut();
+            let mut c_cache = self.component_cache.write();
+            let mut e_cache = self.entity_cache.write();
             //Remove caches for all modified components
             for i in &modified.modified_components {
                 c_cache.remove(i);
@@ -651,7 +658,7 @@ impl World {
     {
         self.upate_caches();
 
-        let mut binding = self.component_cache.borrow_mut();
+        let mut binding = self.component_cache.write();
         let entry = binding
             .entry(std::any::TypeId::of::<T>())
             .or_insert_with(|| {
@@ -659,7 +666,7 @@ impl World {
                 Box::new(
                     self.entities
                         .iter()
-                        .filter_map(|e| e.borrow().get_component::<T>())
+                        .filter_map(|e| e.read().get_component::<T>())
                         .collect::<Vec<_>>(),
                 )
             });
@@ -678,24 +685,24 @@ impl World {
     /// Will return None, if no entities are found
     #[allow(clippy::missing_panics_doc, clippy::coerce_container_to_any)]
     #[must_use]
-    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Rc<RefCell<Entity>>>>
+    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Arc<RwLock<Entity>>>>
     where
         T: 'static + Component,
     {
         self.upate_caches();
 
-        let mut entry = self.entity_cache.borrow_mut();
+        let mut entry = self.entity_cache.write();
         let entry = entry.entry(std::any::TypeId::of::<T>()).or_insert_with(|| {
             log::warn!("Cache miss");
             Box::new(
                 self.entities
                     .iter()
-                    .filter(|e| e.borrow().has_component::<T>())
+                    .filter(|e| e.read().has_component::<T>())
                     .cloned()
                     .collect::<Vec<_>>(),
             )
         });
-        let vec = entry.downcast_ref::<Vec<Rc<RefCell<Entity>>>>().unwrap();
+        let vec = entry.downcast_ref::<Vec<Arc<RwLock<Entity>>>>().unwrap();
 
         if vec.is_empty() {
             None
@@ -718,14 +725,14 @@ impl World {
 
         self.upate_caches();
 
-        let mut binding = self.component_cache.borrow_mut();
+        let mut binding = self.component_cache.write();
         let entry = binding
             .entry(std::any::TypeId::of::<T>())
             .or_insert_with(|| {
                 Box::new(
                     self.entities
                         .iter()
-                        .filter_map(|e| e.borrow().get_component::<T>())
+                        .filter_map(|e| e.read().get_component::<T>())
                         .collect::<Vec<_>>(),
                 )
             });
@@ -738,7 +745,7 @@ impl World {
     ///Calls update on all containing entities
     pub fn update(&self) {
         for e in &self.entities {
-            e.borrow_mut().update();
+            e.write().update();
         }
     }
 }

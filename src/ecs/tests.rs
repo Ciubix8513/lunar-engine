@@ -159,7 +159,7 @@ fn get_entity_test() {
 
     let e = w.get_entity_by_id(id).unwrap();
 
-    let e1 = e.borrow();
+    let e1 = e.read();
     let c = e1.get_component::<TestComponent>().unwrap();
     drop(e1);
     _ = c.borrow();
@@ -206,7 +206,7 @@ fn get_all_componenents_test() {
     let o = o.unwrap();
     assert_eq!(o.len(), 201);
 
-    let mut e = o.first().unwrap().borrow_mut();
+    let mut e = o.first().unwrap().write();
     e.remove_component::<TestComponent>().unwrap();
     drop(e);
 
@@ -344,7 +344,7 @@ fn self_refernce_test() {
 
     let e = binding.first().unwrap();
 
-    let c = e.borrow();
+    let c = e.read();
     _ = c.get_component::<TestComponent1>().unwrap();
 }
 
@@ -412,7 +412,7 @@ fn test_unique_component() {
     let res = e
         .upgrade()
         .unwrap()
-        .borrow_mut()
+        .write()
         .add_component::<UniqueComponent>();
 
     assert_eq!(res, Ok(()));
@@ -420,19 +420,19 @@ fn test_unique_component() {
     let res = e1
         .upgrade()
         .unwrap()
-        .borrow_mut()
+        .write()
         .add_component::<UniqueComponent>();
 
     assert_eq!(res, Err(Error::UniqueComponentExists));
 
-    let id = e.upgrade().unwrap().borrow().get_id();
+    let id = e.upgrade().unwrap().read().get_id();
 
     world.remove_entity_by_id(id).unwrap();
 
     let res = e1
         .upgrade()
         .unwrap()
-        .borrow_mut()
+        .write()
         .add_component::<UniqueComponent>();
 
     assert_eq!(res, Ok(()));
@@ -487,14 +487,14 @@ fn component_addition() {
     //Add dependency
     e.upgrade()
         .unwrap()
-        .borrow_mut()
+        .write()
         .add_component::<TestComponent>()
         .unwrap();
 
     //Add the component itself
     e.upgrade()
         .unwrap()
-        .borrow_mut()
+        .write()
         .add_component::<TestComponent4>()
         .unwrap();
 }
