@@ -1,5 +1,5 @@
 use core::f32;
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use log::info;
 use lunar_engine::{
@@ -26,7 +26,7 @@ use rand::Rng;
 use winit::keyboard::KeyCode;
 
 struct CameraControls {
-    transform: OnceCell<ComponentReference<Transform>>,
+    transform: OnceLock<ComponentReference<Transform>>,
 }
 
 impl Component for CameraControls {
@@ -37,7 +37,7 @@ impl Component for CameraControls {
         input::set_cursor_grab_mode(CursorLock::Locked);
         input::set_cursor_visible(CursorVisibily::Hidden);
         Self {
-            transform: OnceCell::new(),
+            transform: OnceLock::new(),
         }
     }
 

@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use log::{debug, info};
 use lunar_engine::{
@@ -34,7 +34,7 @@ struct Blahaj;
 
 struct Spiny {
     pub speed: f32,
-    transform: OnceCell<ComponentReference<Transform>>,
+    transform: OnceLock<ComponentReference<Transform>>,
 }
 
 impl Component for Spiny {
@@ -46,7 +46,7 @@ impl Component for Spiny {
     {
         Self {
             speed: 100.0,
-            transform: OnceCell::new(),
+            transform: OnceLock::new(),
         }
     }
 

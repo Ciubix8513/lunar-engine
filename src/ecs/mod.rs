@@ -6,7 +6,7 @@
 mod tests;
 
 ///The trait all components that are used within the ECS must implement
-pub trait Component: std::any::Any {
+pub trait Component: std::any::Any + Send + Sync {
     ///Creates a new instance of the component
     fn mew() -> Self
     where

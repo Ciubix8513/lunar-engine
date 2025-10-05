@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 use crate::math::{Mat4x4, Quaternion, Vec3};
 
@@ -18,8 +18,8 @@ pub struct Transform {
     ///Parent transform of the object
     parent: Option<ComponentReference<Self>>,
     children: Vec<ComponentReference<Self>>,
-    self_reference: OnceCell<SelfReferenceGuard>,
-    self_comp_ref: OnceCell<ComponentReference<Transform>>,
+    self_reference: OnceLock<SelfReferenceGuard>,
+    self_comp_ref: OnceLock<ComponentReference<Transform>>,
 }
 
 impl Default for Transform {
@@ -34,8 +34,8 @@ impl Default for Transform {
             },
             parent: None,
             children: Vec::new(),
-            self_reference: OnceCell::new(),
-            self_comp_ref: OnceCell::new(),
+            self_reference: OnceLock::new(),
+            self_comp_ref: OnceLock::new(),
         }
     }
 }
@@ -51,8 +51,8 @@ impl Component for Transform {
             position: Vec3::default(),
             parent: None,
             children: Vec::new(),
-            self_reference: OnceCell::new(),
-            self_comp_ref: OnceCell::new(),
+            self_reference: OnceLock::new(),
+            self_comp_ref: OnceLock::new(),
         }
     }
 
@@ -78,8 +78,8 @@ impl Transform {
             scale,
             parent: None,
             children: Vec::new(),
-            self_reference: OnceCell::new(),
-            self_comp_ref: OnceCell::new(),
+            self_reference: OnceLock::new(),
+            self_comp_ref: OnceLock::new(),
         }
     }
 
@@ -97,8 +97,8 @@ impl Transform {
             scale,
             parent: Some(parent),
             children: Vec::new(),
-            self_reference: OnceCell::new(),
-            self_comp_ref: OnceCell::new(),
+            self_reference: OnceLock::new(),
+            self_comp_ref: OnceLock::new(),
         }
     }
 
