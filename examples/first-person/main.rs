@@ -264,7 +264,7 @@ fn init(state: &mut State) {
         .unwrap()
         .upgrade()
         .unwrap();
-    let t = e.borrow().get_component::<Transform>().unwrap();
+    let t = e.read().get_component::<Transform>().unwrap();
 
     drop(e);
 
