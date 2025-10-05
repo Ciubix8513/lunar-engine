@@ -6,7 +6,7 @@ use wgpu::{BufferUsages, ColorWrites, ShaderStages, util::DeviceExt};
 use wgpu_shader_checker::include_wgsl;
 
 use crate::{
-    components::{camera::MainCamera, physics::colliders},
+    components::{self, camera::MainCamera},
     grimoire::CAMERA_BIND_GROUP_LAYOUT_DESCRIPTOR,
     import,
     internal::{DEVICE, FORMAT, STAGING_BELT},
@@ -228,13 +228,13 @@ impl RenderingExtension for Collider {
         }
 
         //First get all of the colliders
-        let spheres = world
-            .get_all_components::<colliders::Sphere>()
+        let colliders = world
+            .get_all_components::<components::physics::Collider>()
             .unwrap_or_default();
         // let cubes = world.get_all_components::<colliders::Sphere>().unwrap_or_default();
         // let capsules = world.get_all_components::<colliders::Sphere>().unwrap_or_default()u;
         //No op if no colliders
-        if spheres.is_empty() {
+        if colliders.is_empty() {
             //&& cubes.is_empty() && capsules.is_empty() {
             return;
         }
@@ -258,30 +258,40 @@ impl RenderingExtension for Collider {
         let binding = world.get_all_components::<MainCamera>().unwrap();
         let cam = binding.first().unwrap().borrow();
 
-        if self.matrix_buf_lens.get(0).copied().unwrap_or(0) < spheres.len() as u64 {
+        if self.matrix_buf_lens.get(0).copied().unwrap_or(0) < colliders.len() as u64 {
             // let b = self.matrix_bufers.get_mut(0);
             let buf = device.create_buffer(&wgpu::wgt::BufferDescriptor {
                 label: None,
-                size: 64 * spheres.len() as u64,
+                size: 64 * colliders.len() as u64,
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
             if self.matrix_buf_lens.is_empty() {
                 self.matrix_bufers.push(buf);
-                self.matrix_buf_lens.push(spheres.len() as u64);
+                self.matrix_buf_lens.push(colliders.len() as u64);
             } else {
                 *self.matrix_bufers.get_mut(0).unwrap() = buf;
-                *self.matrix_buf_lens.get_mut(0).unwrap() = spheres.len() as u64;
+                *self.matrix_buf_lens.get_mut(0).unwrap() = colliders.len() as u64;
             }
         }
 
-        let transforms = spheres
+        let transforms = colliders
             .iter()
+            .filter(|i| {
+                matches!(
+                    i.borrow().shape,
+                    components::physics::Shape::Sphere { radius: _ }
+                )
+            })
             .map(|i| {
                 let collider = i.borrow();
                 let t = collider.transform.get().unwrap().borrow();
 
-                let s = t.scale_global().max() * collider.radius;
+                let s = t.scale_global().max()
+                    * match collider.shape {
+                        components::physics::Shape::Sphere { radius } => radius,
+                        _ => unreachable!(),
+                    };
                 let p = t.position_global();
                 let r = t.rotation_global();
 

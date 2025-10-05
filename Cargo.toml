@@ -7,8 +7,6 @@ edition = "2024"
 name="lunar_engine"
 path="./src/lib.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
 default = ["physics"]
 webgl = ["wgpu/webgl", "wasm"]
@@ -55,6 +53,3 @@ members = [
   "lunar-engine-derive",
   "swizzle-gen"
 ]
-
-[profile.release]
-# debug=true

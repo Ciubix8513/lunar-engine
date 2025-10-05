@@ -11,7 +11,7 @@ use rapier3d::prelude::{
     MultibodyJointSet, NarrowPhase, PhysicsPipeline, RigidBodySet,
 };
 
-use crate::{components::physics::colliders, ecs::World, math::Vec3};
+use crate::{components::physics::Collider, ecs::World, math::Vec3};
 
 struct PhysicsHooks;
 struct EventHandler;
@@ -83,18 +83,9 @@ impl PhysicsState {
         self.gravity = gravity.into()
     }
 
+    ///Sets up the simulation with a given world
     pub fn set_up(&mut self, world: &mut World) {
-        let spheres = world
-            .get_all_components::<colliders::Sphere>()
-            .unwrap_or_default();
-        let boxes = world
-            .get_all_components::<colliders::Box>()
-            .unwrap_or_default();
-        let capsules = world
-            .get_all_components::<colliders::Capsule>()
-            .unwrap_or_default();
-
-        spheres.first().unwrap().
+        let colliders = world.get_all_components::<Collider>();
     }
 
     ///Step the simulation forward
