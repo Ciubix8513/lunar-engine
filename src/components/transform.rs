@@ -116,6 +116,25 @@ impl Transform {
         self.parent.clone()
     }
 
+    ///Returns all components of type T, from self and children
+    ///
+    /// # Panics
+    ///
+    /// Will panic if the entity, or any of its children was not added to the world first
+    pub fn get_all_components_in_children<T: Component>(&self) -> Vec<ComponentReference<T>> {
+        let mut o = Vec::new();
+
+        if let Ok(c) = self.self_reference.get().unwrap().get_component::<T>() {
+            o.push(c);
+        }
+
+        for i in &self.children {
+            o.extend(i.borrow().get_all_components_in_children());
+        }
+
+        o
+    }
+
     ///Returns a reference to the entity this component is on
     pub fn enity(&self) -> SelfReferenceGuard {
         self.self_reference.get().unwrap().clone()
