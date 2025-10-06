@@ -228,9 +228,7 @@ impl RenderingExtension for Collider {
         }
 
         //First get all of the colliders
-        let colliders = world
-            .get_all_components::<components::physics::Collider>()
-            .unwrap_or_default();
+        let colliders = world.get_all_components::<components::physics::Collider>();
         // let cubes = world.get_all_components::<colliders::Sphere>().unwrap_or_default();
         // let capsules = world.get_all_components::<colliders::Sphere>().unwrap_or_default()u;
         //No op if no colliders
@@ -255,7 +253,7 @@ impl RenderingExtension for Collider {
             .copy_from_slice(bytemuck::bytes_of(&self.collider_color));
         }
 
-        let binding = world.get_all_components::<MainCamera>().unwrap();
+        let binding = world.get_all_components::<MainCamera>();
         let cam = binding.first().unwrap().borrow();
 
         if self.matrix_buf_lens.get(0).copied().unwrap_or(0) < colliders.len() as u64 {
