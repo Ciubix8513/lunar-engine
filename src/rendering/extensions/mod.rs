@@ -222,18 +222,17 @@ impl RenderingExtension for Base {
         trace!("Started frame");
 
         //Update camera first
-        let binding = world
-            .get_all_components::<components::camera::MainCamera>()
-            .expect("Could not find the main camera");
+        let binding = world.get_all_components::<components::camera::MainCamera>();
 
-        let camera = binding.first().unwrap().borrow();
+        let camera = binding
+            .first()
+            .expect("Could not find the main camera")
+            .borrow();
         camera.update_gpu(encoder);
         trace!("Accquired camera");
 
         //This is cached, so should be reasonably fast
-        let binding = world
-            .get_all_components::<crate::components::mesh::Mesh>()
-            .unwrap_or_default();
+        let binding = world.get_all_components::<crate::components::mesh::Mesh>();
 
         #[cfg(feature = "tracy")]
         let _frustum_span = tracy_client::span!("Frustum checking");
@@ -623,8 +622,10 @@ impl RenderingExtension for Base {
                     .unwrap();
             }
 
+            let lights = world.get_all_components::<PointLight>();
+
             //Handle point lights
-            if let Some(lights) = world.get_all_components::<PointLight>() {
+            if !lights.is_empty() {
                 #[repr(C)]
                 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
                 struct PointLight {

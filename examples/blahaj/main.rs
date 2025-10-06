@@ -134,7 +134,7 @@ fn init(state: &mut MyState) {
     info!("Initialized!");
     info!("World contains {} entities", state.world.get_entity_count());
 
-    if state.world.get_all_components::<MainCamera>().is_some() {
+    if !state.world.get_all_components::<MainCamera>().is_empty() {
         info!("World contains a main camera");
     }
 }
@@ -161,10 +161,7 @@ fn run(state: &mut MyState) {
     }
 
     if input::KeyState::Down == input::key(KeyCode::KeyC) {
-        let e = state
-            .world
-            .get_all_entities_with_component::<Blahaj>()
-            .unwrap_or_default();
+        let e = state.world.get_all_entities_with_component::<Blahaj>();
         for b in e {
             let id = b.read().get_id();
             state.world.remove_entity_by_id(id).unwrap();

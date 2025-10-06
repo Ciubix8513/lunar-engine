@@ -652,7 +652,7 @@ impl World {
     /// Will return None if no components are found
     #[allow(clippy::missing_panics_doc, clippy::coerce_container_to_any)]
     #[must_use]
-    pub fn get_all_components<T>(&self) -> Option<Vec<ComponentReference<T>>>
+    pub fn get_all_components<T>(&self) -> Vec<ComponentReference<T>>
     where
         T: 'static + Component,
     {
@@ -673,11 +673,7 @@ impl World {
 
         let vec = entry.downcast_ref::<Vec<ComponentReference<T>>>().unwrap();
 
-        if vec.is_empty() {
-            None
-        } else {
-            Some((*vec).clone())
-        }
+        vec.clone()
     }
 
     /// Returns a vector of all components of type T
@@ -685,7 +681,7 @@ impl World {
     /// Will return None, if no entities are found
     #[allow(clippy::missing_panics_doc, clippy::coerce_container_to_any)]
     #[must_use]
-    pub fn get_all_entities_with_component<T>(&self) -> Option<Vec<Arc<RwLock<Entity>>>>
+    pub fn get_all_entities_with_component<T>(&self) -> Vec<Arc<RwLock<Entity>>>
     where
         T: 'static + Component,
     {
@@ -704,11 +700,7 @@ impl World {
         });
         let vec = entry.downcast_ref::<Vec<Arc<RwLock<Entity>>>>().unwrap();
 
-        if vec.is_empty() {
-            None
-        } else {
-            Some(vec.clone())
-        }
+        vec.clone()
     }
 
     ///Returns a reference to the unique component

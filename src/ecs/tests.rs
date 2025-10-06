@@ -171,7 +171,7 @@ fn get_entity_test() {
 fn get_all_componenents_test() {
     let mut w = World::new();
     let o = w.get_all_components::<TestComponent>();
-    assert!(o.is_none());
+    assert!(o.is_empty());
 
     for _ in 0..200 {
         let mut e = Entity::new();
@@ -182,12 +182,10 @@ fn get_all_componenents_test() {
     //To test speed
     for _ in 0..10000 {
         let o = w.get_all_components::<TestComponent>();
-        assert!(o.is_some());
-        assert_eq!(o.unwrap().len(), 200);
+        assert_eq!(o.len(), 200);
 
         let o = w.get_all_entities_with_component::<TestComponent>();
-        assert!(o.is_some());
-        assert_eq!(o.unwrap().len(), 200);
+        assert_eq!(o.len(), 200);
         // w.modified.borrow_mut().entity_changed();
     }
 
@@ -197,13 +195,10 @@ fn get_all_componenents_test() {
 
     //Test cache invalidation for components
     let o = w.get_all_components::<TestComponent>();
-    assert!(o.is_some());
-    assert_eq!(o.unwrap().len(), 201);
+    assert_eq!(o.len(), 201);
 
     //Test cache invalidation for components
     let o = w.get_all_entities_with_component::<TestComponent>();
-    assert!(o.is_some());
-    let o = o.unwrap();
     assert_eq!(o.len(), 201);
 
     let mut e = o.first().unwrap().write();
@@ -211,12 +206,10 @@ fn get_all_componenents_test() {
     drop(e);
 
     let o = w.get_all_components::<TestComponent>();
-    assert!(o.is_some());
-    assert_eq!(o.unwrap().len(), 200);
+    assert_eq!(o.len(), 200);
 
     let o = w.get_all_entities_with_component::<TestComponent>();
-    assert!(o.is_some());
-    assert_eq!(o.unwrap().len(), 200);
+    assert_eq!(o.len(), 200);
 }
 
 #[test]
@@ -338,9 +331,7 @@ fn self_refernce_test() {
         )
         .unwrap();
 
-    let binding = world
-        .get_all_entities_with_component::<TestComponent2>()
-        .unwrap();
+    let binding = world.get_all_entities_with_component::<TestComponent2>();
 
     let e = binding.first().unwrap();
 
@@ -366,7 +357,7 @@ fn alias_test() {
         )
         .unwrap();
 
-    let binding = world.get_all_components::<Alias>().unwrap();
+    let binding = world.get_all_components::<Alias>();
     assert_eq!(binding.len(), 1);
 }
 
