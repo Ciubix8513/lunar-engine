@@ -245,3 +245,11 @@ impl MulAssign<Self> for Quaternion {
         *self = *self * rhs;
     }
 }
+
+impl Into<nalgebra::Quaternion<f32>> for Quaternion {
+    fn into(self) -> nalgebra::Quaternion<f32> {
+        nalgebra::Quaternion {
+            coords: Vec4::new(self.x, self.y, self.z, self.w).into(),
+        }
+    }
+}

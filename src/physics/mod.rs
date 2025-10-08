@@ -5,13 +5,23 @@
 
 use std::time::SystemTime;
 
-use nalgebra::Vector3;
+use nalgebra::{Isometry, Unit, UnitQuaternion, Vector3};
 use rapier3d::prelude::{
-    BroadPhaseBvh, CCDSolver, ColliderSet, ImpulseJointSet, IntegrationParameters, IslandManager,
-    MultibodyJointSet, NarrowPhase, PhysicsPipeline, RigidBodySet,
+    BroadPhaseBvh, CCDSolver, ColliderBuilder, ColliderSet, ImpulseJointSet, IntegrationParameters,
+    IslandManager, MultibodyJointSet, NarrowPhase, PhysicsPipeline, RigidBodySet,
 };
 
-use crate::{components::physics::Collider, ecs::World, math::Vec3};
+use crate::{
+    components::{
+        physics::{Collider, PhysObject},
+        transform::Transform,
+    },
+    ecs::{ComponentReference, World},
+    math::{Quaternion, Vec3},
+};
+
+#[cfg(test)]
+mod tests;
 
 struct PhysicsHooks;
 struct EventHandler;
@@ -85,7 +95,87 @@ impl PhysicsState {
 
     ///Sets up the simulation with a given world
     pub fn set_up(&mut self, world: &mut World) {
-        let colliders = world.get_all_components::<Collider>();
+        let mut colliders = world.get_all_components::<Collider>();
+        let phys_objs = world.get_all_components::<PhysObject>();
+
+        //Getting a tree of colliders for each phys_obj
+        let mut trees = Vec::new();
+
+        //Doing recursion :3
+        //this is so silly
+        fn traverse_tree(
+            t: &ComponentReference<Transform>,
+            root: bool,
+        ) -> Vec<ComponentReference<Collider>> {
+            if t.borrow().enity().has_component::<PhysObject>() && !root {
+                return Vec::new();
+            }
+
+            let mut o = Vec::new();
+
+            if let Ok(c) = t.borrow().enity().get_component() {
+                o.push(c);
+            }
+
+            for i in t.borrow().get_children() {
+                o.extend(traverse_tree(i, false));
+            }
+
+            o
+        }
+
+        for i in &phys_objs {
+            let id = i.borrow().get_id();
+            let t = i.borrow().transform().clone();
+
+            trees.push((id, traverse_tree(&t, true)));
+        }
+
+        //let's isolate singular colliders vs those on phys objs
+        for i in trees.iter().flat_map(|i| &i.1).map(|i| i.borrow().get_id()) {
+            let mut to_be_removed = None;
+            for (n, c) in colliders.iter().enumerate() {
+                if c.borrow().get_id() == i {
+                    to_be_removed = Some(n);
+                }
+            }
+
+            if let Some(n) = to_be_removed {
+                colliders.remove(n);
+            }
+        }
+
+        for c in colliders {
+            let c = c.borrow();
+
+            let b = match c.shape {
+                crate::components::physics::Shape::Box { dimensions } => {
+                    ColliderBuilder::cuboid(dimensions.x, dimensions.y, dimensions.z)
+                }
+                crate::components::physics::Shape::Sphere { radius } => {
+                    ColliderBuilder::ball(radius)
+                }
+                crate::components::physics::Shape::Capsule => todo!(),
+            };
+
+            let position = c.transform().borrow().position_global();
+            let rotation = c.transform().borrow().rotation_global();
+
+            self.colliders.insert(
+                b.mass(0.0)
+                    .friction(c.material.friction)
+                    .restitution(c.material.bounciness)
+                    .position(Isometry::from_parts(
+                        nalgebra::Translation {
+                            vector: position.into(),
+                        },
+                        UnitQuaternion::from_quaternion(rotation.into()), // rotation.into(),
+                    ))
+                    .user_data(c.get_id()),
+            );
+        }
+
+        //now colliders only contain the colliders that do not have a phys obj as an ancestor
     }
 
     ///Step the simulation forward

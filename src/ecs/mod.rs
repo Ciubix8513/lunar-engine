@@ -79,11 +79,10 @@ pub trait Component: std::any::Any + Send + Sync {
     }
 }
 
-use lock_api::{MappedRwLockReadGuard, RawRwLock};
+use lock_api::MappedRwLockReadGuard;
 use parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use rand::Rng;
 use std::any::{Any, TypeId};
-use std::cell::{Ref, RefMut};
 use std::sync::{Arc, Weak};
 use vec_key_value_pair::set::VecSet;
 
@@ -135,6 +134,16 @@ impl SelfReferenceGuard {
                     .map_or_else(|| Err(Error::ComponentDoesNotExist), Ok)
             },
         )
+    }
+
+    ///Calls `has_component` on the entity
+    pub fn has_component<T: 'static>(&self) -> bool {
+        self.weak.upgrade().unwrap().read().has_component::<T>()
+    }
+
+    ///Returns the uuid of the entity
+    pub fn get_id(&self) -> UUID {
+        self.weak.upgrade().unwrap().read().get_id()
     }
 }
 
