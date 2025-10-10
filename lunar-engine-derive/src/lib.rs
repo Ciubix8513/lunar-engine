@@ -469,3 +469,136 @@ pub fn unique(_: TokenStream, item: TokenStream) -> TokenStream {
         .chain(item)
         .collect()
 }
+
+#[proc_macro_attribute]
+pub fn unique_alias(attr: TokenStream, item: TokenStream) -> TokenStream {
+    //Check if attributes are valid
+    let attrs = attr.into_iter().collect::<Vec<_>>();
+
+    if attrs.is_empty() {
+        return comp_error("No attribute found, one attribute is rquired", item);
+    }
+
+    if attrs.len() != 1 {
+        return comp_error("Too many attributes, one attribute is required", item);
+    }
+
+    let struct_type = is_struct_declaration(&item);
+    if struct_type.is_none() {
+        return comp_error("No struct declaration found", item);
+    }
+
+    if matches!(struct_type.unwrap(), StructType::Tupple) {
+        return comp_error("Tupple structs not supported", item);
+    }
+    //Actual implementation here
+
+    //Add inner of the type of the attribute
+    //Implement Deref, DerefMut
+    //Implement Componnent pass all calls to the inner
+
+    let base = attrs[0].span().source_text().unwrap_or_default();
+    let items = item.into_iter().collect::<Vec<_>>();
+    let name = items[items.len() - 2]
+        .span()
+        .source_text()
+        .unwrap_or_default();
+
+    // Define all the needed blocks
+
+    let inner = format!(
+        "
+    ///The inner value
+    pub inner: {base}"
+    )
+    .parse::<TokenStream>()
+    .unwrap();
+
+    let deref = format!(
+        "
+    impl std::ops::Deref for {name} {{ 
+        type Target = {base}; 
+
+        fn deref(&self) -> &Self::Target {{ 
+            &self.inner 
+        }} 
+    }}"
+    )
+    .parse::<TokenStream>()
+    .unwrap();
+
+    let deref_mut = format!(
+        "
+    impl std::ops::DerefMut for {name} {{ 
+        fn deref_mut(&mut self) -> &mut Self::Target {{ 
+            &mut self.inner 
+        }} 
+    }}
+    "
+    )
+    .parse::<TokenStream>()
+    .unwrap();
+
+    let component_impl = format!(
+        "
+    impl lunar_engine::ecs::Component for {name} {{
+        fn mew() -> Self
+        where
+            Self: Sized,
+        {{
+            Self {{
+                inner: {base}::mew(),
+            }}
+        }}
+        fn update(&mut self) {{
+            self.inner.update();
+        }}
+        fn awawa(&mut self) {{
+            self.inner.awawa();
+        }}
+        fn decatification(&mut self) {{
+            self.inner.decatification();
+        }}
+        fn set_self_reference(&mut self, reference: lunar_engine::ecs::SelfReferenceGuard) {{
+            self.inner.set_self_reference(reference);
+        }}
+        fn check_dependencies(entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str> {{
+            {base}::check_dependencies(entity)
+        }}
+        fn check_dependencies_instanced(&self, entity: &lunar_engine::ecs::Entity) -> Result<(), &'static str> {{
+            {base}::check_dependencies(entity)
+        }}
+        fn unique() -> bool where Self: Sized, {{ true }} 
+        fn unique_instanced(&self) -> bool {{ true }} 
+    }}
+    "
+    )
+    .parse::<TokenStream>()
+    .unwrap();
+
+    let comment = format!("///Alias of [`{base}`]")
+        .parse::<TokenStream>()
+        .unwrap();
+
+    let mut items = items;
+
+    let tmp = if let TokenTree::Group(i) = items.last().unwrap() {
+        let mut s = i.stream();
+        s.extend([inner]);
+        TokenTree::Group(Group::new(proc_macro::Delimiter::Brace, s))
+    } else {
+        TokenTree::Group(Group::new(proc_macro::Delimiter::Brace, inner))
+    };
+
+    *items.last_mut().unwrap() = tmp;
+
+    let mut o = comment.into_iter().collect::<TokenStream>();
+    o.extend([
+        items.into_iter().collect::<TokenStream>(),
+        deref,
+        deref_mut,
+        component_impl,
+    ]);
+
+    o
+}
