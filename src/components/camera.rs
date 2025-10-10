@@ -1,7 +1,7 @@
 use std::num::NonZeroU64;
 use std::sync::OnceLock;
 
-use lunar_engine_derive::{alias, dependencies};
+use lunar_engine_derive::{alias, dependencies, unique_alias};
 use wgpu::BufferUsages;
 
 use crate as lunar_engine;
@@ -63,6 +63,7 @@ pub struct Camera {
     transorm_reference: OnceLock<ComponentReference<Transform>>,
     buffer: Option<wgpu::Buffer>,
     bind_group: Option<wgpu::BindGroup>,
+    gpu_updated: bool,
 }
 
 impl Default for Camera {
@@ -80,6 +81,7 @@ impl Default for Camera {
             transorm_reference: OnceLock::new(),
             buffer: None,
             bind_group: None,
+            gpu_updated: false,
         }
     }
 }
@@ -101,6 +103,10 @@ impl Component for Camera {
         self.transorm_reference
             .set(reference.get_component().unwrap())
             .unwrap();
+    }
+
+    fn update(&mut self) {
+        self.gpu_updated = false;
     }
 }
 
@@ -186,7 +192,13 @@ impl Camera {
     }
 
     ///Updates the buffer of the camera with the new camera matrix
-    pub(crate) fn update_gpu(&self, encoder: &mut wgpu::CommandEncoder) {
+    pub(crate) fn update_gpu(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        //Don't do anything if already updated the gpu this frame
+        if self.gpu_updated {
+            return;
+        }
+        self.gpu_updated = true;
+
         #[repr(C)]
         #[derive(bytemuck::Zeroable, bytemuck::Pod, Clone, Copy)]
         struct CameraData {
@@ -243,6 +255,6 @@ impl Camera {
 }
 
 // #[derive(Debug, Default)]
-#[alias(Camera)]
+#[unique_alias(Camera)]
 #[derive(Default)]
 pub struct MainCamera;

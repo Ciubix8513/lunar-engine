@@ -471,6 +471,7 @@ pub fn unique(_: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+///See [`macro@alias`]
 pub fn unique_alias(attr: TokenStream, item: TokenStream) -> TokenStream {
     //Check if attributes are valid
     let attrs = attr.into_iter().collect::<Vec<_>>();

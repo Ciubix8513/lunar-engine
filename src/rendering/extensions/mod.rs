@@ -225,14 +225,13 @@ impl RenderingExtension for Base {
         trace!("Started frame");
 
         //Update camera first
-        let binding = world.get_all_components::<components::camera::MainCamera>();
+        let binding = world.get_unique_component::<components::camera::MainCamera>();
 
-        let camera = binding
-            .first()
-            .expect("Could not find the main camera")
-            .borrow();
-        camera.update_gpu(encoder);
+        let camera = binding.expect("Could not find the main camera");
+        camera.borrow_mut().update_gpu(encoder);
         trace!("Accquired camera");
+
+        let camera = camera.borrow();
 
         //This is cached, so should be reasonably fast
         let binding = world.get_all_components::<crate::components::mesh::Mesh>();

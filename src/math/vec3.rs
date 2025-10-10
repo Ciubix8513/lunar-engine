@@ -323,3 +323,13 @@ impl From<Vec3> for nalgebra::Vector3<f32> {
         Self::new(value.x, value.y, value.z)
     }
 }
+
+impl From<[f32; 3]> for Vec3 {
+    fn from(value: [f32; 3]) -> Self {
+        Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+        }
+    }
+}

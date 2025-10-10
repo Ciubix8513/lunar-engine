@@ -170,7 +170,8 @@ impl RenderingExtension for Collider {
             label: Some("Collider renderer pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &device.create_shader_module(include_wgsl!("../../../shaders/vertex.wgsl")),
+                module: &device
+                    .create_shader_module(include_wgsl!("../../../../shaders/vertex.wgsl")),
                 entry_point: None,
                 compilation_options: wgpu::PipelineCompilationOptions {
                     constants: &[],
@@ -220,7 +221,7 @@ impl RenderingExtension for Collider {
         encoder: &mut wgpu::CommandEncoder,
         world: &crate::ecs::World,
         _: &mut crate::asset_managment::AssetStore,
-        attachments: &super::AttachmentData,
+        attachments: &crate::rendering::extensions::AttachmentData,
     ) {
         //Check if we can even render
         if !self.supported {
@@ -253,8 +254,8 @@ impl RenderingExtension for Collider {
             .copy_from_slice(bytemuck::bytes_of(&self.collider_color));
         }
 
-        let binding = world.get_all_components::<MainCamera>();
-        let cam = binding.first().unwrap().borrow();
+        let binding = world.get_unique_component::<MainCamera>().unwrap();
+        let cam = binding.borrow();
 
         if self.matrix_buf_lens.get(0).copied().unwrap_or(0) < colliders.len() as u64 {
             // let b = self.matrix_bufers.get_mut(0);

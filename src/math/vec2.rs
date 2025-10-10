@@ -243,3 +243,12 @@ impl From<Vec2> for nalgebra::Vector2<f32> {
         Self::new(value.x, value.y)
     }
 }
+
+impl From<[f32; 2]> for Vec2 {
+    fn from(value: [f32; 2]) -> Self {
+        Self {
+            x: value[0],
+            y: value[1],
+        }
+    }
+}
