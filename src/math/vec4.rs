@@ -322,3 +322,14 @@ impl From<Vec4> for nalgebra::Vector4<f32> {
         Self::new(value.x, value.y, value.z, value.w)
     }
 }
+
+impl From<[f32; 4]> for Vec4 {
+    fn from(value: [f32; 4]) -> Self {
+        Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+            w: value[3],
+        }
+    }
+}
