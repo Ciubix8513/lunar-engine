@@ -246,6 +246,7 @@ impl MulAssign<Self> for Quaternion {
     }
 }
 
+#[cfg(feature = "physics")]
 impl Into<nalgebra::Quaternion<f32>> for Quaternion {
     fn into(self) -> nalgebra::Quaternion<f32> {
         nalgebra::Quaternion {
