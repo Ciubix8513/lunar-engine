@@ -54,7 +54,13 @@ struct n_l {
 var<uniform> num_lights: n_l;
 
 @fragment
-fn main(@builtin(position) pos: vec4<f32>, @location(0) uvs: vec2<f32>, @location(1) normal: vec3<f32>, @location(2) view_dir: vec3<f32>, @location(3) world_pos: vec3<f32>) -> @location(0) vec4<f32> {
+fn main(
+    @builtin(position) pos: vec4<f32>,
+    @location(0) uvs: vec2<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) view_dir: vec3<f32>,
+    @location(3) world_pos: vec3<f32>
+) -> @location(0) vec4<f32> {
     var color = directional_light.ambient_color;
     var specular = vec4(0.0);
 
