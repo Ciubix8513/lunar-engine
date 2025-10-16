@@ -7,8 +7,9 @@ use std::time::SystemTime;
 
 use nalgebra::{Isometry, Unit, UnitQuaternion, Vector3};
 use rapier3d::prelude::{
-    BroadPhaseBvh, CCDSolver, ColliderBuilder, ColliderSet, ImpulseJointSet, IntegrationParameters,
-    IslandManager, MultibodyJointSet, NarrowPhase, PhysicsPipeline, RigidBodySet,
+    BroadPhaseBvh, CCDSolver, ColliderBuilder, ColliderSet, DebugRenderBackend,
+    DebugRenderPipeline, ImpulseJointSet, IntegrationParameters, IslandManager, MultibodyJointSet,
+    NarrowPhase, PhysicsPipeline, RigidBodySet,
 };
 
 use crate::{
@@ -65,6 +66,13 @@ pub struct PhysicsState {
     ccd_solver: CCDSolver,
     phys_hooks: PhysicsHooks,
     ev_handler: EventHandler,
+    debug_render_pipeline: DebugRenderPipeline,
+}
+
+impl Default for PhysicsState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PhysicsState {
@@ -85,7 +93,22 @@ impl PhysicsState {
             ccd_solver: CCDSolver::new(),
             phys_hooks: PhysicsHooks,
             ev_handler: EventHandler,
+            debug_render_pipeline: DebugRenderPipeline::render_all(
+                rapier3d::prelude::DebugRenderStyle::default(),
+            ),
         }
+    }
+
+    ///Renders physics debug data
+    pub fn render(&mut self, backend: &mut impl DebugRenderBackend) {
+        self.debug_render_pipeline.render(
+            backend,
+            &self.bodies,
+            &self.colliders,
+            &self.impulse_joints,
+            &self.multibody_joints,
+            &self.narrow_phase,
+        );
     }
 
     ///Sets the gravity of the simulation
@@ -180,6 +203,11 @@ impl PhysicsState {
 
     ///Step the simulation forward
     pub fn step(&mut self) {
+        //Check the world if there were any changes to physics components, and if not just update
+        //all the data just in case
+
+        //if yes re do setup and drop the cache
+
         let dt = self.phyiscs_sim_end.elapsed().unwrap().as_secs_f32();
 
         self.parameters.dt = dt;

@@ -11,7 +11,7 @@ path="./src/lib.rs"
 default = ["physics"]
 webgl = ["wgpu/webgl", "wasm"]
 gles = ["wgpu/gles"]
-tracy = ["tracy-client/default"]
+tracy = ["tracy-client/default", "dep:tracy-client"]
 physics = ["dep:rapier3d", "dep:nalgebra"]
 
 # Needed for wasm builds

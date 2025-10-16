@@ -64,7 +64,7 @@ fn test_loading_single() {
 #[test]
 fn load_wireframe_mesh() {
     parse(include_str!(
-        "../rendering/extensions/colliders/Sphere_wireframe.obj"
+        "../rendering/extensions/debug/collider/Sphere_wireframe.obj"
     ))
     .unwrap();
 }
