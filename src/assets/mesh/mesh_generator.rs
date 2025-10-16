@@ -21,9 +21,9 @@ pub fn generate_mesh(mesh_type: &ModelType) -> Mesh {
 fn generate_box(dimensions: Vec3) -> Mesh {
     let mut o = Mesh::default();
 
-    let hx = dimensions.x / 2.0;
-    let hy = dimensions.y / 2.0;
-    let hz = dimensions.z / 2.0;
+    let hx = dimensions.x;
+    let hy = dimensions.y;
+    let hz = dimensions.z;
 
     o.vertices = vec![
         //Top face

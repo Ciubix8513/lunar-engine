@@ -16,10 +16,7 @@ use lunar_engine::{
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{Quaternion, Vec3, Vector},
-    rendering::{
-        extensions::{self, Base},
-        render,
-    },
+    rendering::{extensions::Base, render},
     structures::Color,
 };
 use rand::Rng;
@@ -120,8 +117,6 @@ impl Component for CameraControls {
 #[derive(Default)]
 struct State {
     extension: Base,
-    rendering_colliders: bool,
-    only_render_colliders: bool,
     asset_store: AssetStore,
     world: World,
     frames: u64,
@@ -303,23 +298,12 @@ fn init(state: &mut State) {
 fn run(state: &mut State) {
     state.world.update();
 
-    if lunar_engine::input::key(KeyCode::KeyC) == KeyState::Down {
-        state.rendering_colliders = !state.rendering_colliders;
-    }
+    render(
+        &state.world,
+        &mut state.asset_store,
+        &mut [&mut state.extension],
+    );
 
-    if !state.rendering_colliders {
-        render(
-            &state.world,
-            &mut state.asset_store,
-            &mut [&mut state.extension],
-        );
-    } else {
-        render(
-            &state.world,
-            &mut state.asset_store,
-            &mut [&mut state.extension],
-        );
-    }
     state.frames += 1;
     state.delta += delta_time();
 }
