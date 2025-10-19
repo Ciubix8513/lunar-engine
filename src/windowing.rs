@@ -79,10 +79,15 @@ pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Te
         "Rendering not supported... What shitty ancient piece of shit are you fucking using wtf?"
     );
 
+    let screenshot_supported =
+        capabilities.usages & wgpu::TextureUsages::COPY_SRC == wgpu::TextureUsages::COPY_SRC;
+
+    super::SCREENSHOT_SUPPORTED
+        .set(screenshot_supported)
+        .unwrap();
+
     let surface_config = wgpu::SurfaceConfiguration {
-        usage: if capabilities.usages & wgpu::TextureUsages::COPY_SRC
-            == wgpu::TextureUsages::COPY_SRC
-        {
+        usage: if screenshot_supported {
             // features.screenshot = true;
             wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
         } else {
@@ -107,7 +112,7 @@ pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Te
 
     log::debug!("Created depth texture");
 
-    let belt = StagingBelt::new(2048);
+    let belt = StagingBelt::new(4096);
 
     log::debug!("Created staging belt");
 

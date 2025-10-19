@@ -88,6 +88,8 @@ static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 static VSYNC_CHANGE: RwLock<Option<Vsync>> = RwLock::new(None);
 
+static SCREENSHOT_SUPPORTED: OnceLock<bool> = OnceLock::new();
+
 ///Exits the application and closes the window
 pub fn quit() {
     QUIT.set(true).unwrap();

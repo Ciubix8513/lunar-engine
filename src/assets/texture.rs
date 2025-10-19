@@ -230,7 +230,7 @@ impl Asset for Texture {
 
         let image = match self.image_format {
             ImageFormat::Bmp => crate::import::bmp::parse(&image)?,
-            ImageFormat::Png => match lunar_png::read_png(&mut image.into_iter()) {
+            ImageFormat::Png => match lunar_png::decode_png(&mut image.into_iter()) {
                 Ok(mut img) => {
                     flip_texture(&mut img);
                     img.add_alpha();

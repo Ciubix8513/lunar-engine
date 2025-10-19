@@ -84,9 +84,13 @@ pub fn render(
     #[cfg(feature = "tracy")]
     let _span = tracy_client::span!("Rendering extensions");
 
-    for e in extensions {
+    for (i, e) in extensions.iter_mut().enumerate() {
         trace!("Calling render on an extension");
+
+        encoder.push_debug_group(&format!("Extension {i}"));
+
         e.render(&mut encoder, world, assets, &attachments);
+        encoder.pop_debug_group();
     }
 
     let cmd_buffer = encoder.finish();
@@ -101,6 +105,15 @@ pub fn render(
     belt.recall();
     drop(belt);
 
+    trace!("Recalled belt");
+
+    trace!("Doing post render");
+    for e in extensions.iter_mut() {
+        trace!("Calling post render on an extension");
+        e.post_render(&attachments);
+    }
+
+    trace!("Presenting color");
     color.present();
 
     #[cfg(feature = "tracy")]

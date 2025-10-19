@@ -16,7 +16,10 @@ use lunar_engine::{
     ecs::{Component, ComponentReference, EntityBuilder, World},
     input::{self, CursorLock, CursorVisibily, KeyState},
     math::{Quaternion, Vec3, Vector},
-    rendering::{extensions::Base, render},
+    rendering::{
+        extensions::{Base, screenshot::Screenshot},
+        render,
+    },
     structures::Color,
 };
 use rand::Rng;
@@ -106,6 +109,7 @@ impl Component for CameraControls {
 #[derive(Default)]
 struct State {
     extension: Base,
+    screenshot: Screenshot,
     asset_store: AssetStore,
     world: World,
     frames: u64,
@@ -265,15 +269,34 @@ fn init(state: &mut State) {
         .unwrap();
 
     assets.intialize_all().unwrap();
+
+    state.extension.clear_color = Color {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
 }
 
 fn run(state: &mut State) {
     state.world.update();
-    render(
-        &state.world,
-        &mut state.asset_store,
-        &mut [&mut state.extension],
-    );
+    if state.frames == 0 {
+        log::info!("Frame 0");
+        render(
+            &state.world,
+            &mut state.asset_store,
+            &mut [&mut state.extension],
+        );
+    } else {
+        log::info!("Frame 1");
+        render(
+            &state.world,
+            &mut state.asset_store,
+            &mut [&mut state.extension, &mut state.screenshot],
+        );
+        lunar_engine::quit();
+    }
+
     state.frames += 1;
     state.delta += delta_time();
 }
