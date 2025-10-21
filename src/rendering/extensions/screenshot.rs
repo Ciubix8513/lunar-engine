@@ -22,6 +22,8 @@ pub struct Screenshot {
     data: Vec<u8>,
     screenshot_saved: bool,
     config: ScreenshotConfig,
+    padding: u32,
+    fmt_size: u32,
 }
 
 ///Configuration of the screenshot taking tool
@@ -58,11 +60,11 @@ pub struct ScreenshotConfig {
     ///The default value is yes
     pub save_on_capture: bool,
 
-    ///Compression level of the saved screenshot, `lunar_png::CompressionLevel::Fast` is
+    ///Compression level of the saved screenshot, `CompressionLevel::Fast` is
     ///recommended for most cases
     ///
     ///The default value is `Fast`
-    pub copmression: lunar_png::CompressionLevel,
+    pub copmression: CompressionLevel,
 }
 
 impl Default for ScreenshotConfig {
@@ -133,7 +135,7 @@ fn save_image(
             img_type: image_type,
         },
         &PngEncodingOptions {
-            compression: CompressionLevel::None,
+            compression: config.copmression,
             write_timestamp: true,
         },
     );
@@ -172,9 +174,12 @@ impl RenderingExtension for Screenshot {
             let fmt = FORMAT.get().unwrap();
             let fmt_size = fmt.block_copy_size(None).unwrap();
 
-            let row_width = (fmt_size * resolution.width) % 256;
+            self.fmt_size = fmt_size;
+            let padding = (fmt_size * resolution.width) % 256;
 
-            let needed_size = (fmt_size * resolution.width + row_width) * resolution.height;
+            self.padding = padding;
+
+            let needed_size = (fmt_size * resolution.width + padding) * resolution.height;
 
             //re create the buffer
             if needed_size != self.size {
@@ -196,10 +201,9 @@ impl RenderingExtension for Screenshot {
             label: Some("Screenshot command encoder"),
         });
 
-        let img_width = resolution.width * 4;
+        let img_width = resolution.width * self.fmt_size;
 
         let remainder = img_width % 256;
-        log::error!("{remainder}");
 
         enc.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfoBase {
@@ -212,7 +216,7 @@ impl RenderingExtension for Screenshot {
                 buffer: self.buffer.as_ref().unwrap(),
                 layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(resolution.width * 4 + remainder),
+                    bytes_per_row: Some(resolution.width * self.fmt_size + remainder),
                     rows_per_image: Some(resolution.height),
                 },
             },
@@ -226,39 +230,43 @@ impl RenderingExtension for Screenshot {
         let cmd = enc.finish();
         let queue = QUEUE.get().unwrap();
         queue.submit([cmd]);
-        log::info!("Submitted!");
 
         let slice = self.buffer.as_ref().unwrap().slice(..);
         slice.map_async(wgpu::MapMode::Read, |i| {
-            log::info!("MAPPED");
             i.unwrap();
         });
 
         device.poll(wgpu::wgt::PollType::Wait).unwrap();
 
-        self.data = slice.get_mapped_range().iter().copied().collect();
+        self.data = slice
+            .get_mapped_range()
+            .iter()
+            .copied()
+            .collect::<Vec<_>>()
+            .chunks((self.resolution.0 * self.fmt_size + self.padding) as usize)
+            .flat_map(|i| {
+                i[0..(self.resolution.0 * self.fmt_size) as usize]
+                    .into_iter()
+                    .collect::<Vec<_>>()
+            })
+            .copied()
+            .collect();
 
         self.buffer.as_ref().unwrap().unmap();
         self.screenshot_saved = true;
 
         if self.config.save_on_capture {
-            let d0 = self.data[0];
-            let d1 = self.data[1];
-            let d2 = self.data[2];
-            let d3 = self.data[3];
-
             let c = self.config.clone();
             let d = self.data.clone();
             let size = self.resolution;
 
-            let h = thread::spawn(move || {
+            thread::spawn(move || {
                 let r = save_image(c, d, size, lunar_png::ImageType::Rgba8); //self.data.clone());
 
                 if let Err(e) = r {
                     log::error!("Could not save the screenshot {e:?}");
                 }
             });
-            h.join().unwrap();
         }
     }
 

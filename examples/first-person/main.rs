@@ -269,13 +269,6 @@ fn init(state: &mut State) {
         .unwrap();
 
     assets.intialize_all().unwrap();
-
-    state.extension.clear_color = Color {
-        r: 1.0,
-        g: 0.0,
-        b: 0.0,
-        a: 1.0,
-    };
 }
 
 fn run(state: &mut State) {
