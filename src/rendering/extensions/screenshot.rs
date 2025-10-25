@@ -1,4 +1,4 @@
-use std::{error::Error, io::Write, path::PathBuf, thread};
+use std::{io::Write, path::PathBuf, thread};
 
 use chrono::{Datelike, Timelike};
 use lunar_png::{CompressionLevel, Image, PngEncodingOptions};
@@ -16,12 +16,13 @@ use crate::{
 ///</div>
 #[derive(Default)]
 pub struct Screenshot {
+    ///Configuration of the screenshot extension
+    pub config: ScreenshotConfig,
     buffer: Option<wgpu::Buffer>,
     size: u32,
     resolution: (u32, u32),
     data: Vec<u8>,
     screenshot_saved: bool,
-    config: ScreenshotConfig,
     padding: u32,
     fmt_size: u32,
 }
@@ -65,6 +66,11 @@ pub struct ScreenshotConfig {
     ///
     ///The default value is `Fast`
     pub copmression: CompressionLevel,
+
+    ///Whether to copy the screenshot to the clipboard
+    ///
+    ///The default value is `true`
+    pub copy_to_clipboard: bool,
 }
 
 impl Default for ScreenshotConfig {
@@ -87,14 +93,20 @@ impl Default for ScreenshotConfig {
             copmression: lunar_png::CompressionLevel::Fast,
             save_directory_prefix,
             save_directory: "lunar-engine/screenshots/".into(),
+            copy_to_clipboard: true,
         }
     }
 }
 
 impl Screenshot {
-    ///Sets the config for the extension
-    pub fn set_config(&mut self, config: ScreenshotConfig) {
-        self.config = config;
+    ///Saves the taken screenshot manually
+    pub fn save_image(&self) -> Result<(), std::io::Error> {
+        save_image(
+            self.config.clone(),
+            self.data.clone(),
+            self.resolution,
+            lunar_png::ImageType::Rgba8,
+        )
     }
 }
 
@@ -103,7 +115,7 @@ fn save_image(
     data: Vec<u8>,
     size: (u32, u32),
     image_type: lunar_png::ImageType,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), std::io::Error> {
     let time = chrono::Local::now();
     let year = time.year();
     let month = time.month();
@@ -140,9 +152,13 @@ fn save_image(
         },
     );
 
-    let mut f = std::fs::File::create(path)?;
+    let mut f = std::fs::File::create(&path)?;
 
     f.write_all(&img)?;
+
+    if config.copy_to_clipboard {
+        crate::set_clipboard(path.to_str().unwrap_or_default().to_string());
+    }
 
     Ok(())
 }
@@ -159,7 +175,13 @@ impl RenderingExtension for Screenshot {
     }
 
     fn post_render(&mut self, attachment_data: &super::AttachmentData) {
-        if !crate::SCREENSHOT_SUPPORTED.get().unwrap() {
+        if !crate::APP_INFO
+            .get()
+            .unwrap()
+            .read()
+            .unwrap()
+            .screenshot_supported
+        {
             //Screenshot feature not supported
             return;
         }
@@ -175,7 +197,7 @@ impl RenderingExtension for Screenshot {
             let fmt_size = fmt.block_copy_size(None).unwrap();
 
             self.fmt_size = fmt_size;
-            let padding = (fmt_size * resolution.width) % 256;
+            let padding = 256 - ((fmt_size * resolution.width) % 256);
 
             self.padding = padding;
 
@@ -191,8 +213,6 @@ impl RenderingExtension for Screenshot {
                     mapped_at_creation: false,
                 }));
             }
-
-            // self.data = Vec::with_capacity(needed_size as usize);
         }
 
         //hmm i can do a new command encoder, or just recycle that one...
@@ -203,7 +223,11 @@ impl RenderingExtension for Screenshot {
 
         let img_width = resolution.width * self.fmt_size;
 
-        let remainder = img_width % 256;
+        let remainder = 256 - (img_width % 256);
+
+        log::info!("img_width: {img_width}");
+        log::info!("Padding: {remainder}");
+        log::info!("Total width = {}", img_width + remainder);
 
         enc.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfoBase {
@@ -261,7 +285,7 @@ impl RenderingExtension for Screenshot {
             let size = self.resolution;
 
             thread::spawn(move || {
-                let r = save_image(c, d, size, lunar_png::ImageType::Rgba8); //self.data.clone());
+                let r = save_image(c, d, size, lunar_png::ImageType::Rgba8);
 
                 if let Err(e) = r {
                     log::error!("Could not save the screenshot {e:?}");

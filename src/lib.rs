@@ -54,8 +54,12 @@ use chrono::DateTime;
 use input::INPUT;
 #[allow(clippy::wildcard_imports)]
 use internal::*;
+use utils::clipboard::Clipboard;
 use wgpu::SurfaceConfiguration;
-use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
+use winit::{
+    application::ApplicationHandler, dpi::PhysicalSize, event,
+    platform::wayland::EventLoopExtWayland,
+};
 
 pub mod asset_managment;
 pub mod assets;
@@ -73,6 +77,8 @@ pub mod rendering;
 pub mod structures;
 #[cfg(test)]
 mod test_utils;
+mod utils;
+
 mod windowing;
 
 ///UUID of an asset or an entity
@@ -88,7 +94,15 @@ static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 static VSYNC_CHANGE: RwLock<Option<Vsync>> = RwLock::new(None);
 
-static SCREENSHOT_SUPPORTED: OnceLock<bool> = OnceLock::new();
+static CLIPBOARD_REQUEST: RwLock<(bool, String)> = RwLock::new((false, String::new()));
+
+#[derive(Debug)]
+pub(crate) struct AppInfo {
+    screenshot_supported: bool,
+    is_wayland: bool,
+}
+
+static APP_INFO: OnceLock<RwLock<AppInfo>> = OnceLock::new();
 
 ///Exits the application and closes the window
 pub fn quit() {
@@ -114,6 +128,13 @@ pub fn set_vsync(vsync: Vsync) {
     *VSYNC_CHANGE.write().unwrap() = Some(vsync);
 }
 
+///Sets the clipboard to the given text
+pub fn set_clipboard(text: String) {
+    let mut c = CLIPBOARD_REQUEST.write().unwrap();
+    c.1 = text;
+    c.0 = true;
+}
+
 ///Contains main state of the app
 #[allow(clippy::type_complexity)]
 pub struct State<T> {
@@ -122,6 +143,7 @@ pub struct State<T> {
     vsync: Vsync,
     contents: T,
     closed: bool,
+    clipboard: Option<Clipboard>,
     frame_start: Option<DateTime<chrono::Local>>,
     init: Option<Box<dyn FnOnce(&mut T)>>,
     run: Option<Box<dyn Fn(&mut T)>>,
@@ -140,6 +162,7 @@ impl<T: Default> Default for State<T> {
             init: None,
             run: None,
             end: None,
+            clipboard: None,
         }
     }
 }
@@ -157,6 +180,7 @@ impl<T: 'static> State<T> {
             init: None,
             run: None,
             end: None,
+            clipboard: None,
         }
     }
 
@@ -176,6 +200,13 @@ impl<T: 'static> State<T> {
         self.run = Some(Box::new(run));
         self.end = Some(Box::new(end));
 
+        APP_INFO
+            .set(RwLock::new(AppInfo {
+                is_wayland: false,
+                screenshot_supported: false,
+            }))
+            .unwrap();
+
         #[cfg(target_arch = "wasm32")]
         {
             std::panic::set_hook(Box::new(|e| {
@@ -190,7 +221,15 @@ impl<T: 'static> State<T> {
         }
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
+
         log::debug!("Created event loop");
+
+        let wl = event_loop.is_wayland();
+        if wl {
+            log::info!("Running on wayland!");
+        }
+
+        APP_INFO.get().unwrap().write().unwrap().is_wayland = wl;
 
         //Start tracy
         //
@@ -248,7 +287,6 @@ impl<T> State<T> {
             let height = canvas.height();
 
             log::info!("Canvas size = {width} x {height}");
-
             log::debug!("Found canvas");
             attributes = attributes.with_canvas(Some(canvas));
 
@@ -271,6 +309,16 @@ impl<T> State<T> {
 
         WINDOW.set(window).unwrap();
         let window = WINDOW.get().unwrap();
+
+        let mut clipboard = None;
+
+        if let Ok(c) = Clipboard::new() {
+            clipboard = Some(c);
+        } else {
+            log::error!("Could not create the clipboard manager!");
+        }
+
+        self.clipboard = clipboard;
 
         let (surface, config, depth_stencil) = windowing::initialize_gpu(window);
 
@@ -394,6 +442,20 @@ impl<T> ApplicationHandler for State<T> {
                 if QUIT.get().is_some() {
                     event_loop.exit();
                     self.closed = true;
+                }
+
+                let c = CLIPBOARD_REQUEST.read().unwrap();
+
+                if c.0 {
+                    drop(c);
+
+                    let mut c = CLIPBOARD_REQUEST.write().unwrap();
+
+                    c.0 = false;
+
+                    if let Some(cl) = self.clipboard.as_mut() {
+                        cl.set_clipboard(c.1.clone());
+                    }
                 }
 
                 self.redraw();

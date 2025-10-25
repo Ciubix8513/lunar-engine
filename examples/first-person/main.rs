@@ -110,6 +110,7 @@ impl Component for CameraControls {
 struct State {
     extension: Base,
     screenshot: Screenshot,
+    need_screenshot: bool,
     asset_store: AssetStore,
     world: World,
     frames: u64,
@@ -272,22 +273,25 @@ fn init(state: &mut State) {
 }
 
 fn run(state: &mut State) {
+    if input::key(KeyCode::F12) == KeyState::Down {
+        state.need_screenshot = true;
+    }
+
     state.world.update();
-    if state.frames == 0 {
-        log::info!("Frame 0");
+    if !state.need_screenshot {
         render(
             &state.world,
             &mut state.asset_store,
             &mut [&mut state.extension],
         );
     } else {
-        log::info!("Frame 1");
+        log::info!("Taking a screenshot:3");
         render(
             &state.world,
             &mut state.asset_store,
             &mut [&mut state.extension, &mut state.screenshot],
         );
-        lunar_engine::quit();
+        state.need_screenshot = false;
     }
 
     state.frames += 1;

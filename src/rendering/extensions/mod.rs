@@ -47,6 +47,7 @@ pub trait RenderingExtension {
 
     ///Allows the extension to do some work after all the extensions have been rendered, but before
     ///the frame buffer is swapped
+    #[allow(unused)]
     fn post_render(&mut self, attachments: &AttachmentData) {}
 
     ///Returns the priority of the extension, extensions with smaller priorities are rendered first.

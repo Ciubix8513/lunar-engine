@@ -29,12 +29,14 @@ parking_lot = "0.12.1"
 rand = "0.8.5"
 vec_key_value_pair = "0.2.0"
 wgpu = { version = "26", default-features = false, features =["vulkan", "wgsl"]}
-winit = { version = "0.30.1" }
+winit = { version = "0.30.1", features = ["rwh_06"] }
 lunar-logger= "0.2.0"
 lunar-png = "0.2.1"
 tracy-client={version = "0.18.0", default-features=false}
 wgpu_shader_checker = "0.2.0"
 directories = "6.0.0"
+arboard = { version = "3.6.1", default-features = false }
+smithay-clipboard = "0.7.2"
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 getrandom = {version = "0.2.15", features = ["js"]}

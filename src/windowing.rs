@@ -5,7 +5,9 @@ use vec_key_value_pair::map::VecMap;
 use wgpu::{Backends, Surface, SurfaceConfiguration, Texture, util::StagingBelt};
 use winit::window::Window;
 
-use crate::{DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT, input::InputState, math::Vec2};
+use crate::{
+    APP_INFO, DEVICE, FORMAT, QUEUE, RESOLUTION, STAGING_BELT, input::InputState, math::Vec2,
+};
 
 pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Texture) {
     let mut size = window.inner_size();
@@ -82,9 +84,12 @@ pub fn initialize_gpu(window: &Window) -> (Surface<'_>, SurfaceConfiguration, Te
     let screenshot_supported =
         capabilities.usages & wgpu::TextureUsages::COPY_SRC == wgpu::TextureUsages::COPY_SRC;
 
-    super::SCREENSHOT_SUPPORTED
-        .set(screenshot_supported)
-        .unwrap();
+    APP_INFO
+        .get()
+        .unwrap()
+        .write()
+        .unwrap()
+        .screenshot_supported = screenshot_supported;
 
     let surface_config = wgpu::SurfaceConfiguration {
         usage: if screenshot_supported {
