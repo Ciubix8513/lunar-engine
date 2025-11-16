@@ -84,13 +84,9 @@ pub fn render(
     #[cfg(feature = "tracy")]
     let _span = tracy_client::span!("Rendering extensions");
 
-    for (i, e) in extensions.iter_mut().enumerate() {
+    for e in extensions.iter_mut() {
         trace!("Calling render on an extension");
-
-        encoder.push_debug_group(&format!("Extension {i}"));
-
         e.render(&mut encoder, world, assets, &attachments);
-        encoder.pop_debug_group();
     }
 
     let cmd_buffer = encoder.finish();
