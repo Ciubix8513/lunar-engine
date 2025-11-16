@@ -35,6 +35,8 @@ lunar-png = "0.2.1"
 tracy-client={version = "0.18.0", default-features=false}
 wgpu_shader_checker = "0.2.0"
 directories = "6.0.0"
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
 clipboard-rs = { git = "https://github.com/ciubix8513/clipboard-rs", default-features = false}
 
 [target.'cfg(target_os="linux")'.dependencies]

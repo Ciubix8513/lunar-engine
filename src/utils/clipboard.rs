@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use clipboard_rs::Clipboard as C;
 
 use crate::{APP_INFO, WINDOW};
@@ -8,6 +9,7 @@ pub struct Clipboard {
 }
 
 enum ClipboardProvider {
+    #[cfg(not(target_arch = "wasm32"))]
     ClipRs(clipboard_rs::ClipboardContext),
     #[cfg(target_os = "linux")]
     Smithay(smithay_clipboard::Clipboard),
