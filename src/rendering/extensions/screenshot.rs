@@ -22,7 +22,7 @@ pub struct Screenshot {
     size: u32,
     resolution: (u32, u32),
     data: Vec<u8>,
-    screenshot_saved: bool,
+    saved: bool,
     padding: u32,
     fmt_size: u32,
 }
@@ -79,7 +79,7 @@ impl Default for ScreenshotConfig {
         //
         //Theoretically this can only fail on linux so no need to do platform specific stuff?
         let save_directory_prefix = directories::UserDirs::new()
-            .and_then(|i| i.picture_dir().map(|i| i.to_path_buf()))
+            .and_then(|i| i.picture_dir().map(std::path::Path::to_path_buf))
             .unwrap_or_else(|| {
                 std::env::var("HOME")
                     .expect("Could not find home directory")
@@ -100,6 +100,10 @@ impl Default for ScreenshotConfig {
 
 impl Screenshot {
     ///Saves the taken screenshot manually
+    ///
+    ///# Errors
+    ///
+    ///Returns an error if the function fails to save the file
     pub fn save_image(&self) -> Result<(), std::io::Error> {
         save_image(
             self.config.clone(),
@@ -208,7 +212,7 @@ impl RenderingExtension for Screenshot {
                 self.size = needed_size;
                 self.buffer = Some(device.create_buffer(&wgpu::wgt::BufferDescriptor {
                     label: Some("Screenshot copy buffer"),
-                    size: needed_size as u64,
+                    size: u64::from(needed_size),
                     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
                     mapped_at_creation: false,
                 }));
@@ -250,6 +254,7 @@ impl RenderingExtension for Screenshot {
                 depth_or_array_layers: 1,
             },
         );
+        drop(resolution);
 
         let cmd = enc.finish();
         let queue = QUEUE.get().unwrap();
@@ -270,14 +275,14 @@ impl RenderingExtension for Screenshot {
             .chunks((self.resolution.0 * self.fmt_size + self.padding) as usize)
             .flat_map(|i| {
                 i[0..(self.resolution.0 * self.fmt_size) as usize]
-                    .into_iter()
+                    .iter()
                     .collect::<Vec<_>>()
             })
             .copied()
             .collect();
 
         self.buffer.as_ref().unwrap().unmap();
-        self.screenshot_saved = true;
+        self.saved = true;
 
         if self.config.save_on_capture {
             let c = self.config.clone();

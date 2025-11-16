@@ -253,7 +253,7 @@ fn generate_sphere(radius: f32, segments: u32, rings: u32) -> Mesh {
         for j in 0..segments {
             let j = offset + j;
 
-            if j % segments == 0 {
+            if j.is_multiple_of(segments) {
                 o.indices.push(j);
                 o.indices.push(j + segments);
                 o.indices.push(j + 1);

@@ -3,7 +3,7 @@ use clipboard_rs::Clipboard as C;
 use crate::{APP_INFO, WINDOW};
 
 ///Clipboard manager, for getting text from the clipboard or for copying text to the clipboard
-pub(crate) struct Clipboard {
+pub struct Clipboard {
     provider: ClipboardProvider,
 }
 
@@ -41,14 +41,14 @@ impl Clipboard {
         })
     }
 
-    ///Get text from the clipboard
-    pub fn get_clipboard(&self) -> String {
-        match &self.provider {
-            ClipboardProvider::ClipRs(clipboard) => clipboard.get_text().unwrap_or_default(),
-            #[cfg(target_os = "linux")]
-            ClipboardProvider::Smithay(clipboard) => clipboard.load().unwrap_or_default(),
-        }
-    }
+    //Get text from the clipboard
+    // pub fn get_clipboard(&self) -> String {
+    //     match &self.provider {
+    //         ClipboardProvider::ClipRs(clipboard) => clipboard.get_text().unwrap_or_default(),
+    //         #[cfg(target_os = "linux")]
+    //         ClipboardProvider::Smithay(clipboard) => clipboard.load().unwrap_or_default(),
+    //     }
+    // }
 
     ///Copy text to the clipboard
     pub fn set_clipboard(&mut self, text: String) {
@@ -66,7 +66,7 @@ impl Clipboard {
             ClipboardProvider::ClipRs(clipboard) => clipboard.set_buffer("image/png", img).unwrap(),
             #[cfg(target_os = "linux")]
             ClipboardProvider::Smithay(clipboard) => {
-                clipboard.store_data_with_mime(img, smithay_clipboard::MimeType::ImagePng)
+                clipboard.store_data_with_mime(img, smithay_clipboard::MimeType::ImagePng);
             }
         }
     }

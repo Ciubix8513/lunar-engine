@@ -325,13 +325,13 @@ impl<T> State<T> {
         WINDOW.set(window).unwrap();
         let window = WINDOW.get().unwrap();
 
-        let mut clipboard = None;
-
-        if let Ok(c) = Clipboard::new() {
-            clipboard = Some(c);
-        } else {
-            log::error!("Could not create the clipboard manager!");
-        }
+        let clipboard = Clipboard::new().map_or_else(
+            |_| {
+                log::error!("Could not create the clipboard manager!");
+                None
+            },
+            Some,
+        );
 
         self.clipboard = clipboard;
 
