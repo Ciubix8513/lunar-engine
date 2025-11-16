@@ -54,7 +54,11 @@ use chrono::DateTime;
 use input::INPUT;
 #[allow(clippy::wildcard_imports)]
 use internal::*;
+#[cfg(not(target_arch = "wasm32"))]
+use utils::clipboard::Clipboard;
 use wgpu::SurfaceConfiguration;
+#[cfg(target_os = "linux")]
+use winit::platform::wayland::EventLoopExtWayland;
 use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
 
 pub mod asset_managment;
@@ -73,6 +77,8 @@ pub mod rendering;
 pub mod structures;
 #[cfg(test)]
 mod test_utils;
+mod utils;
+
 mod windowing;
 
 ///UUID of an asset or an entity
@@ -87,6 +93,24 @@ static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
 static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 static VSYNC_CHANGE: RwLock<Option<Vsync>> = RwLock::new(None);
+
+#[derive(Clone)]
+#[allow(dead_code)]
+enum ClipboardData {
+    Text(String),
+    Img(Vec<u8>),
+}
+
+static CLIPBOARD_REQUEST: RwLock<(bool, ClipboardData)> =
+    RwLock::new((false, ClipboardData::Text(String::new())));
+
+#[derive(Debug)]
+pub(crate) struct AppInfo {
+    screenshot_supported: bool,
+    is_wayland: bool,
+}
+
+static APP_INFO: OnceLock<RwLock<AppInfo>> = OnceLock::new();
 
 ///Exits the application and closes the window
 pub fn quit() {
@@ -112,6 +136,19 @@ pub fn set_vsync(vsync: Vsync) {
     *VSYNC_CHANGE.write().unwrap() = Some(vsync);
 }
 
+///Sets the clipboard to the given text
+pub fn set_clipboard(text: String) {
+    let mut c = CLIPBOARD_REQUEST.write().unwrap();
+    c.1 = ClipboardData::Text(text);
+    c.0 = true;
+}
+
+pub(crate) fn set_clipboard_png(img: Vec<u8>) {
+    let mut c = CLIPBOARD_REQUEST.write().unwrap();
+    c.1 = ClipboardData::Img(img);
+    c.0 = true;
+}
+
 ///Contains main state of the app
 #[allow(clippy::type_complexity)]
 pub struct State<T> {
@@ -120,6 +157,8 @@ pub struct State<T> {
     vsync: Vsync,
     contents: T,
     closed: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    clipboard: Option<Clipboard>,
     frame_start: Option<DateTime<chrono::Local>>,
     init: Option<Box<dyn FnOnce(&mut T)>>,
     run: Option<Box<dyn Fn(&mut T)>>,
@@ -138,6 +177,8 @@ impl<T: Default> Default for State<T> {
             init: None,
             run: None,
             end: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            clipboard: None,
         }
     }
 }
@@ -155,6 +196,8 @@ impl<T: 'static> State<T> {
             init: None,
             run: None,
             end: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            clipboard: None,
         }
     }
 
@@ -174,6 +217,13 @@ impl<T: 'static> State<T> {
         self.run = Some(Box::new(run));
         self.end = Some(Box::new(end));
 
+        APP_INFO
+            .set(RwLock::new(AppInfo {
+                is_wayland: false,
+                screenshot_supported: false,
+            }))
+            .unwrap();
+
         #[cfg(target_arch = "wasm32")]
         {
             std::panic::set_hook(Box::new(|e| {
@@ -188,7 +238,18 @@ impl<T: 'static> State<T> {
         }
 
         let event_loop = winit::event_loop::EventLoop::new().expect("Failed to create event loop");
+
         log::debug!("Created event loop");
+
+        #[cfg(target_os = "linux")]
+        let wl = event_loop.is_wayland();
+        #[cfg(not(target_os = "linux"))]
+        let wl = false;
+        if wl {
+            log::info!("Running on wayland!");
+        }
+
+        APP_INFO.get().unwrap().write().unwrap().is_wayland = wl;
 
         //Start tracy
         //
@@ -246,7 +307,6 @@ impl<T> State<T> {
             let height = canvas.height();
 
             log::info!("Canvas size = {width} x {height}");
-
             log::debug!("Found canvas");
             attributes = attributes.with_canvas(Some(canvas));
 
@@ -269,6 +329,19 @@ impl<T> State<T> {
 
         WINDOW.set(window).unwrap();
         let window = WINDOW.get().unwrap();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let clipboard = Clipboard::new().map_or_else(
+                |_| {
+                    log::error!("Could not create the clipboard manager!");
+                    None
+                },
+                Some,
+            );
+
+            self.clipboard = clipboard;
+        }
 
         let (surface, config, depth_stencil) = windowing::initialize_gpu(window);
 
@@ -392,6 +465,26 @@ impl<T> ApplicationHandler for State<T> {
                 if QUIT.get().is_some() {
                     event_loop.exit();
                     self.closed = true;
+                }
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let c = CLIPBOARD_REQUEST.read().unwrap();
+
+                    if c.0 {
+                        drop(c);
+
+                        let mut c = CLIPBOARD_REQUEST.write().unwrap();
+
+                        c.0 = false;
+
+                        if let Some(cl) = self.clipboard.as_mut() {
+                            match &c.1 {
+                                ClipboardData::Text(t) => cl.set_clipboard(t.clone()),
+                                ClipboardData::Img(img) => cl.set_clipboard_png(img.clone()),
+                            }
+                        }
+                    }
                 }
 
                 self.redraw();

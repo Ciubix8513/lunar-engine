@@ -84,7 +84,7 @@ pub fn render(
     #[cfg(feature = "tracy")]
     let _span = tracy_client::span!("Rendering extensions");
 
-    for e in extensions {
+    for e in extensions.iter_mut() {
         trace!("Calling render on an extension");
         e.render(&mut encoder, world, assets, &attachments);
     }
@@ -101,6 +101,15 @@ pub fn render(
     belt.recall();
     drop(belt);
 
+    trace!("Recalled belt");
+
+    trace!("Doing post render");
+    for e in extensions.iter_mut() {
+        trace!("Calling post render on an extension");
+        e.post_render(&attachments);
+    }
+
+    trace!("Presenting color");
     color.present();
 
     #[cfg(feature = "tracy")]
