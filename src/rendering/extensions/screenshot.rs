@@ -157,7 +157,7 @@ fn save_image(
     f.write_all(&img)?;
 
     if config.copy_to_clipboard {
-        crate::set_clipboard(path.to_str().unwrap_or_default().to_string());
+        crate::set_clipboard_png(img.clone());
     }
 
     Ok(())

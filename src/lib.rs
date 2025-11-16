@@ -56,10 +56,9 @@ use input::INPUT;
 use internal::*;
 use utils::clipboard::Clipboard;
 use wgpu::SurfaceConfiguration;
-use winit::{
-    application::ApplicationHandler, dpi::PhysicalSize, event,
-    platform::wayland::EventLoopExtWayland,
-};
+#[cfg(target_os = "linux")]
+use winit::platform::wayland::EventLoopExtWayland;
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
 
 pub mod asset_managment;
 pub mod assets;
@@ -94,7 +93,14 @@ static QUIT: OnceLock<bool> = OnceLock::new();
 static DELTA_TIME: RwLock<f32> = RwLock::new(0.01);
 static VSYNC_CHANGE: RwLock<Option<Vsync>> = RwLock::new(None);
 
-static CLIPBOARD_REQUEST: RwLock<(bool, String)> = RwLock::new((false, String::new()));
+#[derive(Clone)]
+enum ClipboardData {
+    Text(String),
+    Img(Vec<u8>),
+}
+
+static CLIPBOARD_REQUEST: RwLock<(bool, ClipboardData)> =
+    RwLock::new((false, ClipboardData::Text(String::new())));
 
 #[derive(Debug)]
 pub(crate) struct AppInfo {
@@ -131,7 +137,13 @@ pub fn set_vsync(vsync: Vsync) {
 ///Sets the clipboard to the given text
 pub fn set_clipboard(text: String) {
     let mut c = CLIPBOARD_REQUEST.write().unwrap();
-    c.1 = text;
+    c.1 = ClipboardData::Text(text);
+    c.0 = true;
+}
+
+pub(crate) fn set_clipboard_png(img: Vec<u8>) {
+    let mut c = CLIPBOARD_REQUEST.write().unwrap();
+    c.1 = ClipboardData::Img(img);
     c.0 = true;
 }
 
@@ -224,7 +236,10 @@ impl<T: 'static> State<T> {
 
         log::debug!("Created event loop");
 
+        #[cfg(target_os = "linux")]
         let wl = event_loop.is_wayland();
+        #[cfg(not(target_os = "linux"))]
+        let wl = false;
         if wl {
             log::info!("Running on wayland!");
         }
@@ -454,7 +469,10 @@ impl<T> ApplicationHandler for State<T> {
                     c.0 = false;
 
                     if let Some(cl) = self.clipboard.as_mut() {
-                        cl.set_clipboard(c.1.clone());
+                        match &c.1 {
+                            ClipboardData::Text(t) => cl.set_clipboard(t.clone()),
+                            ClipboardData::Img(img) => cl.set_clipboard_png(img.clone()),
+                        }
                     }
                 }
 

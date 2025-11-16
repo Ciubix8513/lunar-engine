@@ -1,3 +1,5 @@
+use clipboard_rs::Clipboard as C;
+
 use crate::{APP_INFO, WINDOW};
 
 ///Clipboard manager, for getting text from the clipboard or for copying text to the clipboard
@@ -6,13 +8,14 @@ pub(crate) struct Clipboard {
 }
 
 enum ClipboardProvider {
-    Arb(arboard::Clipboard),
+    ClipRs(clipboard_rs::ClipboardContext),
+    #[cfg(target_os = "linux")]
     Smithay(smithay_clipboard::Clipboard),
 }
 
 impl Clipboard {
     ///Creates a new clipboard manager
-    pub fn new() -> Result<Self, arboard::Error> {
+    pub fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         #[cfg(target_os = "linux")]
         if APP_INFO.get().unwrap().read().unwrap().is_wayland {
             use wgpu::rwh::HasDisplayHandle;
@@ -34,14 +37,15 @@ impl Clipboard {
         }
 
         Ok(Self {
-            provider: ClipboardProvider::Arb(arboard::Clipboard::new()?),
+            provider: ClipboardProvider::ClipRs(clipboard_rs::ClipboardContext::new()?),
         })
     }
 
     ///Get text from the clipboard
-    pub fn get_clipboard(&mut self) -> String {
-        match &mut self.provider {
-            ClipboardProvider::Arb(clipboard) => clipboard.get_text().unwrap_or_default(),
+    pub fn get_clipboard(&self) -> String {
+        match &self.provider {
+            ClipboardProvider::ClipRs(clipboard) => clipboard.get_text().unwrap_or_default(),
+            #[cfg(target_os = "linux")]
             ClipboardProvider::Smithay(clipboard) => clipboard.load().unwrap_or_default(),
         }
     }
@@ -50,8 +54,20 @@ impl Clipboard {
     pub fn set_clipboard(&mut self, text: String) {
         log::info!("setting clipboard to {text}");
         match &mut self.provider {
-            ClipboardProvider::Arb(clipboard) => clipboard.set_text(text).unwrap(),
+            ClipboardProvider::ClipRs(clipboard) => clipboard.set_text(text).unwrap(),
+            #[cfg(target_os = "linux")]
             ClipboardProvider::Smithay(clipboard) => clipboard.store(text),
+        }
+    }
+
+    pub fn set_clipboard_png(&mut self, img: Vec<u8>) {
+        log::info!("Copying a png to clipboard");
+        match &mut self.provider {
+            ClipboardProvider::ClipRs(clipboard) => clipboard.set_buffer("image/png", img).unwrap(),
+            #[cfg(target_os = "linux")]
+            ClipboardProvider::Smithay(clipboard) => {
+                clipboard.store_data_with_mime(img, smithay_clipboard::MimeType::ImagePng)
+            }
         }
     }
 }

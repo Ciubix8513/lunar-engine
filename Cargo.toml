@@ -35,9 +35,11 @@ lunar-png = "0.2.1"
 tracy-client={version = "0.18.0", default-features=false}
 wgpu_shader_checker = "0.2.0"
 directories = "6.0.0"
-arboard = { version = "3.6.1", default-features = false }
-smithay-clipboard = "0.7.2"
+clipboard-rs = { git = "https://github.com/ciubix8513/clipboard-rs" }
 
+[target.'cfg(target_os="linux")'.dependencies]
+smithay-clipboard = { git = "https://github.com/ciubix8513/smithay-clipboard.git" }
+ 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 getrandom = {version = "0.2.15", features = ["js"]}
 web-sys = "0.3.64"
