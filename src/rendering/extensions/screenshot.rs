@@ -143,13 +143,17 @@ fn save_image(
         path.to_str().unwrap_or("Couldn't convert path to string")
     );
 
+    let mut img = Image {
+        data,
+        width: size.0,
+        height: size.1,
+        img_type: image_type,
+    };
+
+    img.strip_alpha();
+
     let img = lunar_png::encode_png(
-        &Image {
-            data,
-            width: size.0,
-            height: size.1,
-            img_type: image_type,
-        },
+        &img,
         &PngEncodingOptions {
             compression: config.copmression,
             write_timestamp: true,

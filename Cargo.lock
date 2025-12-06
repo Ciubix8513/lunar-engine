@@ -1196,8 +1196,7 @@ dependencies = [
 [[package]]
 name = "lunar-png"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "004887203770faeba2b94bf8aabaccd8711c143db70ca44f20e7f0c1452a224b"
+source = "git+https://github.com/ciubix8513/lunar-png#b3a25f6d3d18ffbe46a8be902b788ee73fdb96fb"
 dependencies = [
  "bytemuck",
  "chrono",
