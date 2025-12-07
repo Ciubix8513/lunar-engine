@@ -4,7 +4,11 @@ use lunar_engine::{
     asset_managment::AssetStore,
     assets,
     components::{
-        self, camera::MainCamera, light::DirectionalLight, physics::Collider, transform::Transform,
+        self,
+        camera::MainCamera,
+        light::DirectionalLight,
+        physics::{Collider, PhysObject},
+        transform::Transform,
     },
     delta_time,
     ecs::{Component, ComponentReference, Entity, EntityBuilder, World},
@@ -12,7 +16,7 @@ use lunar_engine::{
     math::{Quaternion, Vec3, Vector},
     physics::PhysicsState,
     rendering::{
-        extensions::{self, Base},
+        extensions::{self, Base, RenderingExtension},
         render,
     },
 };
@@ -116,18 +120,35 @@ struct State {
     assets: AssetStore,
     extension: Base,
     dbg_ext: extensions::Debug,
+    screenshot_ext: extensions::screenshot::Screenshot,
     phys_world: PhysicsState,
+    world_running: bool,
 }
+
 fn run(state: &mut State) {
     state.world.update();
 
     state.phys_world.render(&mut state.dbg_ext);
 
-    render(
-        &mut state.world,
-        &mut state.assets,
-        &mut [&mut state.extension, &mut state.dbg_ext],
-    );
+    if input::key(KeyCode::Space) == KeyState::Down {
+        state.world_running = !state.world_running;
+    }
+
+    if state.world_running {
+        state.phys_world.step();
+    }
+
+    let ext: &mut [&mut dyn RenderingExtension] = if input::key(KeyCode::F12) == KeyState::Down {
+        &mut [
+            &mut state.extension,
+            &mut state.dbg_ext,
+            &mut state.screenshot_ext,
+        ]
+    } else {
+        &mut [&mut state.extension, &mut state.dbg_ext]
+    };
+
+    render(&mut state.world, &mut state.assets, ext);
 }
 fn end(_: &mut State) {}
 
@@ -136,11 +157,12 @@ fn init(state: &mut State) {
     let world = &mut state.world;
 
     let b = assets.register(assets::Mesh::new_box(0.5.into()));
+    let f = assets.register(assets::Mesh::new_box((10, 0.1, 10).into()));
     let m = assets.register(assets::materials::Lit::new(None, None, None, 0.5));
 
     let e = EntityBuilder::new()
         .add_existing_component(Transform::new(
-            0.0.into(),
+            (0, 10, 0).into(),
             Quaternion::default(),
             0.0.into(),
         ))
@@ -167,26 +189,55 @@ fn init(state: &mut State) {
     world
         .add_entity(
             EntityBuilder::new()
-                .add_component::<DirectionalLight>()
+                .create_component(|| DirectionalLight {
+                    direction: Into::<Vec3>::into((0, -1, 0)).normalize(),
+                    intensity: 0.8,
+                    ..Default::default()
+                })
+                // .add_component::<DirectionalLight>()
                 .create()
                 .unwrap(),
         )
         .unwrap();
 
+    //Floor
     world
         .add_entity(
             EntityBuilder::new()
                 .add_component::<Transform>()
-                .create_component(|| components::mesh::Mesh::new(b, m))
+                .create_component(|| components::mesh::Mesh::new(f, m))
                 .create_component(|| {
                     Collider::new(components::physics::Shape::Box {
-                        dimensions: 0.5.into(),
+                        dimensions: (10, 0.1, 10).into(),
                     })
                 })
                 .create()
                 .unwrap(),
         )
         .unwrap();
+
+    //Boxes
+    for i in 0..5 {
+        world
+            .add_entity(
+                EntityBuilder::new()
+                    .create_component(|| {
+                        Transform::new((0, 5 + i * 3, 0).into(), Quaternion::default(), 1.into())
+                    })
+                    .add_component::<PhysObject>()
+                    .create_component(|| components::mesh::Mesh::new(b, m))
+                    .create_component(|| {
+                        Collider::new(components::physics::Shape::Box {
+                            dimensions: 0.5.into(),
+                        })
+                    })
+                    .create()
+                    .unwrap(),
+            )
+            .unwrap();
+    }
+    state.phys_world = PhysicsState::new();
+    state.phys_world.set_gravity((0, -0.1, 0).into());
 
     state.phys_world.set_up(world);
 }

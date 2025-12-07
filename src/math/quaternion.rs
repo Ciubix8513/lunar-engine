@@ -258,12 +258,12 @@ impl Into<nalgebra::Quaternion<f32>> for Quaternion {
 #[cfg(feature = "physics")]
 impl From<nalgebra::Quaternion<f32>> for Quaternion {
     fn from(value: nalgebra::Quaternion<f32>) -> Self {
-        let value = value.coords;
+        let vec = value.vector();
         Self {
-            x: value.x,
-            y: value.y,
-            z: value.z,
-            w: value.w,
+            x: vec.x,
+            y: vec.y,
+            z: vec.z,
+            w: value.scalar(),
         }
     }
 }
@@ -271,12 +271,12 @@ impl From<nalgebra::Quaternion<f32>> for Quaternion {
 #[cfg(feature = "physics")]
 impl From<&nalgebra::Quaternion<f32>> for Quaternion {
     fn from(value: &nalgebra::Quaternion<f32>) -> Self {
-        let value = value.coords;
+        let vec = value.vector();
         Self {
-            x: value.x,
-            y: value.y,
-            z: value.z,
-            w: value.w,
+            x: vec.x,
+            y: vec.y,
+            z: vec.z,
+            w: value.scalar(),
         }
     }
 }

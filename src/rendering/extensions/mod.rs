@@ -24,6 +24,11 @@ use crate::{
 ///Screenshot stuff
 pub mod screenshot;
 
+///Debug rendering extensions
+mod debug;
+
+pub use debug::Debug;
+
 ///A color buffer and a depth stencil buffer
 pub struct AttachmentData {
     ///Color buffer

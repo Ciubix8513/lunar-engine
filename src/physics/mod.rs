@@ -5,16 +5,20 @@
 
 use std::time::SystemTime;
 
+use log::info;
 use nalgebra::{Isometry, Unit, UnitQuaternion, Vector3};
 use rapier3d::prelude::{
-    BroadPhaseBvh, CCDSolver, ColliderBuilder, ColliderSet, DebugRenderBackend,
+    BroadPhaseBvh, CCDSolver, Collider, ColliderBuilder, ColliderSet, DebugRenderBackend,
     DebugRenderPipeline, ImpulseJointSet, IntegrationParameters, IslandManager, MultibodyJointSet,
-    NarrowPhase, PhysicsPipeline, RigidBodySet,
+    NarrowPhase, PhysicsPipeline, RigidBodyBuilder, RigidBodySet,
 };
+use vec_key_value_pair::map::VecMap;
 
 use crate::{
+    UUID,
     components::{
-        physics::{Collider, PhysObject},
+        self,
+        physics::{self, PhysObject},
         transform::Transform,
     },
     ecs::{ComponentReference, World},
@@ -50,6 +54,21 @@ impl rapier3d::prelude::EventHandler for EventHandler {
     }
 }
 
+///Stores references
+struct ComponentStore {
+    obj_store: VecMap<UUID, ComponentReference<physics::PhysObject>>,
+    col_store: VecMap<UUID, ComponentReference<physics::Collider>>,
+}
+
+impl Default for ComponentStore {
+    fn default() -> Self {
+        Self {
+            obj_store: VecMap::new(),
+            col_store: VecMap::new(),
+        }
+    }
+}
+
 ///Physics handler
 pub struct PhysicsState {
     gravity: Vector3<f32>,
@@ -67,12 +86,66 @@ pub struct PhysicsState {
     phys_hooks: PhysicsHooks,
     ev_handler: EventHandler,
     debug_render_pipeline: DebugRenderPipeline,
+    comps: ComponentStore,
 }
 
 impl Default for PhysicsState {
     fn default() -> Self {
         Self::new()
     }
+}
+
+enum UserData {
+    Id,
+    None,
+}
+
+fn build_collider(
+    c: ComponentReference<components::physics::Collider>,
+    local: bool,
+    ignore_tranform: bool,
+    user_data: UserData,
+) -> Collider {
+    let c = c.borrow();
+
+    let b = match c.shape {
+        crate::components::physics::Shape::Box { dimensions } => {
+            ColliderBuilder::cuboid(dimensions.x, dimensions.y, dimensions.z)
+        }
+        crate::components::physics::Shape::Sphere { radius } => ColliderBuilder::ball(radius),
+        crate::components::physics::Shape::Capsule => todo!(),
+    };
+
+    let position = if ignore_tranform {
+        Vec3::default()
+    } else if local {
+        c.transform().borrow().position
+    } else {
+        c.transform().borrow().position_global()
+    };
+
+    let rotation = if ignore_tranform {
+        Quaternion::default()
+    } else if local {
+        c.transform().borrow().rotation
+    } else {
+        c.transform().borrow().rotation_global()
+    };
+
+    b.mass(1.0)
+        .friction(c.material.friction)
+        .restitution(c.material.bounciness)
+        .position(Isometry::from_parts(
+            nalgebra::Translation {
+                vector: position.into(),
+            },
+            UnitQuaternion::from_quaternion(rotation.into()), // rotation.into(),
+        ))
+        .user_data(match user_data {
+            UserData::Id => c.get_id(),
+            UserData::None => 0,
+        })
+        .build()
 }
 
 impl PhysicsState {
@@ -96,6 +169,7 @@ impl PhysicsState {
             debug_render_pipeline: DebugRenderPipeline::render_all(
                 rapier3d::prelude::DebugRenderStyle::default(),
             ),
+            comps: ComponentStore::default(),
         }
     }
 
@@ -118,7 +192,7 @@ impl PhysicsState {
 
     ///Sets up the simulation with a given world
     pub fn set_up(&mut self, world: &mut World) {
-        let mut colliders = world.get_all_components::<Collider>();
+        let mut colliders = world.get_all_components::<physics::Collider>();
         let phys_objs = world.get_all_components::<PhysObject>();
 
         //Getting a tree of colliders for each phys_obj
@@ -129,7 +203,7 @@ impl PhysicsState {
         fn traverse_tree(
             t: &ComponentReference<Transform>,
             root: bool,
-        ) -> Vec<ComponentReference<Collider>> {
+        ) -> Vec<ComponentReference<physics::Collider>> {
             if t.borrow().enity().has_component::<PhysObject>() && !root {
                 return Vec::new();
             }
@@ -147,6 +221,7 @@ impl PhysicsState {
             o
         }
 
+        //Let's assume for now that a phys obj can not have a phys obj child
         for i in &phys_objs {
             let id = i.borrow().get_id();
             let t = i.borrow().transform().clone();
@@ -169,36 +244,75 @@ impl PhysicsState {
         }
 
         for c in colliders {
-            let c = c.borrow();
-
-            let b = match c.shape {
-                crate::components::physics::Shape::Box { dimensions } => {
-                    ColliderBuilder::cuboid(dimensions.x, dimensions.y, dimensions.z)
-                }
-                crate::components::physics::Shape::Sphere { radius } => {
-                    ColliderBuilder::ball(radius)
-                }
-                crate::components::physics::Shape::Capsule => todo!(),
-            };
-
-            let position = c.transform().borrow().position_global();
-            let rotation = c.transform().borrow().rotation_global();
-
-            self.colliders.insert(
-                b.mass(0.0)
-                    .friction(c.material.friction)
-                    .restitution(c.material.bounciness)
-                    .position(Isometry::from_parts(
-                        nalgebra::Translation {
-                            vector: position.into(),
-                        },
-                        UnitQuaternion::from_quaternion(rotation.into()), // rotation.into(),
-                    ))
-                    .user_data(c.get_id()),
-            );
+            self.colliders
+                .insert(build_collider(c, false, false, UserData::Id));
         }
-
         //now colliders only contain the colliders that do not have a phys obj as an ancestor
+
+        for (i, (_, colliders)) in phys_objs.iter().zip(trees) {
+            let o = i.borrow();
+            let binding = o.transform();
+            let t = binding.borrow();
+            let body = RigidBodyBuilder::dynamic()
+                .pose(Isometry::from_parts(
+                    nalgebra::Translation {
+                        vector: t.position_global().into(),
+                    },
+                    UnitQuaternion::from_quaternion(t.rotation.into()),
+                ))
+                .can_sleep(false)
+                .gravity_scale(1.0)
+                .user_data(o.get_id())
+                .build();
+
+            self.comps.obj_store.insert(o.get_id(), i.clone());
+
+            drop(o);
+            drop(t);
+            let hndl = self.bodies.insert(body);
+
+            for c in colliders {
+                let ignore_t = c.borrow().get_id() == c.borrow().get_id();
+
+                let ud = if ignore_t {
+                    UserData::None
+                } else {
+                    self.comps.col_store.insert(c.borrow().get_id(), c.clone());
+                    UserData::Id
+                };
+
+                let c = build_collider(c, true, ignore_t, ud);
+
+                self.colliders.insert_with_parent(c, hndl, &mut self.bodies);
+            }
+        }
+    }
+
+    ///Applies transformations calculated by the physics simulation
+    pub fn apply_step(&mut self) {
+        for (_hndl, body) in self.bodies.iter() {
+            let obj = self
+                .comps
+                .obj_store
+                .get_mut(&body.user_data)
+                .unwrap()
+                .borrow_mut();
+            let binding = obj.transform();
+            let mut t = binding.borrow_mut();
+
+            let p: Vec3 = (*body.translation()).into();
+            let gp = t.position_global();
+            let diff = p - gp;
+
+            t.position += diff;
+
+            let n_q = body.rotation().quaternion();
+            let q = n_q.into();
+
+            info!("n_q: {n_q}, q: {q:?}");
+
+            t.rotation = q;
+        }
     }
 
     ///Step the simulation forward
@@ -210,7 +324,7 @@ impl PhysicsState {
 
         let dt = self.phyiscs_sim_end.elapsed().unwrap().as_secs_f32();
 
-        self.parameters.dt = dt;
+        self.parameters.dt = 1.0 / 60.0;
 
         self.pipeline.step(
             &self.gravity,
@@ -227,6 +341,7 @@ impl PhysicsState {
             &self.ev_handler,
         );
 
-        self.phyiscs_sim_end = SystemTime::now()
+        self.phyiscs_sim_end = SystemTime::now();
+        self.apply_step();
     }
 }
