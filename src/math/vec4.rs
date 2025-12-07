@@ -333,3 +333,15 @@ impl From<[f32; 4]> for Vec4 {
         }
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<nalgebra::Vector4<f32>> for Vec4 {
+    fn from(value: nalgebra::Vector4<f32>) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+            w: value.w,
+        }
+    }
+}

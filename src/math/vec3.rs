@@ -4,6 +4,7 @@ use std::ops::{
 };
 
 use bytemuck::{Pod, Zeroable};
+use nalgebra::{ArrayStorage, Const, Matrix};
 use rand::Rng;
 use swizzle_gen::gen_swizzle;
 
@@ -330,6 +331,17 @@ impl From<[f32; 3]> for Vec3 {
             x: value[0],
             y: value[1],
             z: value[2],
+        }
+    }
+}
+
+#[cfg(feature = "physics")]
+impl From<nalgebra::Vector3<f32>> for Vec3 {
+    fn from(value: nalgebra::Vector3<f32>) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
         }
     }
 }

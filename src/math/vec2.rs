@@ -252,3 +252,13 @@ impl From<[f32; 2]> for Vec2 {
         }
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<nalgebra::Vector2<f32>> for Vec2 {
+    fn from(value: nalgebra::Vector2<f32>) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+        }
+    }
+}

@@ -254,3 +254,29 @@ impl Into<nalgebra::Quaternion<f32>> for Quaternion {
         }
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<nalgebra::Quaternion<f32>> for Quaternion {
+    fn from(value: nalgebra::Quaternion<f32>) -> Self {
+        let value = value.coords;
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+            w: value.w,
+        }
+    }
+}
+
+#[cfg(feature = "physics")]
+impl From<&nalgebra::Quaternion<f32>> for Quaternion {
+    fn from(value: &nalgebra::Quaternion<f32>) -> Self {
+        let value = value.coords;
+        Self {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+            w: value.w,
+        }
+    }
+}
