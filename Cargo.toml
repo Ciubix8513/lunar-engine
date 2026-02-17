@@ -13,6 +13,7 @@ path="./src/lib.rs"
 webgl = ["wgpu/webgl", "wasm"]
 gles = ["wgpu/gles"]
 tracy = ["tracy-client/default"]
+internal_access = []
 
 # Needed for wasm builds
 wasm = ["wgpu/fragile-send-sync-non-atomic-wasm"]

@@ -85,7 +85,11 @@ mod windowing;
 pub type UUID = u128;
 
 //TODO find a better way than just staticing it
+
+#[cfg(not(feature = "internal_access"))]
 static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
+#[cfg(feature = "internal_access")]
+pub static WINDOW: OnceLock<winit::window::Window> = OnceLock::new();
 
 static SURFACE: OnceLock<RwLock<wgpu::Surface>> = OnceLock::new();
 static DEPTH: OnceLock<RwLock<wgpu::Texture>> = OnceLock::new();
