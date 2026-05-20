@@ -53,11 +53,13 @@ impl Entity {
         false
     }
 
-    ///Adds component of type T to the entity
+    ///Adds component of type T to the entity, and returns a reference to that component
     ///# Errors
     ///
     ///Returns an error if the entity already has the component of type `T`
-    pub fn add_component<T: 'static + Component>(&mut self) -> Result<(), Error> {
+    pub fn add_component<T: 'static + Component>(
+        &mut self,
+    ) -> Result<ComponentReference<T>, Error> {
         //Check if already have that component
         if self.has_component::<T>() {
             return Err(Error::ComponentAlreadyExists);
@@ -94,12 +96,16 @@ impl Entity {
         //Add component type ID
         self.comoponent_types.push(std::any::TypeId::of::<T>());
         self.components.push(Arc::new(RwLock::new(c)));
+        let c = self.components.last().unwrap();
 
         if let Some(w) = &self.world_modified {
             w.write().component_changed::<T>();
         }
 
-        Ok(())
+        Ok(ComponentReference {
+            cell: Arc::downgrade(c),
+            phantom: std::marker::PhantomData,
+        })
     }
 
     ///Removes component of type T from the entity
