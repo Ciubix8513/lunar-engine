@@ -10,7 +10,7 @@ mod world;
 
 pub use entity::Entity;
 pub use entity_builder::EntityBuilder;
-pub use world::World;
+pub use world::*;
 
 ///The trait all components that are used within the ECS must implement
 pub trait Component: std::any::Any + Send + Sync {
@@ -88,7 +88,6 @@ pub trait Component: std::any::Any + Send + Sync {
 
 use lock_api::MappedRwLockReadGuard;
 use parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use rand::Rng;
 use std::any::{Any, TypeId};
 use std::sync::{Arc, Weak};
 
@@ -159,6 +158,41 @@ pub enum Error {
 pub struct ComponentReference<T> {
     phantom: std::marker::PhantomData<T>,
     cell: Weak<RwLock<dyn Component + 'static>>,
+}
+
+#[cfg(test)]
+impl<T> PartialEq for ComponentReference<T> {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+///More generic version of the component reference
+#[derive(Clone)]
+pub struct AnyComponentReference {
+    cell: Weak<RwLock<dyn Component + 'static>>,
+    type_id: std::any::TypeId,
+}
+
+impl AnyComponentReference {
+    ///Downcasts this component reference into a specific type
+    pub fn into<T: 'static>(self) -> Option<ComponentReference<T>> {
+        if TypeId::of::<T>() == self.type_id {
+            return Some(ComponentReference::<T> {
+                cell: self.cell,
+                phantom: std::marker::PhantomData,
+            });
+        }
+        None
+    }
+
+    ///Turns a type component reference into an untyped one
+    pub fn from_reference<T: 'static>(comp: ComponentReference<T>) -> Self {
+        Self {
+            cell: comp.cell,
+            type_id: TypeId::of::<T>(),
+        }
+    }
 }
 
 //Have to use the manual implementation, so that it doesn't require T to implement clone

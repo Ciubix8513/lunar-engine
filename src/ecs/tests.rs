@@ -103,10 +103,10 @@ fn component_dependency_test() {
     assert_eq!(res, Err(Error::MissingDependency("TestComponent")));
 
     let res = e.add_component::<TestComponent>();
-    assert_eq!(res, Ok(()));
+    assert!(res.is_ok());
 
     let res = e.add_component::<TestComponent3>();
-    assert_eq!(res, Ok(()));
+    assert!(res.is_ok());
 
     let res = EntityBuilder::new()
         .add_component::<TestComponent3>()
@@ -220,7 +220,7 @@ fn component_add_test() {
 
     let res = entity.add_component::<TestComponent>();
 
-    assert_eq!(res, Ok(()));
+    assert!(res.is_ok());
     assert!(entity.has_component::<TestComponent>());
 }
 
@@ -361,6 +361,7 @@ fn alias_test() {
     assert_eq!(binding.len(), 1);
 }
 
+#[derive(Debug)]
 struct UniqueComponent;
 
 impl Component for UniqueComponent {
@@ -406,7 +407,7 @@ fn test_unique_component() {
         .write()
         .add_component::<UniqueComponent>();
 
-    assert_eq!(res, Ok(()));
+    assert!(res.is_ok());
 
     let res = e1
         .upgrade()
@@ -426,7 +427,7 @@ fn test_unique_component() {
         .write()
         .add_component::<UniqueComponent>();
 
-    assert_eq!(res, Ok(()));
+    assert!(res.is_ok());
 }
 
 #[test]
@@ -488,4 +489,16 @@ fn component_addition() {
         .write()
         .add_component::<TestComponent4>()
         .unwrap();
+}
+
+#[test]
+fn generic_component() {
+    let mut e = Entity::new();
+
+    let r = e.add_component::<TestComponent>().unwrap();
+
+    let any = AnyComponentReference::from_reference(r);
+
+    assert!(any.clone().into::<TestComponent>().is_some());
+    assert!(any.into::<TestComponent1>().is_none());
 }
