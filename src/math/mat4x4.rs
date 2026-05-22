@@ -587,15 +587,23 @@ impl Mat4x4 {
         let norm = rotation.norm();
         let s = 2.0 / norm / norm;
 
+        // let s = Mat4x4::scale_matrix(scale);
+        // let r = rotation.matrix();
+        // let t = Mat4x4::translation_matrix(translation);
+
+        // s * r * t
+        //
+        // t * r * s
+
         Self {
-            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
-            m01: s * (rotation.x * rotation.y - rotation.z * rotation.w) * scale.y,
-            m02: s * (rotation.x * rotation.z + rotation.y * rotation.w) * scale.z,
-            m10: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
+            m00: (1.0 - s * (rotation.y * rotation.y + rotation.z * rotation.z)) * scale.x,
+            m01:       (s * (rotation.x * rotation.y - rotation.z * rotation.w)) * scale.y,
+            m02:       (s * (rotation.x * rotation.z + rotation.y * rotation.w)) * scale.z,
+            m10:       (s * (rotation.x * rotation.y + rotation.z * rotation.w)) * scale.x,
             m11: (1.0 - s * (rotation.x * rotation.x + rotation.z * rotation.z)) * scale.y,
-            m12: s * (rotation.y * rotation.z - rotation.x * rotation.w) * scale.z,
-            m20: s * (rotation.x * rotation.z - rotation.y * rotation.w) * scale.x,
-            m21: s * (rotation.y * rotation.z + rotation.x * rotation.w) * scale.y,
+            m12:       (s * (rotation.y * rotation.z - rotation.x * rotation.w)) * scale.z,
+            m20:       (s * (rotation.x * rotation.z - rotation.y * rotation.w)) * scale.x,
+            m21:       (s * (rotation.y * rotation.z + rotation.x * rotation.w)) * scale.y,
             m22: (1.0 - s * (rotation.x * rotation.x + rotation.y * rotation.y)) * scale.z,
             m03: translation.x,
             m13: translation.y,
@@ -621,7 +629,7 @@ impl Mat4x4 {
         let s = 2.0 / norm / norm;
 
         Self {
-            m00: (1.0 - s * rotation.y * rotation.y + rotation.z * rotation.z) * scale.x,
+            m00: (1.0 - s * (rotation.y * rotation.y + rotation.z * rotation.z)) * scale.x,
             m10: s * (rotation.x * rotation.y - rotation.z * rotation.w) * scale.y,
             m20: s * (rotation.x * rotation.z + rotation.y * rotation.w) * scale.z,
             m01: s * (rotation.x * rotation.y + rotation.z * rotation.w) * scale.x,
@@ -635,6 +643,7 @@ impl Mat4x4 {
             m32: translation.z,
             ..Default::default()
         }
+        // Self::transform_matrix(translation, scale, rotation).transpose()
     }
 
     #[must_use]

@@ -171,6 +171,7 @@ impl Color {
         } else if (5.0..6.0).contains(&h_tick) {
             (chroma, 0.0, x)
         } else {
+            log::error!("MEWO 2");
             unreachable!()
         };
 

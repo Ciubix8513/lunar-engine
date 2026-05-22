@@ -345,3 +345,10 @@ impl From<nalgebra::Vector3<f32>> for Vec3 {
         }
     }
 }
+
+#[cfg(feature = "physics")]
+impl From<Vec3> for nalgebra::Translation<f32, 3> {
+    fn from(value: Vec3) -> Self {
+        Self::new(value.x, value.y, value.z)
+    }
+}

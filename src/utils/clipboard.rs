@@ -26,7 +26,10 @@ impl Clipboard {
 
             let ptr = match win.display_handle().unwrap().as_raw() {
                 wgpu::rwh::RawDisplayHandle::Wayland(hndl) => hndl.display,
-                _ => unreachable!(),
+                _ => {
+                    log::error!("MEWO");
+                    unreachable!()
+                }
             };
 
             log::info!("Smithay!");

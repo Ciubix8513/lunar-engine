@@ -3,14 +3,19 @@
 //!
 //!
 
-use std::time::SystemTime;
+use std::{any::TypeId, sync::Arc, time::SystemTime};
 
 use log::info;
 use nalgebra::{Isometry, Unit, UnitQuaternion, Vector3};
-use rapier3d::prelude::{
-    BroadPhaseBvh, CCDSolver, Collider, ColliderBuilder, ColliderSet, DebugRenderBackend,
-    DebugRenderPipeline, ImpulseJointSet, IntegrationParameters, IslandManager, MultibodyJointSet,
-    NarrowPhase, PhysicsPipeline, RigidBodyBuilder, RigidBodySet,
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use rapier3d::{
+    parry::shape::Ball,
+    prelude::{
+        BroadPhaseBvh, CCDSolver, Collider, ColliderBuilder, ColliderSet, Cuboid,
+        DebugRenderBackend, DebugRenderMode, DebugRenderPipeline, ImpulseJointSet,
+        IntegrationParameters, IslandManager, MultibodyJointSet, NarrowPhase, PhysicsPipeline,
+        RigidBodyBuilder, RigidBodySet, Shape, SharedShape,
+    },
 };
 use vec_key_value_pair::map::VecMap;
 
@@ -21,7 +26,10 @@ use crate::{
         physics::{self, PhysObject},
         transform::Transform,
     },
-    ecs::{ComponentReference, World},
+    ecs::{
+        ComponentReference, WeakEntityRefence, World,
+        tracking::{self, EntityEvent, EventQueue},
+    },
     math::{Quaternion, Vec3},
 };
 
@@ -87,6 +95,8 @@ pub struct PhysicsState {
     ev_handler: EventHandler,
     debug_render_pipeline: DebugRenderPipeline,
     comps: ComponentStore,
+
+    world_event_queue: Option<Arc<RwLock<EventQueue>>>,
 }
 
 impl Default for PhysicsState {
@@ -100,6 +110,18 @@ enum UserData {
     None,
 }
 
+fn to_rapier_shape(shape: components::physics::Shape, scale: Vec3) -> SharedShape {
+    match shape {
+        crate::components::physics::Shape::Box { dimensions } => SharedShape::new(Cuboid {
+            half_extents: (dimensions * scale).into(),
+        }),
+        crate::components::physics::Shape::Sphere { radius } => SharedShape::new(Ball {
+            radius: radius * scale.max(),
+        }),
+        crate::components::physics::Shape::Capsule => todo!(),
+    }
+}
+
 fn build_collider(
     c: ComponentReference<components::physics::Collider>,
     local: bool,
@@ -107,14 +129,6 @@ fn build_collider(
     user_data: UserData,
 ) -> Collider {
     let c = c.borrow();
-
-    let b = match c.shape {
-        crate::components::physics::Shape::Box { dimensions } => {
-            ColliderBuilder::cuboid(dimensions.x, dimensions.y, dimensions.z)
-        }
-        crate::components::physics::Shape::Sphere { radius } => ColliderBuilder::ball(radius),
-        crate::components::physics::Shape::Capsule => todo!(),
-    };
 
     let position = if ignore_tranform {
         Vec3::default()
@@ -131,6 +145,14 @@ fn build_collider(
     } else {
         c.transform().borrow().rotation_global()
     };
+
+    let scale = if local {
+        c.transform().borrow().scale
+    } else {
+        c.transform().borrow().scale_global()
+    };
+
+    let b = ColliderBuilder::new(to_rapier_shape(c.shape, scale));
 
     b.mass(1.0)
         .friction(c.material.friction)
@@ -166,10 +188,14 @@ impl PhysicsState {
             ccd_solver: CCDSolver::new(),
             phys_hooks: PhysicsHooks,
             ev_handler: EventHandler,
-            debug_render_pipeline: DebugRenderPipeline::render_all(
+            debug_render_pipeline: DebugRenderPipeline::new(
                 rapier3d::prelude::DebugRenderStyle::default(),
+                DebugRenderMode::COLLIDER_SHAPES
+                    | DebugRenderMode::RIGID_BODY_AXES
+                    | DebugRenderMode::CONTACTS,
             ),
             comps: ComponentStore::default(),
+            world_event_queue: None,
         }
     }
 
@@ -192,9 +218,30 @@ impl PhysicsState {
 
     ///Sets up the simulation with a given world
     pub fn set_up(&mut self, world: &mut World) {
+        //A queue for checking changes to the phys componets
+        if self.world_event_queue.is_none() {
+            let id = world
+                .queues
+                .write()
+                .create_event_queue(tracking::EventFilter::MultipleTypes(vec![
+                    TypeId::of::<PhysObject>(),
+                    TypeId::of::<physics::Collider>(),
+                ]));
+
+            self.world_event_queue = Some(world.queues.read().get_queue(id).unwrap());
+        }
+
         let mut colliders = world.get_all_components::<physics::Collider>();
         let phys_objs = world.get_all_components::<PhysObject>();
 
+        self.setup_objs(phys_objs, colliders);
+    }
+
+    fn setup_objs(
+        &mut self,
+        phys_objs: Vec<ComponentReference<PhysObject>>,
+        mut colliders: Vec<ComponentReference<physics::Collider>>,
+    ) {
         //Getting a tree of colliders for each phys_obj
         let mut trees = Vec::new();
 
@@ -254,12 +301,10 @@ impl PhysicsState {
             let binding = o.transform();
             let t = binding.borrow();
             let body = RigidBodyBuilder::dynamic()
-                .pose(Isometry::from_parts(
-                    nalgebra::Translation {
-                        vector: t.position_global().into(),
-                    },
-                    UnitQuaternion::from_quaternion(t.rotation.into()),
-                ))
+                .pose(Isometry {
+                    translation: t.position_global().into(),
+                    rotation: t.rotation.into(),
+                })
                 .can_sleep(false)
                 .gravity_scale(1.0)
                 .user_data(o.get_id())
@@ -277,9 +322,9 @@ impl PhysicsState {
                 let ud = if ignore_t {
                     UserData::None
                 } else {
-                    self.comps.col_store.insert(c.borrow().get_id(), c.clone());
                     UserData::Id
                 };
+                self.comps.col_store.insert(c.borrow().get_id(), c.clone());
 
                 let c = build_collider(c, true, ignore_t, ud);
 
@@ -309,14 +354,115 @@ impl PhysicsState {
             let n_q = body.rotation().quaternion();
             let q = n_q.into();
 
-            info!("n_q: {n_q}, q: {q:?}");
+            let r_diff = t.rotation_global() / q;
 
-            t.rotation = q;
+            t.rotation *= r_diff;
+
+            t.rotation = t.rotation.normalize();
+        }
+    }
+
+    ///Applies changes of the ECS world onto the physics simulation
+    fn apply_world(&mut self) {
+        //Sync with the event queue
+        if let Some(queue) = &self.world_event_queue {
+            let queue = queue.upgradable_read();
+
+            let mut entities = VecMap::<UUID, WeakEntityRefence>::new();
+
+            for e in queue.iter() {
+                match e {
+                    tracking::Event::Component(component_event) => match component_event {
+                        tracking::ComponentEvent::Addition(type_id, any_component_reference) => {
+                            todo!()
+                        }
+                        tracking::ComponentEvent::Removal(type_id) => todo!(),
+                    },
+                    tracking::Event::Entity(entity_event) => match entity_event {
+                        EntityEvent::Addition(id, type_ids, weak) => {
+                            entities.insert(*id, weak.clone());
+                        }
+
+                        EntityEvent::Removal(id) => {
+                            entities.remove(id);
+                        }
+                    },
+                }
+            }
+
+            RwLockUpgradableReadGuard::upgrade(queue).clear();
+
+            if !entities.is_empty() {
+                let (objs, cols): (Vec<_>, Vec<_>) = entities
+                    .values()
+                    .map(|e| {
+                        let binding = e.upgrade().unwrap();
+                        let e = binding.read();
+                        (
+                            e.get_component::<PhysObject>(),
+                            e.get_component::<physics::Collider>(),
+                        )
+                    })
+                    .unzip();
+
+                let objs: Vec<_> = objs.into_iter().flatten().collect();
+                let cols: Vec<_> = cols.into_iter().flatten().collect();
+
+                self.setup_objs(objs, cols);
+            }
+        }
+        for (_hndl, body) in self.bodies.iter_mut() {
+            let obj = self.comps.obj_store.get(&body.user_data).unwrap().borrow();
+
+            let p = obj.transform().borrow().position_global();
+            let r = obj.transform().borrow().rotation_global();
+            let s = obj.transform().borrow().scale;
+
+            body.set_position(
+                Isometry {
+                    rotation: r.into(),
+                    translation: p.into(),
+                },
+                false,
+            );
+
+            for c in body.colliders() {
+                let shape = self
+                    .comps
+                    .col_store
+                    .get(&body.user_data)
+                    .unwrap()
+                    .borrow()
+                    .shape;
+                let collider = self.colliders.get_mut(*c).unwrap();
+                collider.set_shape(to_rapier_shape(shape, s));
+            }
+        }
+
+        for (_hndl, collider) in self.colliders.iter_mut() {
+            if collider.user_data == 0 {
+                continue;
+            }
+
+            if let Some(col) = self.comps.col_store.get(&collider.user_data) {
+                let col = col.borrow();
+                let p = col.transform().borrow().position_global();
+                let r = col.transform().borrow().rotation_global();
+                let s = col.transform().borrow().scale;
+
+                collider.set_shape(to_rapier_shape(col.shape, s));
+
+                collider.set_position(Isometry {
+                    rotation: r.into(),
+                    translation: p.into(),
+                });
+            }
         }
     }
 
     ///Step the simulation forward
     pub fn step(&mut self) {
+        self.apply_world();
         //Check the world if there were any changes to physics components, and if not just update
         //all the data just in case
 

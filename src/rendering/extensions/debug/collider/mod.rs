@@ -289,7 +289,10 @@ impl RenderingExtension for Collider {
                 let s = t.scale_global().max()
                     * match collider.shape {
                         components::physics::Shape::Sphere { radius } => radius,
-                        _ => unreachable!(),
+                        _ => {
+                            log::error!("WAA");
+                            unreachable!()
+                        }
                     };
                 let p = t.position_global();
                 let r = t.rotation_global();

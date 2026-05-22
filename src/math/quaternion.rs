@@ -1,7 +1,7 @@
 #![allow(clippy::suboptimal_flops)]
 use std::{
     f32,
-    ops::{Index, Mul, MulAssign},
+    ops::{Div, Index, Mul, MulAssign},
 };
 
 use super::{IntoFloat32, Mat4x4, Vec3, Vec4};
@@ -198,6 +198,14 @@ impl Mul<Self> for Quaternion {
     }
 }
 
+impl Div<Self> for Quaternion {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        self.invert() * rhs
+    }
+}
+
 impl From<Vec4> for Quaternion {
     fn from(value: Vec4) -> Self {
         Self {
@@ -278,5 +286,14 @@ impl From<&nalgebra::Quaternion<f32>> for Quaternion {
             z: vec.z,
             w: value.scalar(),
         }
+    }
+}
+
+#[cfg(feature = "physics")]
+impl From<Quaternion> for nalgebra::Unit<nalgebra::Quaternion<f32>> {
+    fn from(value: Quaternion) -> Self {
+        Self::new_unchecked(nalgebra::Quaternion {
+            coords: Vec4::new(value.x, value.y, value.z, value.w).into(),
+        })
     }
 }

@@ -24,7 +24,8 @@ pub struct World {
     component_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
     entity_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
     unique_components: Arc<RwLock<VecSet<std::any::TypeId>>>,
-    queues: Arc<RwLock<QueueContainer>>,
+    ///awa
+    pub queues: Arc<RwLock<QueueContainer>>,
 }
 
 impl Drop for World {
