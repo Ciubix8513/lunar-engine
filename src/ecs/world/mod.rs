@@ -1,10 +1,16 @@
-use std::sync::Arc;
+#[cfg(test)]
+mod tests;
+///Tracking of the changes to the world
+pub mod tracking;
+
+use std::{sync::Arc, thread};
 
 use crate::{
     UUID,
     ecs::{
         Component, ComponentReference, ComponentsModified, Entity, EntityRefence, Error,
         SelfReferenceGuard, WeakEntityRefence,
+        tracking::{EventQueue, QueueContainer},
     },
 };
 use parking_lot::RwLock;
@@ -12,12 +18,13 @@ use vec_key_value_pair::{map::VecMap, set::VecSet};
 
 ///Manages all the entities
 pub struct World {
-    entities: Vec<EntityRefence>,
     pub(crate) modified: Arc<RwLock<ComponentsModified>>,
+    entities: Vec<EntityRefence>,
     //Gotta box it, this is so stupid
     component_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
     entity_cache: RwLock<VecMap<std::any::TypeId, Box<dyn std::any::Any>>>,
     unique_components: Arc<RwLock<VecSet<std::any::TypeId>>>,
+    queues: Arc<RwLock<QueueContainer>>,
 }
 
 impl Drop for World {
@@ -29,11 +36,12 @@ impl Drop for World {
 impl Default for World {
     fn default() -> Self {
         Self {
-            entities: Vec::new(),
             modified: Arc::new(RwLock::new(ComponentsModified::default())),
             component_cache: RwLock::new(VecMap::new()),
+            entities: Vec::new(),
             entity_cache: RwLock::new(VecMap::new()),
             unique_components: Arc::new(RwLock::new(VecSet::new())),
+            queues: Arc::new(RwLock::new(QueueContainer::new())),
         }
     }
 }
@@ -59,8 +67,9 @@ impl World {
     ///Returns an error if the entity contains an instance of a unique component that already
     ///exists in the world
     pub fn add_entity(&mut self, mut entity: Entity) -> Result<WeakEntityRefence, Error> {
-        entity.world_modified = Some(self.modified.clone());
-        entity.unique_components = Some(self.unique_components.clone());
+        entity.world_modified = Some(Arc::downgrade(&self.modified));
+        entity.unique_components = Some(Arc::downgrade(&self.unique_components));
+        entity.world_event_queues = Some(Arc::downgrade(&self.queues));
 
         //Check every component for whether or not it's unique
         for (i, c) in entity.components.iter().enumerate() {
@@ -91,6 +100,8 @@ impl World {
 
         (*self.modified).write().entity_changed();
 
+        self.queues.read().process_add_entity(weak.clone());
+
         Ok(weak)
     }
 
@@ -109,10 +120,11 @@ impl World {
         }
 
         if let Some(id) = id {
-            Arc::into_inner(self.entities.remove(id))
-                .unwrap()
-                .into_inner()
-                .decatify();
+            let e = self.entities.remove(id);
+            self.queues.read().process_remove_entity(Arc::downgrade(&e));
+
+            Arc::into_inner(e).unwrap().into_inner().decatify();
+
             (*self.modified).write().entity_changed();
 
             Ok(())
@@ -135,7 +147,11 @@ impl World {
         }
 
         if let Some(id) = id {
-            self.entities.remove(id).write().decatify();
+            let e = self.entities.remove(id);
+            self.queues.read().process_remove_entity(Arc::downgrade(&e));
+
+            e.write().decatify();
+
             (*self.modified).write().entity_changed();
             Ok(())
         } else {
@@ -144,9 +160,6 @@ impl World {
     }
 
     ///Returns the total number of entities
-    ///# Errors
-    ///
-    ///Returns an error if the entity with a given id doesn't exist
     #[must_use]
     pub const fn get_entity_count(&self) -> usize {
         self.entities.len()

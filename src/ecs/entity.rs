@@ -5,7 +5,10 @@ use std::{
 
 use crate::{
     UUID,
-    ecs::{Component, ComponentReference, ComponentsModified, Error, SelfReferenceGuard},
+    ecs::{
+        Component, ComponentReference, ComponentsModified, Error, SelfReferenceGuard,
+        tracking::QueueContainer,
+    },
 };
 use parking_lot::RwLock;
 use rand::Rng;
@@ -21,8 +24,9 @@ pub struct Entity {
     //stuff, I SWEAR IT MAKES SENSE
     pub(super) components: Vec<Arc<RwLock<dyn Component + 'static>>>,
     pub(super) self_reference: Option<Weak<RwLock<Self>>>,
-    pub(crate) world_modified: Option<Arc<RwLock<ComponentsModified>>>,
-    pub(crate) unique_components: Option<Arc<RwLock<VecSet<TypeId>>>>,
+    pub(crate) world_modified: Option<Weak<RwLock<ComponentsModified>>>,
+    pub(crate) unique_components: Option<Weak<RwLock<VecSet<TypeId>>>>,
+    pub(crate) world_event_queues: Option<Weak<RwLock<QueueContainer>>>,
 }
 
 impl Entity {
@@ -70,7 +74,8 @@ impl Entity {
             && let Some(u) = &self.unique_components
         {
             // let map = &mut u.write();
-            let map = u.read();
+            let map = u.upgrade().unwrap();
+            let map = map.read();
 
             //Returns an error if there already is a instance of a component
             if map.contains(&TypeId::of::<T>()) {
@@ -79,7 +84,7 @@ impl Entity {
 
             drop(map);
 
-            u.write().insert(TypeId::of::<T>());
+            u.upgrade().unwrap().write().insert(TypeId::of::<T>());
         }
 
         if let Err(e) = T::check_dependencies(self) {
@@ -99,13 +104,22 @@ impl Entity {
         let c = self.components.last().unwrap();
 
         if let Some(w) = &self.world_modified {
-            w.write().component_changed::<T>();
+            w.upgrade().unwrap().write().component_changed::<T>();
         }
 
-        Ok(ComponentReference {
+        let cmp_ref = ComponentReference {
             cell: Arc::downgrade(c),
             phantom: std::marker::PhantomData,
-        })
+        };
+
+        if let Some(q) = &self.world_event_queues {
+            q.upgrade()
+                .unwrap()
+                .read()
+                .process_add_component::<T>(cmp_ref.clone());
+        }
+
+        Ok(cmp_ref)
     }
 
     ///Removes component of type T from the entity
@@ -125,7 +139,11 @@ impl Entity {
             self.components.remove(ind);
 
             if let Some(w) = &self.world_modified {
-                w.write().component_changed::<T>();
+                w.upgrade().unwrap().write().component_changed::<T>();
+            }
+
+            if let Some(q) = &self.world_event_queues {
+                q.upgrade().unwrap().read().process_remove_component::<T>();
             }
 
             Ok(())
@@ -163,6 +181,7 @@ impl Entity {
             if c.unique_instanced()
                 && let Some(u) = &self.unique_components
             {
+                let u = u.upgrade().unwrap();
                 let u = &mut u.write();
                 let type_id = self.comoponent_types[i];
 
