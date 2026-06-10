@@ -29,6 +29,11 @@ impl Default for Quaternion {
 }
 
 impl Quaternion {
+    ///Creates a new identity quaternion
+    pub fn identity() -> Self {
+        Self::default()
+    }
+
     ///Creates a new `Quaternion`
     #[must_use]
     pub fn new<A: IntoFloat32, B: IntoFloat32, C: IntoFloat32, D: IntoFloat32>(
