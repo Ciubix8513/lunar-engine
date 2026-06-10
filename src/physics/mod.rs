@@ -2,6 +2,9 @@
 //!
 //!
 //!
+mod queries;
+
+pub use queries::*;
 
 use std::{any::TypeId, sync::Arc, time::SystemTime};
 

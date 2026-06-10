@@ -2,10 +2,14 @@ use std::num::NonZeroU64;
 use std::sync::OnceLock;
 
 use lunar_engine_derive::{alias, dependencies, unique_alias};
+use nalgebra::Matrix3xX;
 use wgpu::BufferUsages;
 
 use crate as lunar_engine;
+#[cfg(feature = "physics")]
+use crate::math::Vec2;
 use crate::math::{Vec3, Vec4Swizzles};
+use crate::physics::Ray;
 
 use crate::{
     DEVICE, RESOLUTION, STAGING_BELT,
@@ -157,6 +161,22 @@ impl Camera {
         camera_matrix * projection_matrix
     }
 
+    #[must_use]
+    ///Returns the projection matrix of the camera
+    pub fn projection_matrix(&self) -> Mat4x4 {
+        let resolution = lunar_engine::screen_size();
+        let aspect = resolution.x / resolution.y;
+
+        match self.projection_type {
+            ProjectionType::Perspective { fov } => {
+                Mat4x4::perspercive_projection(fov, aspect, self.near, self.far)
+            }
+            ProjectionType::Orthographic { size } => {
+                Mat4x4::orth_aspect_projection(size, aspect, self.near, self.far)
+            }
+        }
+    }
+
     ///Initializes gpu related components of the camera: Buffers, bindgroups, etc.
     pub(crate) fn initialize_gpu(&mut self) {
         let device = DEVICE.get().unwrap();
@@ -249,6 +269,40 @@ impl Camera {
         let forward = Vec4::new(0.0, 0.0, 1.0, 1.0);
 
         (forward * matrix).into()
+    }
+
+    ///Returns a reference to the transform component of the camera object
+    pub fn transform(&self) -> ComponentReference<Transform> {
+        self.transorm_reference.get().unwrap().clone()
+    }
+
+    #[cfg(feature = "physics")]
+    ///AWAWA
+    pub fn screen_point_to_ray(&self, point: Vec2, max_length: Option<f32>) -> Ray {
+        use crate::math::Vector;
+        ///Code partially stolen from godot, under MIT
+        let trans = self.transorm_reference.get().unwrap().borrow();
+
+        let screen_res = crate::screen_size();
+
+        let proj = self.projection_matrix();
+        let w = self.near * proj.m23 + proj.m33;
+        let half_extent = Vec2::new(w / proj.m00, w / proj.m11);
+
+        let dir = Vec3::new(
+            ((point.x / screen_res.x) * 2.0 - 1.0) * half_extent.x,
+            ((point.y / screen_res.y) * 2.0 - 1.0) * half_extent.y,
+            self.near,
+        );
+
+        Ray {
+            origin: trans.position_global(),
+            direction: trans
+                .rotation_global()
+                .matrix()
+                .transform3(dir.normalized()),
+            max_length,
+        }
     }
 }
 

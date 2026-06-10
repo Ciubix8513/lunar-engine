@@ -58,4 +58,36 @@ fn setup() {
     let mut phys = PhysicsState::new();
 
     phys.set_up(&mut world);
+
+    phys.step();
+}
+
+#[test]
+fn raycasting() {
+    let mut world = World::new();
+
+    world
+        .add_entity(
+            EntityBuilder::new()
+                .add_component::<Transform>()
+                .add_component::<Collider>()
+                .create()
+                .unwrap(),
+        )
+        .unwrap();
+
+    let mut phys = PhysicsState::new();
+
+    phys.set_up(&mut world);
+
+    phys.step();
+
+    phys.ray_cast(
+        &world,
+        super::Ray {
+            origin: 0.into(),
+            direction: 1.into(),
+            max_length: None,
+        },
+    );
 }

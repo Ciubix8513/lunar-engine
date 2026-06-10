@@ -352,3 +352,9 @@ impl From<Vec3> for nalgebra::Translation<f32, 3> {
         Self::new(value.x, value.y, value.z)
     }
 }
+
+impl From<Vec3> for nalgebra::OPoint<f32, Const<3>> {
+    fn from(value: Vec3) -> Self {
+        Self::new(value.x, value.y, value.z)
+    }
+}
