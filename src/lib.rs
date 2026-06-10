@@ -59,7 +59,12 @@ use utils::clipboard::Clipboard;
 use wgpu::SurfaceConfiguration;
 #[cfg(target_os = "linux")]
 use winit::platform::wayland::EventLoopExtWayland;
-use winit::{application::ApplicationHandler, dpi::PhysicalSize, event};
+use winit::{
+    application::ApplicationHandler, dpi::PhysicalSize, event,
+    platform::x11::EventLoopBuilderExtX11,
+};
+
+use crate::math::Vec2;
 
 pub mod asset_managment;
 pub mod assets;
@@ -535,4 +540,11 @@ impl<T> ApplicationHandler for State<T> {
             _ => {}
         }
     }
+}
+
+///Returns the size of the screen
+pub fn screen_size() -> Vec2 {
+    let r = RESOLUTION.read().unwrap();
+
+    (r.width, r.height).into()
 }

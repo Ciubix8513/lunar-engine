@@ -142,10 +142,8 @@ impl Camera {
 
         let camera_matrix = Mat4x4::look_at_matrix(pos, up, forward);
 
-        let resolution = RESOLUTION.read().unwrap();
-        let aspect = resolution.width as f32 / resolution.height as f32;
-
-        drop(resolution);
+        let resolution = lunar_engine::screen_size();
+        let aspect = resolution.x / resolution.y;
 
         let projection_matrix = match self.projection_type {
             ProjectionType::Perspective { fov } => {
