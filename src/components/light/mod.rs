@@ -53,7 +53,7 @@ impl Component for DirectionalLight {
 impl DirectionalLight {
     pub(crate) fn get_light(&self) -> LightBuffer {
         LightBuffer {
-            direction: self.direction.normalize(),
+            direction: self.direction.normalized(),
             color: self.color,
             intensity: self.intensity,
             ambient_color: self.ambient_color,

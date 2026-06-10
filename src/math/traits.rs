@@ -20,17 +20,18 @@ pub trait Vector: Div<f32> + Sized + Copy + PartialEq + PartialOrd {
     {
         (self / self.length()).into()
     }
-    ///Returns vector normalized
-    #[must_use]
-    fn normalize(self) -> Self
+
+    ///Normalizes the vector
+    fn normalize(&mut self)
     where
-        Self: From<<Self as Div<f32>>::Output>,
+        Self: std::ops::DivAssign<f32>,
     {
         let len = self.length();
         if len == 0.0 {
-            return self;
+            return;
         }
-        (self / len).into()
+
+        self.div_assign(len);
     }
 
     ///Restricts the vector to a certain interval
