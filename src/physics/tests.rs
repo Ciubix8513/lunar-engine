@@ -8,6 +8,8 @@ use crate::{
     physics::PhysicsState,
 };
 
+use super::Ray;
+
 #[test]
 fn setup() {
     let mut world = World::new();
@@ -84,7 +86,7 @@ fn raycasting() {
 
     phys.ray_cast(
         &world,
-        super::Ray {
+        &Ray {
             origin: 0.into(),
             direction: 1.into(),
             max_length: None,

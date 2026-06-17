@@ -1,11 +1,6 @@
-use std::os::linux::raw::stat;
-
 use lunar_engine::{
-    components::{self, camera::MainCamera, physics::PhysObject, transform::Transform},
-    ecs::ComponentReference,
+    components::{self, camera::MainCamera, physics::PhysObject},
     input::{self, KeyState, mouse_btn},
-    math::{Mat4x4, Vec2, Vec3, Vec4, Vec4Swizzles, Vector},
-    physics::Ray,
 };
 
 use crate::State;
@@ -28,19 +23,9 @@ pub fn cast(state: &mut State) {
 
         let e = res.entity.read();
 
-        if !e.has_component::<PhysObject>() {
-            return;
-        }
+        let id = e.get_id();
+        drop(e);
 
-        let mesh = e.get_component::<components::mesh::Mesh>().unwrap();
-
-        let mut mesh = mesh.borrow_mut();
-
-        if mesh.get_material_id().unwrap() == state.mat_hndl {
-            mesh.set_material(state.mat_hndl1);
-        } else {
-            mesh.set_material(state.mat_hndl);
-        }
-        //
+        state.world.remove_entity_by_id(id).unwrap();
     }
 }

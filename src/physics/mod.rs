@@ -12,6 +12,8 @@ use log::info;
 use nalgebra::{Isometry, Unit, UnitQuaternion, Vector3};
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use rapier3d::{
+    dynamics::RigidBodyHandle,
+    geometry::ColliderHandle,
     parry::shape::Ball,
     prelude::{
         BroadPhaseBvh, CCDSolver, Collider, ColliderBuilder, ColliderSet, Cuboid,
@@ -20,7 +22,7 @@ use rapier3d::{
         RigidBodyBuilder, RigidBodySet, Shape, SharedShape,
     },
 };
-use vec_key_value_pair::map::VecMap;
+use vec_key_value_pair::{map::VecMap, set::VecSet};
 
 use crate::{
     UUID,
@@ -71,6 +73,12 @@ struct ComponentStore {
     col_store: VecMap<UUID, ComponentReference<physics::Collider>>,
 }
 
+#[derive(Default)]
+struct HanldleStore {
+    obj_store: VecMap<UUID, RigidBodyHandle>,
+    col_store: VecMap<UUID, ColliderHandle>,
+}
+
 impl Default for ComponentStore {
     fn default() -> Self {
         Self {
@@ -98,6 +106,7 @@ pub struct PhysicsState {
     ev_handler: EventHandler,
     debug_render_pipeline: DebugRenderPipeline,
     comps: ComponentStore,
+    handles: HanldleStore,
 
     world_event_queue: Option<Arc<RwLock<EventQueue>>>,
 }
@@ -198,6 +207,7 @@ impl PhysicsState {
                     | DebugRenderMode::CONTACTS,
             ),
             comps: ComponentStore::default(),
+            handles: HanldleStore::default(),
             world_event_queue: None,
         }
     }
@@ -294,9 +304,13 @@ impl PhysicsState {
         }
 
         for c in colliders {
-            self.colliders
-                .insert(build_collider(c, false, false, UserData::Id));
+            let c = build_collider(c, false, false, UserData::Id);
+            let e_id = c.user_data;
+            self.handles
+                .col_store
+                .insert(e_id, self.colliders.insert(c));
         }
+
         //now colliders only contain the colliders that do not have a phys obj as an ancestor
 
         for (i, (_, colliders)) in phys_objs.iter().zip(trees) {
@@ -313,25 +327,27 @@ impl PhysicsState {
                 .user_data(o.get_id())
                 .build();
 
-            self.comps.obj_store.insert(o.get_id(), i.clone());
+            let entity_id = o.get_id();
+
+            self.comps.obj_store.insert(entity_id, i.clone());
 
             drop(o);
             drop(t);
-            let hndl = self.bodies.insert(body);
+            let body_hndl = self.bodies.insert(body);
+
+            self.handles.obj_store.insert(entity_id, body_hndl);
 
             for c in colliders {
-                let ignore_t = c.borrow().get_id() == c.borrow().get_id();
+                let id = c.borrow().get_id();
 
-                let ud = if ignore_t {
-                    UserData::None
-                } else {
-                    UserData::Id
-                };
-                self.comps.col_store.insert(c.borrow().get_id(), c.clone());
+                self.comps.col_store.insert(id, c.clone());
 
-                let c = build_collider(c, true, ignore_t, ud);
+                let c = build_collider(c, true, true, UserData::None);
+                let col_hndl = self
+                    .colliders
+                    .insert_with_parent(c, body_hndl, &mut self.bodies);
 
-                self.colliders.insert_with_parent(c, hndl, &mut self.bodies);
+                self.handles.col_store.insert(id, col_hndl);
             }
         }
     }
@@ -372,6 +388,7 @@ impl PhysicsState {
             let queue = queue.upgradable_read();
 
             let mut entities = VecMap::<UUID, WeakEntityRefence>::new();
+            let mut removed_entities = VecSet::<UUID>::new();
 
             for e in queue.iter() {
                 match e {
@@ -384,10 +401,12 @@ impl PhysicsState {
                     tracking::Event::Entity(entity_event) => match entity_event {
                         EntityEvent::Addition(id, type_ids, weak) => {
                             entities.insert(*id, weak.clone());
+                            removed_entities.remove(id);
                         }
 
                         EntityEvent::Removal(id) => {
                             entities.remove(id);
+                            removed_entities.insert(*id);
                         }
                     },
                 }
@@ -412,6 +431,26 @@ impl PhysicsState {
                 let cols: Vec<_> = cols.into_iter().flatten().collect();
 
                 self.setup_objs(objs, cols);
+            }
+
+            for e in removed_entities.iter() {
+                let col = self.handles.col_store.get(e);
+                let obj = self.handles.obj_store.get(e);
+
+                if let Some(col) = col {
+                    self.colliders
+                        .remove(*col, &mut self.island_manager, &mut self.bodies, true);
+                }
+                if let Some(obj) = obj {
+                    self.bodies.remove(
+                        *obj,
+                        &mut self.island_manager,
+                        &mut self.colliders,
+                        &mut self.impulse_joints,
+                        &mut self.multibody_joints,
+                        true,
+                    );
+                }
             }
         }
         for (_hndl, body) in self.bodies.iter_mut() {
